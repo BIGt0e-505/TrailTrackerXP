@@ -285,7 +285,7 @@ For issues or questions, refer to:
 
 ## Version History
 
-**v1.0.0** - Initial Release
+**v0.2.4** - Initial Release
 - GPS tracking for walking and biking
 - Calendar view with activity markers
 - Statistics dashboard with time windows
