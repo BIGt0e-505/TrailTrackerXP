@@ -1,0 +1,39 @@
+node_modules/
+.expo/
+.expo-shared/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+dist/
+
+# macOS
+.DS_Store
+
+# Android
+*.apk
+*.aab
+android/
+.gradle/
+
+# iOS
+*.ipa
+ios/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log

@@ -1,0 +1,358 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
+import { processActivity, recalculateGamification } from './gamification';
+
+const ACTIVITIES_KEY = '@trail_tracker_activities';
+const CACHED_TILES_KEY = '@trail_tracker_cached_tiles';
+const TILE_CACHE_DIR = `${FileSystem.documentDirectory}tile_cache/`;
+
+export const saveActivity = async (activity) => {
+  try {
+    const existingActivities = await getActivities();
+    const newActivity = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      ...activity,
+    };
+    const updatedActivities = [...existingActivities, newActivity];
+    await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updatedActivities));
+    
+    // Process gamification (XP, achievements, challenges)
+    const gamificationResults = await processActivity(newActivity, updatedActivities);
+    
+    return { activity: newActivity, gamification: gamificationResults };
+  } catch (error) {
+    console.error('Error saving activity:', error);
+    throw error;
+  }
+};
+
+// Update an existing activity (e.g., change type)
+export const updateActivity = async (id, updates) => {
+  try {
+    const activities = await getActivities();
+    const index = activities.findIndex(a => a.id === id);
+    if (index === -1) throw new Error('Activity not found');
+    
+    activities[index] = { ...activities[index], ...updates };
+    await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(activities));
+    
+    // Recalculate gamification since activity type may affect achievements
+    await recalculateGamification(activities);
+    
+    return activities[index];
+  } catch (error) {
+    console.error('Error updating activity:', error);
+    throw error;
+  }
+};
+
+export const getActivities = async () => {
+  try {
+    const activities = await AsyncStorage.getItem(ACTIVITIES_KEY);
+    return activities ? JSON.parse(activities) : [];
+  } catch (error) {
+    console.error('Error getting activities:', error);
+    return [];
+  }
+};
+
+export const getActivityById = async (id) => {
+  try {
+    const activities = await getActivities();
+    return activities.find(a => a.id === id) || null;
+  } catch (error) {
+    console.error('Error getting activity:', error);
+    return null;
+  }
+};
+
+export const deleteActivity = async (id) => {
+  try {
+    const activities = await getActivities();
+    const filteredActivities = activities.filter(a => a.id !== id);
+    await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(filteredActivities));
+    
+    // Recalculate gamification based on remaining activities
+    await recalculateGamification(filteredActivities);
+  } catch (error) {
+    console.error('Error deleting activity:', error);
+    throw error;
+  }
+};
+
+export const calculateDistance = (coords) => {
+  if (!coords || coords.length < 2) return 0;
+  
+  let totalDistance = 0;
+  for (let i = 1; i < coords.length; i++) {
+    totalDistance += getDistanceBetweenPoints(
+      coords[i - 1].latitude,
+      coords[i - 1].longitude,
+      coords[i].latitude,
+      coords[i].longitude
+    );
+  }
+  return totalDistance;
+};
+
+// Haversine formula for distance calculation (returns km)
+const getDistanceBetweenPoints = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth's radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const toRad = (deg) => deg * (Math.PI / 180);
+
+// Convert km to miles
+const kmToMiles = (km) => km * 0.621371;
+
+// Format distance with unit preference (km is stored value)
+// When miles selected: always show miles (no yards/feet conversion)
+// When km selected: show metres for small distances, km for larger
+export const formatDistance = (km, unit = 'miles') => {
+  if (km === undefined || km === null) return unit === 'miles' ? '0.00 mi' : '0 m';
+  
+  if (unit === 'miles') {
+    const miles = kmToMiles(km);
+    return `${miles.toFixed(2)} mi`;
+  } else {
+    if (km < 1) {
+      return `${Math.round(km * 1000)} m`;
+    }
+    return `${km.toFixed(2)} km`;
+  }
+};
+
+// Get raw distance in preferred unit
+export const getDistanceInUnit = (km, unit = 'miles') => {
+  if (unit === 'miles') {
+    return kmToMiles(km);
+  }
+  return km;
+};
+
+export const formatDuration = (seconds) => {
+  if (!seconds) return '0s';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  }
+  return `${secs}s`;
+};
+
+export const formatDurationLong = (seconds) => {
+  if (!seconds) return '0:00:00';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Calculate moving time (time when speed > threshold)
+export const calculateMovingTime = (routeData) => {
+  if (!routeData || routeData.length < 2) return 0;
+  
+  let movingTime = 0;
+  const speedThreshold = 0.5; // km/h minimum to count as moving
+  
+  for (let i = 1; i < routeData.length; i++) {
+    const timeDiff = (routeData[i].timestamp - routeData[i-1].timestamp) / 1000; // seconds
+    if (timeDiff <= 0) continue;
+    
+    const distance = getDistanceBetweenPoints(
+      routeData[i-1].latitude,
+      routeData[i-1].longitude,
+      routeData[i].latitude,
+      routeData[i].longitude
+    );
+    const speed = (distance / timeDiff) * 3600; // km/h
+    
+    if (speed > speedThreshold) {
+      movingTime += timeDiff;
+    }
+  }
+  
+  return movingTime;
+};
+
+// Calculate elevation gain
+export const calculateElevationGain = (routeData) => {
+  if (!routeData || routeData.length < 2) return 0;
+  
+  let gain = 0;
+  for (let i = 1; i < routeData.length; i++) {
+    const elevDiff = (routeData[i].altitude || 0) - (routeData[i-1].altitude || 0);
+    if (elevDiff > 0) {
+      gain += elevDiff;
+    }
+  }
+  return Math.round(gain);
+};
+
+// Calculate elevation loss
+export const calculateElevationLoss = (routeData) => {
+  if (!routeData || routeData.length < 2) return 0;
+  
+  let loss = 0;
+  for (let i = 1; i < routeData.length; i++) {
+    const elevDiff = (routeData[i].altitude || 0) - (routeData[i-1].altitude || 0);
+    if (elevDiff < 0) {
+      loss += Math.abs(elevDiff);
+    }
+  }
+  return Math.round(loss);
+};
+
+// Get speed data for graphing (smoothed over ~5 seconds)
+export const getSpeedData = (routeData) => {
+  if (!routeData || routeData.length < 2) return [];
+  
+  const rawSpeeds = [];
+  for (let i = 1; i < routeData.length; i++) {
+    const timeDiff = (routeData[i].timestamp - routeData[i-1].timestamp) / 1000;
+    if (timeDiff <= 0) continue;
+    
+    const distance = getDistanceBetweenPoints(
+      routeData[i-1].latitude,
+      routeData[i-1].longitude,
+      routeData[i].latitude,
+      routeData[i].longitude
+    );
+    const speed = (distance / timeDiff) * 3600; // km/h
+    
+    rawSpeeds.push({
+      time: (routeData[i].timestamp - routeData[0].timestamp) / 1000 / 60,
+      timestamp: routeData[i].timestamp,
+      speed: Math.min(speed, 100),
+      distance: routeData[i].cumulativeDistance || 0,
+    });
+  }
+  
+  // Smooth speeds using a 10-second rolling average for cleaner graphs
+  const smoothedSpeeds = [];
+  const smoothingWindow = 10000; // 10 seconds in ms
+  
+  for (let i = 0; i < rawSpeeds.length; i++) {
+    const currentTime = rawSpeeds[i].timestamp;
+    let sumSpeed = 0;
+    let count = 0;
+    
+    // Look back and forward within the window
+    for (let j = 0; j < rawSpeeds.length; j++) {
+      if (Math.abs(rawSpeeds[j].timestamp - currentTime) <= smoothingWindow / 2) {
+        sumSpeed += rawSpeeds[j].speed;
+        count++;
+      }
+    }
+    
+    smoothedSpeeds.push({
+      time: rawSpeeds[i].time,
+      speed: count > 0 ? sumSpeed / count : rawSpeeds[i].speed,
+      distance: rawSpeeds[i].distance,
+    });
+  }
+  
+  return smoothedSpeeds;
+};
+
+// Get elevation data for graphing
+export const getElevationData = (routeData) => {
+  if (!routeData || routeData.length < 1) return [];
+  
+  return routeData
+    .filter(point => point.altitude !== undefined && point.altitude !== null)
+    .map((point, index) => ({
+      distance: point.cumulativeDistance || 0,
+      elevation: Math.round(point.altitude),
+      time: (point.timestamp - routeData[0].timestamp) / 1000 / 60,
+    }));
+};
+
+// Tile caching
+export const cacheTiles = async (bounds, zoomLevels = [13, 14, 15, 16]) => {
+  try {
+    const cached = await getCachedTileRegions();
+    const newRegion = {
+      id: Date.now().toString(),
+      bounds,
+      zoomLevels,
+      timestamp: new Date().toISOString(),
+    };
+    cached.push(newRegion);
+    await AsyncStorage.setItem(CACHED_TILES_KEY, JSON.stringify(cached));
+    return newRegion;
+  } catch (error) {
+    console.error('Error caching tiles:', error);
+    throw error;
+  }
+};
+
+export const getCachedTileRegions = async () => {
+  try {
+    const cached = await AsyncStorage.getItem(CACHED_TILES_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch (error) {
+    console.error('Error getting cached tiles:', error);
+    return [];
+  }
+};
+
+export const clearCachedTiles = async () => {
+  try {
+    // Clear AsyncStorage record
+    await AsyncStorage.removeItem(CACHED_TILES_KEY);
+    
+    // Actually delete the cached tile files from the file system
+    const dirInfo = await FileSystem.getInfoAsync(TILE_CACHE_DIR);
+    if (dirInfo.exists) {
+      await FileSystem.deleteAsync(TILE_CACHE_DIR, { idempotent: true });
+      console.log('Map tile cache directory deleted');
+    }
+  } catch (error) {
+    console.error('Error clearing cached tiles:', error);
+  }
+};
+
+// Format speed with unit preference
+export const formatSpeed = (kmh, unit = 'miles') => {
+  if (!kmh || kmh < 0) return unit === 'miles' ? '0.0 mph' : '0.0 km/h';
+  if (unit === 'miles') {
+    return `${(kmh * 0.621371).toFixed(1)} mph`;
+  }
+  return `${kmh.toFixed(1)} km/h`;
+};
+
+// Format pace with unit preference
+export const formatPace = (kmh, unit = 'miles') => {
+  if (!kmh || kmh <= 0) return '--:--';
+  if (unit === 'miles') {
+    const paceMinutes = 60 / (kmh * 0.621371); // min per mile
+    const mins = Math.floor(paceMinutes);
+    const secs = Math.round((paceMinutes - mins) * 60);
+    return `${mins}:${secs.toString().padStart(2, '0')} /mi`;
+  } else {
+    const paceMinutes = 60 / kmh; // min per km
+    const mins = Math.floor(paceMinutes);
+    const secs = Math.round((paceMinutes - mins) * 60);
+    return `${mins}:${secs.toString().padStart(2, '0')} /km`;
+  }
+};
+
+// Format elevation - always in metres regardless of distance unit preference
+export const formatElevation = (meters, unit = 'miles') => {
+  if (meters === undefined || meters === null) return '0 m';
+  return `${Math.round(meters)} m`;
+};

@@ -1,0 +1,1802 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  AppState,
+  Modal,
+  Platform,
+  Linking,
+  TextInput,
+} from 'react-native';
+import { WebView } from 'react-native-webview';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
+import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { useTheme } from '../utils/theme';
+import { 
+  saveActivity, 
+  calculateDistance, 
+  formatDistance, 
+  formatDuration,
+  calculateMovingTime,
+  calculateElevationGain,
+} from '../utils/storage';
+import { WalkingIcon, BikingIcon, PlayIcon, StopIcon, MapIcon, DownloadIcon } from '../components/Icons';
+import Svg, { Path, Circle } from 'react-native-svg';
+
+const LOCATION_TASK_NAME = 'background-location-task';
+
+// Global state for background tracking
+let backgroundRouteData = [];
+let backgroundStartTime = null;
+let backgroundActivityType = 'walking';
+let backgroundDistanceUnit = 'miles';
+
+
+
+// Define the background task
+TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
+  if (error) {
+    console.error('Background location error:', error);
+    return;
+  }
+  if (data) {
+    const { locations } = data;
+    if (locations && locations.length > 0) {
+      const location = locations[0];
+      const newCoord = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        altitude: location.coords.altitude || 0,
+        speed: location.coords.speed || 0,
+        timestamp: location.timestamp,
+      };
+      
+      if (backgroundRouteData.length > 0) {
+        newCoord.cumulativeDistance = calculateDistance([...backgroundRouteData, newCoord]);
+      } else {
+        newCoord.cumulativeDistance = 0;
+      }
+      
+      backgroundRouteData.push(newCoord);
+    }
+  }
+});
+
+// Custom icons
+const RecenterIcon = ({ size = 24, color = '#424242' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="3" fill={color} />
+    <Path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    <Circle cx="12" cy="12" r="8" stroke={color} strokeWidth="2" fill="none" />
+  </Svg>
+);
+
+const PauseIcon = ({ size = 24, color = '#424242' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M6 4h4v16H6V4zM14 4h4v16h-4V4z" fill={color} />
+  </Svg>
+);
+
+const CheckIcon = ({ size = 24, color = '#4CAF50' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" fill="none" />
+    <Path d="M8 12l3 3 5-6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const CacheSuccessIcon = ({ size = 24, color = '#2196F3' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    <Path d="M12 3v12M7 10l5 5 5-5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const TrashIcon = ({ size = 24, color = '#D32F2F' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M10 11v6M14 11v6" stroke={color} strokeWidth="2" strokeLinecap="round" />
+  </Svg>
+);
+
+export default function TrackingScreen() {
+  const { theme, isDark, isMapDark, distanceUnit, setUsername } = useTheme();
+  const [location, setLocation] = useState(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [activityType, setActivityType] = useState('walking');
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
+  const [distance, setDistance] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentSpeed, setCurrentSpeed] = useState(0);
+  const [currentAltitude, setCurrentAltitude] = useState(0);
+  const [mapStyle, setMapStyle] = useState('osm');
+  const [hasPermission, setHasPermission] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalContent, setSuccessModalContent] = useState({ title: '', message: '', icon: 'check' });
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [isCaching, setIsCaching] = useState(false);
+  const [cacheProgress, setCacheProgress] = useState({ current: 0, total: 0 });
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [setupUsername, setSetupUsername] = useState('');
+  
+  const webViewRef = useRef(null);
+  const cachingCancelled = useRef(false);
+  const startTime = useRef(null);
+  const pausedDuration = useRef(0);
+  const durationInterval = useRef(null);
+  const appState = useRef(AppState.currentState);
+  const locationSubscription = useRef(null);
+
+  const SETUP_COMPLETE_KEY = '@trail_tracker_setup_complete';
+
+  useEffect(() => {
+    checkFirstRun();
+    requestPermissions();
+    backgroundDistanceUnit = distanceUnit;
+    
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription.remove();
+      if (durationInterval.current) {
+        clearInterval(durationInterval.current);
+      }
+      if (locationSubscription.current) {
+        locationSubscription.current.remove();
+      }
+      deactivateKeepAwake();
+    };
+  }, []);
+
+  const checkFirstRun = async () => {
+    try {
+      const setupComplete = await AsyncStorage.getItem(SETUP_COMPLETE_KEY);
+      if (!setupComplete) {
+        setShowSetupModal(true);
+      }
+    } catch (e) {
+      console.log('Error checking first run:', e);
+    }
+  };
+
+  const completeSetup = async () => {
+    try {
+      // Save username if provided
+      if (setupUsername.trim()) {
+        await setUsername(setupUsername.trim());
+      }
+      await AsyncStorage.setItem(SETUP_COMPLETE_KEY, 'true');
+      setShowSetupModal(false);
+    } catch (e) {
+      console.log('Error saving setup state:', e);
+      setShowSetupModal(false);
+    }
+  };
+
+  const openBatterySettings = () => {
+    if (Platform.OS === 'android') {
+      Linking.openSettings();
+    }
+  };
+
+  useEffect(() => {
+    backgroundDistanceUnit = distanceUnit;
+  }, [distanceUnit]);
+
+  const handleAppStateChange = async (nextAppState) => {
+    if (appState.current === 'active' && nextAppState.match(/inactive|background/)) {
+      if (isTracking && !isPaused) {
+        console.log('App backgrounded, continuing tracking...');
+      }
+    } else if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      if (isTracking && !isPaused) {
+        if (backgroundRouteData.length > 0) {
+          setRouteCoordinates([...backgroundRouteData]);
+          const dist = calculateDistance(backgroundRouteData);
+          setDistance(dist);
+        }
+      }
+    }
+    appState.current = nextAppState;
+  };
+
+  // Auto-pan map to follow location when tracking
+  useEffect(() => {
+    if (mapReady && location && webViewRef.current) {
+      const shouldFollow = isTracking && !isPaused;
+      webViewRef.current.injectJavaScript(`
+        updateLocation(${location.latitude}, ${location.longitude}, ${shouldFollow});
+        true;
+      `);
+    }
+  }, [location, mapReady, isTracking, isPaused]);
+
+  useEffect(() => {
+    if (mapReady && webViewRef.current && routeCoordinates.length > 0) {
+      const routeJson = JSON.stringify(routeCoordinates.map(c => ({
+        latitude: c.latitude,
+        longitude: c.longitude
+      })));
+      const color = activityType === 'walking' ? '#1976D2' : '#D32F2F';
+      webViewRef.current.injectJavaScript(`
+        updateRoute(${routeJson}, '${color}');
+        true;
+      `);
+    }
+  }, [routeCoordinates, mapReady]);
+
+  useEffect(() => {
+    if (mapReady && webViewRef.current) {
+      webViewRef.current.injectJavaScript(`
+        changeMapStyle('${mapStyle}');
+        setDarkMode(${isMapDark});
+        setAppDarkMode(${isDark});
+        true;
+      `);
+    }
+  }, [mapStyle, mapReady, isMapDark, isDark]);
+
+  // Recenter map on user location when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      const recenterOnFocus = async () => {
+        if (mapReady && webViewRef.current) {
+          try {
+            const currentLocation = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.High,
+            });
+            const lat = currentLocation.coords.latitude;
+            const lng = currentLocation.coords.longitude;
+            setLocation({ latitude: lat, longitude: lng });
+            webViewRef.current.injectJavaScript(`
+              recenterMap(${lat}, ${lng});
+              true;
+            `);
+          } catch (error) {
+            console.log('Error getting location on focus:', error);
+          }
+        }
+      };
+      recenterOnFocus();
+    }, [mapReady])
+  );
+
+  const requestPermissions = async () => {
+    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+    if (foregroundStatus !== 'granted') {
+      Alert.alert('Permission Denied', 'Location permission is required to track activities.');
+      return;
+    }
+    
+    const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+    if (backgroundStatus !== 'granted') {
+      Alert.alert(
+        'Background Permission Required',
+        'For tracking to work when your screen is off:\n\n1. Enable "Allow all the time" location permission\n2. Disable battery optimization for TrailTrackerXP\n\nGo to Settings > Apps > TrailTrackerXP > Permissions > Location > Allow all the time\n\nThen: Settings > Apps > TrailTrackerXP > Battery > Unrestricted',
+        [{ text: 'OK' }]
+      );
+    }
+    
+    setHasPermission(true);
+    
+    try {
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setLocation({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      });
+      if (currentLocation.coords.altitude) {
+        setCurrentAltitude(Math.round(currentLocation.coords.altitude));
+      }
+    } catch (error) {
+      console.log('Error getting initial location:', error);
+      setLocation({ latitude: 51.5074, longitude: -0.1278 });
+    }
+  };
+
+  const startTracking = async () => {
+    if (!hasPermission) {
+      await requestPermissions();
+      return;
+    }
+
+    setIsTracking(true);
+    setIsPaused(false);
+    setRouteCoordinates([]);
+    setDistance(0);
+    setDuration(0);
+    pausedDuration.current = 0;
+    startTime.current = Date.now();
+    backgroundStartTime = Date.now();
+    backgroundRouteData = [];
+    backgroundActivityType = activityType;
+    
+    try {
+      await activateKeepAwakeAsync();
+    } catch (e) {
+      console.log('Keep awake error:', e);
+    }
+
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(`clearRoute(); true;`);
+    }
+
+    durationInterval.current = setInterval(() => {
+      if (!isPaused) {
+        const elapsed = Math.floor((Date.now() - startTime.current) / 1000) - pausedDuration.current;
+        setDuration(elapsed);
+      }
+    }, 1000);
+
+    // Start background location - Android requires a foreground service notification for background GPS
+    // Using high priority and sticky notification to prevent suspension
+    await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+      accuracy: Location.Accuracy.BestForNavigation,
+      timeInterval: 2000,
+      distanceInterval: 2,
+      showsBackgroundLocationIndicator: false,
+      activityType: Location.ActivityType.Fitness,
+      pausesUpdatesAutomatically: false,
+      deferredUpdatesInterval: 0,
+      deferredUpdatesDistance: 0,
+      foregroundService: {
+        notificationTitle: 'TrailTrackerXP Recording',
+        notificationBody: 'GPS tracking is active',
+        notificationColor: '#4CAF50',
+        killServiceOnDestroy: false,
+      },
+    });
+
+    // Use a single foreground location watcher for UI updates
+    // This doesn't create a separate location indicator
+    locationSubscription.current = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.High,
+        timeInterval: 2000,
+        distanceInterval: 2,
+        mayShowUserSettingsDialog: false,
+      },
+      (newLocation) => {
+        if (isPaused) return;
+        
+        const newCoord = {
+          latitude: newLocation.coords.latitude,
+          longitude: newLocation.coords.longitude,
+          altitude: newLocation.coords.altitude || 0,
+          speed: newLocation.coords.speed || 0,
+          timestamp: Date.now(),
+        };
+        
+        setLocation({
+          latitude: newCoord.latitude,
+          longitude: newCoord.longitude,
+        });
+        
+        if (newLocation.coords.speed && newLocation.coords.speed > 0) {
+          setCurrentSpeed(newLocation.coords.speed * 3.6);
+        }
+        
+        if (newLocation.coords.altitude) {
+          setCurrentAltitude(Math.round(newLocation.coords.altitude));
+        }
+        
+        setRouteCoordinates([...backgroundRouteData]);
+        setDistance(calculateDistance(backgroundRouteData));
+      }
+    );
+  };
+
+  const pauseTracking = async () => {
+    setIsPaused(true);
+    setShowPauseModal(true);
+  };
+
+  const resumeTracking = async () => {
+    setIsPaused(false);
+    setShowPauseModal(false);
+  };
+
+  const saveTracking = async () => {
+    setShowPauseModal(false);
+    
+    try {
+      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    } catch (e) {
+      console.log('Error stopping location updates:', e);
+    }
+    
+    if (durationInterval.current) {
+      clearInterval(durationInterval.current);
+      durationInterval.current = null;
+    }
+
+    if (locationSubscription.current) {
+      locationSubscription.current.remove();
+      locationSubscription.current = null;
+    }
+
+    deactivateKeepAwake();
+
+    const finalRouteData = backgroundRouteData.length > 0 ? backgroundRouteData : routeCoordinates;
+
+    if (finalRouteData.length > 0) {
+      const finalDistance = calculateDistance(finalRouteData);
+      const movingTime = calculateMovingTime(finalRouteData);
+      const elevationGain = calculateElevationGain(finalRouteData);
+      
+      const activity = {
+        type: activityType,
+        distance: finalDistance,
+        duration: duration,
+        movingTime: movingTime,
+        elevationGain: elevationGain,
+        route: finalRouteData,
+        date: new Date().toISOString(),
+      };
+
+      try {
+        const result = await saveActivity(activity);
+        const { gamification } = result;
+        
+        // Build success message with gamification info
+        let message = `${activityType === 'walking' ? 'Walk' : 'Ride'}: ${formatDistance(finalDistance, distanceUnit)} in ${formatDuration(duration)}`;
+        
+        if (gamification) {
+          message += `\n\n⭐ +${gamification.xpEarned} XP`;
+          
+          if (gamification.newLevel) {
+            message += `\n🎉 Level Up! ${gamification.newLevel.icon} ${gamification.newLevel.name}`;
+          }
+          
+          if (gamification.newAchievements && gamification.newAchievements.length > 0) {
+            const achievementNames = gamification.newAchievements.map(a => `${a.icon} ${a.name}`).join('\n');
+            message += `\n\n🏆 New Achievement!\n${achievementNames}`;
+          }
+          
+          if (gamification.challengesCompleted && gamification.challengesCompleted.length > 0) {
+            message += `\n\n🎯 Challenge Complete!`;
+          }
+        }
+        
+        setSuccessModalContent({
+          title: gamification?.newLevel ? '🎉 Level Up!' : (gamification?.newAchievements?.length > 0 ? '🏆 Achievement Unlocked!' : 'Activity Saved'),
+          message: message,
+          icon: 'check'
+        });
+        setShowSuccessModal(true);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save activity');
+      }
+    }
+
+    setIsTracking(false);
+    setIsPaused(false);
+    setCurrentSpeed(0);
+    backgroundRouteData = [];
+    backgroundStartTime = null;
+  };
+
+  const discardTracking = () => {
+    setShowPauseModal(false);
+    setShowDiscardModal(true);
+  };
+
+  const confirmDiscard = async () => {
+    setShowDiscardModal(false);
+    
+    try {
+      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    } catch (e) {
+      console.log('Error stopping location updates:', e);
+    }
+    
+    if (durationInterval.current) {
+      clearInterval(durationInterval.current);
+      durationInterval.current = null;
+    }
+
+    if (locationSubscription.current) {
+      locationSubscription.current.remove();
+      locationSubscription.current = null;
+    }
+
+    deactivateKeepAwake();
+
+    setIsTracking(false);
+    setIsPaused(false);
+    setRouteCoordinates([]);
+    setDistance(0);
+    setDuration(0);
+    setCurrentSpeed(0);
+    backgroundRouteData = [];
+    backgroundStartTime = null;
+    
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(`clearRoute(); true;`);
+    }
+  };
+
+  const toggleActivityType = () => {
+    if (!isTracking) {
+      setActivityType(prev => prev === 'walking' ? 'biking' : 'walking');
+    }
+  };
+
+  const cycleMapStyle = () => {
+    const styles = ['osm', 'outdoors', 'cycle'];
+    const currentIndex = styles.indexOf(mapStyle);
+    const nextIndex = (currentIndex + 1) % styles.length;
+    setMapStyle(styles[nextIndex]);
+  };
+
+  const getMapStyleLabel = () => {
+    switch (mapStyle) {
+      case 'osm': return 'Standard';
+      case 'outdoors': return 'Outdoors';
+      case 'cycle': return 'Cycle';
+      default: return 'Standard';
+    }
+  };
+
+  const recenterMap = () => {
+    if (webViewRef.current && location) {
+      webViewRef.current.injectJavaScript(`
+        recenterMap(${location.latitude}, ${location.longitude});
+        true;
+      `);
+    }
+  };
+
+  // Cache ALL map styles at ALL zoom levels
+  // Tile cache directory
+  const TILE_CACHE_DIR = `${FileSystem.documentDirectory}tile_cache/`;
+
+  // Ensure cache directory exists
+  const ensureCacheDir = async () => {
+    const dirInfo = await FileSystem.getInfoAsync(TILE_CACHE_DIR);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(TILE_CACHE_DIR, { intermediates: true });
+    }
+  };
+
+  // Get tile file path
+  const getTilePath = (style, z, x, y) => {
+    return `${TILE_CACHE_DIR}${style}_${z}_${x}_${y}.png`;
+  };
+
+  // Check if tile is cached
+  const isTileCached = async (style, z, x, y) => {
+    const path = getTilePath(style, z, x, y);
+    const info = await FileSystem.getInfoAsync(path);
+    return info.exists;
+  };
+
+  // Download and cache a single tile
+  const cacheTile = async (style, z, x, y, url) => {
+    const path = getTilePath(style, z, x, y);
+    try {
+      const downloadResult = await FileSystem.downloadAsync(url, path);
+      return downloadResult.status === 200;
+    } catch (e) {
+      console.log('Tile download failed:', e);
+      return false;
+    }
+  };
+
+  // Get cached tile as base64
+  const getCachedTileBase64 = async (style, z, x, y) => {
+    const path = getTilePath(style, z, x, y);
+    try {
+      const base64 = await FileSystem.readAsStringAsync(path, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return `data:image/png;base64,${base64}`;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Calculate tiles needed for current bounds
+  // Note: OSM (Standard) is excluded from caching due to tile usage policy restrictions
+  const calculateTiles = (bounds, minZoom, maxZoom) => {
+    const tiles = [];
+    const styles = ['outdoors', 'cycle']; // OSM excluded - doesn't allow bulk caching
+    const subdomains = ['a', 'b', 'c'];
+    
+    const tileUrls = {
+      outdoors: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+      cycle: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png'
+    };
+    
+    const styleMaxZooms = { outdoors: 17, cycle: 19 };
+
+    styles.forEach(style => {
+      const effectiveMaxZoom = Math.min(maxZoom, styleMaxZooms[style]);
+      
+      for (let z = minZoom; z <= effectiveMaxZoom; z++) {
+        // Convert lat/lng bounds to tile coordinates
+        const nwX = Math.floor((bounds.west + 180) / 360 * Math.pow(2, z));
+        const nwY = Math.floor((1 - Math.log(Math.tan(bounds.north * Math.PI / 180) + 1 / Math.cos(bounds.north * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
+        const seX = Math.floor((bounds.east + 180) / 360 * Math.pow(2, z));
+        const seY = Math.floor((1 - Math.log(Math.tan(bounds.south * Math.PI / 180) + 1 / Math.cos(bounds.south * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
+        
+        for (let x = nwX; x <= seX; x++) {
+          for (let y = nwY; y <= seY; y++) {
+            const subdomain = subdomains[tiles.length % 3];
+            const url = tileUrls[style]
+              .replace('{s}', subdomain)
+              .replace('{z}', z)
+              .replace('{x}', x)
+              .replace('{y}', y);
+            
+            tiles.push({ style, z, x, y, url });
+          }
+        }
+      }
+    });
+    
+    return tiles;
+  };
+
+  // Main caching function - toggle start/stop
+  const cacheAllMaps = async () => {
+    if (isCaching) {
+      // Stop caching
+      cachingCancelled.current = true;
+      return;
+    }
+    
+    // Get current map bounds from WebView
+    webViewRef.current?.injectJavaScript(`
+      var bounds = map.getBounds();
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'cacheBounds',
+        bounds: {
+          north: bounds.getNorth(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          west: bounds.getWest()
+        }
+      }));
+      true;
+    `);
+  };
+
+  const startCaching = async (bounds) => {
+    setIsCaching(true);
+    cachingCancelled.current = false;
+    await ensureCacheDir();
+    
+    const tiles = calculateTiles(bounds, 10, 18);
+    const total = tiles.length;
+    let cached = 0;
+    let skipped = 0;
+    
+    setCacheProgress({ current: 0, total });
+    
+    // Process tiles in batches for better performance
+    const BATCH_SIZE = 10;
+    
+    for (let i = 0; i < tiles.length; i += BATCH_SIZE) {
+      // Check for cancellation
+      if (cachingCancelled.current) {
+        break;
+      }
+      
+      const batch = tiles.slice(i, i + BATCH_SIZE);
+      
+      await Promise.all(batch.map(async (tile) => {
+        if (cachingCancelled.current) return;
+        
+        const alreadyCached = await isTileCached(tile.style, tile.z, tile.x, tile.y);
+        if (alreadyCached) {
+          skipped++;
+        } else {
+          await cacheTile(tile.style, tile.z, tile.x, tile.y, tile.url);
+          cached++;
+        }
+      }));
+      
+      setCacheProgress({ current: i + batch.length, total });
+    }
+    
+    setIsCaching(false);
+    setCacheProgress({ current: 0, total: 0 });
+    
+    // Only show success modal if not cancelled
+    if (!cachingCancelled.current) {
+      setSuccessModalContent({
+        title: 'Maps Cached',
+        message: `Downloaded ${cached} tiles for Outdoors & Cycle maps.\n${skipped} tiles were already cached.\n\nNote: Standard (OSM) maps are not cached due to usage policy.`,
+        icon: 'cache'
+      });
+      setShowSuccessModal(true);
+    }
+  };
+
+  // Handle tile request from WebView
+  const handleTileRequest = async (style, z, x, y, requestId) => {
+    const cached = await isTileCached(style, z, x, y);
+    if (cached) {
+      const base64 = await getCachedTileBase64(style, z, x, y);
+      if (base64) {
+        webViewRef.current?.injectJavaScript(`
+          window.handleCachedTile('${requestId}', '${base64}');
+          true;
+        `);
+        return;
+      }
+    }
+    // Not cached - tell WebView to use network
+    webViewRef.current?.injectJavaScript(`
+      window.handleCachedTile('${requestId}', null);
+      true;
+    `);
+  };
+
+  // Auto-cache a tile from base64 data URL
+  const autoCacheTile = async (style, z, x, y, dataUrl) => {
+    // Only cache if not already cached
+    const alreadyCached = await isTileCached(style, z, x, y);
+    if (alreadyCached) return;
+    
+    try {
+      await ensureCacheDir();
+      const path = getTilePath(style, z, x, y);
+      // Extract base64 data from data URL
+      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+      await FileSystem.writeAsStringAsync(path, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+    } catch (e) {
+      // Silently fail - auto-caching is best-effort
+      console.log('Auto-cache failed:', e.message);
+    }
+  };
+
+  const handleMapMessage = (event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'mapReady') {
+        setMapReady(true);
+      } else if (data.type === 'cacheBounds') {
+        startCaching(data.bounds);
+      } else if (data.type === 'tileRequest') {
+        handleTileRequest(data.style, data.z, data.x, data.y, data.requestId);
+      } else if (data.type === 'autoCacheTile') {
+        // Auto-cache tile that was loaded from network
+        autoCacheTile(data.style, data.z, data.x, data.y, data.dataUrl);
+      }
+    } catch (e) {
+      console.log('Map message error:', e);
+    }
+  };
+
+  const mapHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; }
+    html, body, #map { height: 100%; width: 100%; }
+    .dark-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
+    /* Custom zoom control styling */
+    .leaflet-control-zoom {
+      border: none !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+    }
+    .leaflet-control-zoom a {
+      width: 36px !important;
+      height: 36px !important;
+      line-height: 34px !important;
+      font-size: 28px !important;
+      font-weight: bold !important;
+      border: none !important;
+      text-align: center !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    .leaflet-control-zoom-in {
+      border-radius: 12px 12px 0 0 !important;
+    }
+    .leaflet-control-zoom-out {
+      border-radius: 0 0 12px 12px !important;
+    }
+    /* Light mode - use primary green color like recenter button */
+    .leaflet-control-zoom a {
+      background-color: #ffffff !important;
+      color: #2E7D32 !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background-color: #f5f5f5 !important;
+    }
+    /* App dark mode zoom controls */
+    .app-dark-mode .leaflet-control-zoom a {
+      background-color: #1E1E1E !important;
+      color: #4CAF50 !important;
+    }
+    .app-dark-mode .leaflet-control-zoom a:hover {
+      background-color: #2d2d2d !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    var map = L.map('map', {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([51.5074, -0.1278], 16);
+
+    // Store user's current location for zoom centering
+    var userLatLng = null;
+
+    // Custom zoom control that centers on user location
+    var CustomZoomControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function(map) {
+        var container = L.DomUtil.create('div', 'leaflet-control-zoom leaflet-bar leaflet-control');
+        
+        var zoomIn = L.DomUtil.create('a', 'leaflet-control-zoom-in', container);
+        zoomIn.innerHTML = '+';
+        zoomIn.href = '#';
+        zoomIn.title = 'Zoom in';
+        zoomIn.setAttribute('role', 'button');
+        zoomIn.setAttribute('aria-label', 'Zoom in');
+        
+        var zoomOut = L.DomUtil.create('a', 'leaflet-control-zoom-out', container);
+        zoomOut.innerHTML = '−';
+        zoomOut.href = '#';
+        zoomOut.title = 'Zoom out';
+        zoomOut.setAttribute('role', 'button');
+        zoomOut.setAttribute('aria-label', 'Zoom out');
+        
+        L.DomEvent.disableClickPropagation(container);
+        
+        L.DomEvent.on(zoomIn, 'click', function(e) {
+          L.DomEvent.preventDefault(e);
+          if (userLatLng) {
+            map.setZoomAround(userLatLng, map.getZoom() + 1);
+          } else {
+            map.zoomIn();
+          }
+        });
+        
+        L.DomEvent.on(zoomOut, 'click', function(e) {
+          L.DomEvent.preventDefault(e);
+          if (userLatLng) {
+            map.setZoomAround(userLatLng, map.getZoom() - 1);
+          } else {
+            map.zoomOut();
+          }
+        });
+        
+        return container;
+      }
+    });
+    
+    map.addControl(new CustomZoomControl());
+
+    var tileUrls = {
+      osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      outdoors: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+      cycle: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png'
+    };
+
+    var maxZooms = {
+      osm: 19,
+      outdoors: 17,
+      cycle: 19
+    };
+
+    // Pending tile requests
+    var pendingTileRequests = {};
+    var requestIdCounter = 0;
+
+    // Custom tile layer that checks cache first
+    var CachedTileLayer = L.TileLayer.extend({
+      styleName: 'osm',
+      
+      initialize: function(url, options, styleName) {
+        this.styleName = styleName;
+        L.TileLayer.prototype.initialize.call(this, url, options);
+      },
+      
+      createTile: function(coords, done) {
+        var tile = document.createElement('img');
+        var url = this.getTileUrl(coords);
+        var style = this.styleName;
+        var requestId = 'tile_' + (requestIdCounter++);
+        
+        tile.alt = '';
+        tile.setAttribute('role', 'presentation');
+        
+        // Request tile from React Native cache - include coords for auto-caching
+        pendingTileRequests[requestId] = {
+          tile: tile,
+          url: url,
+          done: done,
+          style: style,
+          z: coords.z,
+          x: coords.x,
+          y: coords.y
+        };
+        
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'tileRequest',
+          style: style,
+          z: coords.z,
+          x: coords.x,
+          y: coords.y,
+          requestId: requestId
+        }));
+        
+        // Timeout fallback - if no response in 2000ms, use network
+        setTimeout(function() {
+          if (pendingTileRequests[requestId]) {
+            var req = pendingTileRequests[requestId];
+            delete pendingTileRequests[requestId];
+            req.tile.crossOrigin = 'anonymous';
+            req.tile.onload = function() { 
+              done(null, req.tile);
+              // Try to auto-cache on timeout fallback too
+              try {
+                var canvas = document.createElement('canvas');
+                canvas.width = req.tile.naturalWidth || 256;
+                canvas.height = req.tile.naturalHeight || 256;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(req.tile, 0, 0);
+                var dataUrl = canvas.toDataURL('image/png');
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  type: 'autoCacheTile',
+                  style: req.style,
+                  z: req.z,
+                  x: req.x,
+                  y: req.y,
+                  dataUrl: dataUrl
+                }));
+              } catch (e) {}
+            };
+            req.tile.onerror = function(e) { done(e, req.tile); };
+            req.tile.src = req.url;
+          }
+        }, 2000);
+        
+        return tile;
+      }
+    });
+
+    // Handle cached tile response from React Native
+    window.handleCachedTile = function(requestId, base64Data) {
+      var req = pendingTileRequests[requestId];
+      if (!req) return;
+      delete pendingTileRequests[requestId];
+      
+      if (base64Data) {
+        // Use cached tile
+        req.tile.onload = function() { req.done(null, req.tile); };
+        req.tile.onerror = function(e) { req.done(e, req.tile); };
+        req.tile.src = base64Data;
+      } else {
+        // Not cached - use network and auto-cache on load
+        req.tile.crossOrigin = 'anonymous';
+        req.tile.onload = function() { 
+          req.done(null, req.tile);
+          // Auto-cache this tile after successful network load
+          try {
+            var canvas = document.createElement('canvas');
+            canvas.width = req.tile.naturalWidth || 256;
+            canvas.height = req.tile.naturalHeight || 256;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(req.tile, 0, 0);
+            var dataUrl = canvas.toDataURL('image/png');
+            // Send to React Native for caching (same zoom level only)
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'autoCacheTile',
+              style: req.style,
+              z: req.z,
+              x: req.x,
+              y: req.y,
+              dataUrl: dataUrl
+            }));
+          } catch (e) {
+            // Cross-origin tiles may fail canvas export - that's OK
+          }
+        };
+        req.tile.onerror = function(e) { req.done(e, req.tile); };
+        req.tile.src = req.url;
+      }
+    };
+
+    var tileLayers = {
+      osm: new CachedTileLayer(tileUrls.osm, { maxZoom: 19, crossOrigin: true }, 'osm'),
+      outdoors: new CachedTileLayer(tileUrls.outdoors, { maxZoom: 17, crossOrigin: true }, 'outdoors'),
+      cycle: new CachedTileLayer(tileUrls.cycle, { maxZoom: 19, crossOrigin: true }, 'cycle')
+    };
+
+    var currentStyle = 'osm';
+    var currentLayer = tileLayers.osm;
+    currentLayer.addTo(map);
+    var isDarkMode = false;
+    var userHasPanned = false;
+    var bottomPanelRatio = 0.35;
+
+    var userMarker = null;
+    var userCircle = null;
+    var routeLine = null;
+    var startMarker = null;
+
+    map.on('dragstart', function() {
+      userHasPanned = true;
+    });
+
+    function setDarkMode(dark) {
+      isDarkMode = dark;
+      var mapPane = document.querySelector('.leaflet-tile-pane');
+      if (mapPane) {
+        if (dark) {
+          mapPane.classList.add('dark-tiles');
+        } else {
+          mapPane.classList.remove('dark-tiles');
+        }
+      }
+    }
+
+    function setAppDarkMode(dark) {
+      // Toggle app dark mode class on body for zoom controls (separate from map tiles)
+      if (dark) {
+        document.body.classList.add('app-dark-mode');
+      } else {
+        document.body.classList.remove('app-dark-mode');
+      }
+    }
+
+    function getOffsetCenter(latlng) {
+      var mapHeight = map.getSize().y;
+      var offsetPixels = (mapHeight * bottomPanelRatio) / 2;
+      var point = map.latLngToContainerPoint(latlng);
+      var offsetPoint = L.point(point.x, point.y + offsetPixels);
+      return map.containerPointToLatLng(offsetPoint);
+    }
+
+    function updateLocation(lat, lng, shouldFollow) {
+      var latlng = L.latLng(lat, lng);
+      userLatLng = latlng; // Store for zoom centering
+      
+      if (userMarker) {
+        userMarker.setLatLng(latlng);
+        userCircle.setLatLng(latlng);
+      } else {
+        userMarker = L.circleMarker(latlng, {
+          radius: 10,
+          fillColor: '#4285F4',
+          color: '#fff',
+          weight: 3,
+          fillOpacity: 1,
+          zIndexOffset: 1000
+        }).addTo(map);
+        
+        userCircle = L.circle(latlng, {
+          radius: 30,
+          fillColor: '#4285F4',
+          color: '#4285F4',
+          weight: 1,
+          fillOpacity: 0.2
+        }).addTo(map);
+        
+        // Initial view with offset
+        var offsetCenter = getOffsetCenter(latlng);
+        map.setView(offsetCenter, 16);
+      }
+      
+      // Auto-follow only if user hasn't manually panned away
+      if (shouldFollow && !userHasPanned) {
+        var offsetCenter = getOffsetCenter(latlng);
+        map.setView(offsetCenter, map.getZoom(), { animate: true, duration: 0.3 });
+      }
+    }
+
+    function recenterMap(lat, lng) {
+      var latlng = L.latLng(lat, lng);
+      userHasPanned = false; // Clear the pan flag when user taps recenter
+      var offsetCenter = getOffsetCenter(latlng);
+      map.setView(offsetCenter, map.getZoom(), { animate: true });
+    }
+
+    function updateRoute(coords, color) {
+      var latlngs = coords.map(function(c) { 
+        return [c.latitude, c.longitude]; 
+      });
+      
+      if (routeLine) {
+        routeLine.setLatLngs(latlngs);
+        routeLine.setStyle({ color: color });
+      } else {
+        routeLine = L.polyline(latlngs, {
+          color: color,
+          weight: 5,
+          opacity: 0.8
+        }).addTo(map);
+      }
+      
+      if (latlngs.length > 0 && !startMarker) {
+        startMarker = L.circleMarker(latlngs[0], {
+          radius: 10,
+          fillColor: '#4CAF50',
+          color: '#fff',
+          weight: 3,
+          fillOpacity: 1
+        }).addTo(map);
+      }
+    }
+
+    function clearRoute() {
+      if (routeLine) {
+        map.removeLayer(routeLine);
+        routeLine = null;
+      }
+      if (startMarker) {
+        map.removeLayer(startMarker);
+        startMarker = null;
+      }
+    }
+
+    function changeMapStyle(style) {
+      map.removeLayer(currentLayer);
+      currentStyle = style;
+      currentLayer = tileLayers[style] || tileLayers.osm;
+      currentLayer.addTo(map);
+      setDarkMode(isDarkMode);
+    }
+
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' }));
+  </script>
+</body>
+</html>
+  `;
+
+  const styles = createStyles(theme);
+
+  if (!hasPermission) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+          Requesting permissions...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <WebView
+        ref={webViewRef}
+        source={{ html: mapHtml }}
+        style={styles.map}
+        onMessage={handleMapMessage}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        cacheEnabled={true}
+        cacheMode="LOAD_CACHE_ELSE_NETWORK"
+        startInLoadingState={true}
+        renderLoading={() => (
+          <View style={[styles.mapLoading, { backgroundColor: theme.surface }]}>
+            <ActivityIndicator size="large" color={theme.primary} />
+            <Text style={{ color: theme.text }}>Loading map...</Text>
+          </View>
+        )}
+      />
+
+      {/* Recenter button */}
+      <TouchableOpacity 
+        style={[styles.recenterButton, { backgroundColor: theme.cardBg }]}
+        onPress={recenterMap}
+      >
+        <RecenterIcon size={24} color={theme.primary} />
+      </TouchableOpacity>
+
+      <View style={[styles.controlsContainer, { backgroundColor: theme.overlay }]}>
+        {/* Activity Type Selector - HIDDEN when tracking */}
+        {!isTracking && (
+          <View style={styles.activitySelector}>
+            <TouchableOpacity
+              style={[
+                styles.activityButton,
+                { borderColor: theme.border, backgroundColor: theme.cardBg },
+                activityType === 'walking' && { borderColor: theme.primary, backgroundColor: theme.primaryLight },
+              ]}
+              onPress={toggleActivityType}
+            >
+              <WalkingIcon size={28} color={activityType === 'walking' ? theme.primary : theme.icon} />
+              <Text style={[styles.activityText, { color: theme.text }]}>Walking</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.activityButton,
+                { borderColor: theme.border, backgroundColor: theme.cardBg },
+                activityType === 'biking' && { borderColor: theme.primary, backgroundColor: theme.primaryLight },
+              ]}
+              onPress={toggleActivityType}
+            >
+              <BikingIcon size={28} color={activityType === 'biking' ? theme.primary : theme.icon} />
+              <Text style={[styles.activityText, { color: theme.text }]}>Biking</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Stats display */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statBox, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Distance</Text>
+            <Text style={[styles.statValue, { color: theme.primary }]}>{formatDistance(distance, distanceUnit)}</Text>
+          </View>
+          <View style={[styles.statBox, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Duration</Text>
+            <Text style={[styles.statValue, { color: theme.primary }]}>{formatDuration(duration)}</Text>
+          </View>
+          <View style={[styles.statBox, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+              {activityType === 'walking' ? 'Pace' : 'Speed'}
+            </Text>
+            <Text style={[styles.statValue, { color: theme.primary }]}>
+              {currentSpeed > 0 
+                ? (activityType === 'walking' 
+                    ? `${(60 / (currentSpeed * (distanceUnit === 'miles' ? 0.621371 : 1))).toFixed(1)}'/${distanceUnit === 'miles' ? 'mi' : 'km'}`
+                    : `${(currentSpeed * (distanceUnit === 'miles' ? 0.621371 : 1)).toFixed(1)} ${distanceUnit === 'miles' ? 'mph' : 'km/h'}`)
+                : '--'
+              }
+            </Text>
+          </View>
+        </View>
+
+        {/* Secondary stats */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statBox, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Elevation</Text>
+            <Text style={[styles.statValue, { color: theme.primary }]}>
+              {`${currentAltitude} m`}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={[styles.statBox, styles.mapStyleBox, { backgroundColor: theme.surface }]}
+            onPress={cycleMapStyle}
+          >
+            <MapIcon size={18} color={theme.icon} />
+            <Text style={[styles.mapStyleText, { color: theme.text }]}>{getMapStyleLabel()}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.statBox, styles.cacheBox, { backgroundColor: theme.surface }]}
+            onPress={cacheAllMaps}
+          >
+            <DownloadIcon size={18} color={isCaching ? theme.danger : theme.icon} />
+            <Text style={[styles.mapStyleText, { color: isCaching ? theme.danger : theme.text }]}>
+              {isCaching 
+                ? `Stop (${cacheProgress.current}/${cacheProgress.total})` 
+                : 'Cache Area'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Start/Pause button */}
+        {!isTracking ? (
+          <TouchableOpacity
+            style={[styles.trackButton, { backgroundColor: theme.primary }]}
+            onPress={startTracking}
+          >
+            <PlayIcon size={24} color="#fff" />
+            <Text style={styles.trackButtonText}>Start Tracking</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.trackButton, { backgroundColor: theme.pauseButton }]}
+            onPress={pauseTracking}
+          >
+            <PauseIcon size={24} color="#fff" />
+            <Text style={styles.trackButtonText}>Pause</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Pause Modal */}
+      <Modal
+        visible={showPauseModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPauseModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Activity Paused</Text>
+            <Text style={[styles.modalStats, { color: theme.textSecondary }]}>
+              {formatDistance(distance, distanceUnit)} • {formatDuration(duration)}
+            </Text>
+            
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: theme.primary }]}
+              onPress={resumeTracking}
+            >
+              <PlayIcon size={20} color="#fff" />
+              <Text style={styles.modalButtonText}>Resume</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#2196F3' }]}
+              onPress={saveTracking}
+            >
+              <StopIcon size={20} color="#fff" />
+              <Text style={styles.modalButtonText}>Save Activity</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: theme.danger }]}
+              onPress={discardTracking}
+            >
+              <Text style={styles.modalButtonText}>Discard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success Modal - styled confirmation for saves and caching */}
+      <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.successModalContent, { backgroundColor: theme.cardBg }]}>
+            {successModalContent.icon === 'check' ? (
+              <CheckIcon size={56} color={theme.primary} />
+            ) : (
+              <CacheSuccessIcon size={56} color="#2196F3" />
+            )}
+            <Text style={[styles.successModalTitle, { color: theme.text }]}>
+              {successModalContent.title}
+            </Text>
+            <Text style={[styles.successModalMessage, { color: theme.textSecondary }]}>
+              {successModalContent.message}
+            </Text>
+            <TouchableOpacity
+              style={[styles.successModalButton, { backgroundColor: theme.primary }]}
+              onPress={() => setShowSuccessModal(false)}
+            >
+              <Text style={styles.successModalButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Discard Confirmation Modal */}
+      <Modal
+        visible={showDiscardModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDiscardModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.successModalContent, { backgroundColor: theme.cardBg }]}>
+            <TrashIcon size={56} color={theme.danger} />
+            <Text style={[styles.successModalTitle, { color: theme.text }]}>
+              Discard Activity?
+            </Text>
+            <Text style={[styles.successModalMessage, { color: theme.textSecondary }]}>
+              This cannot be undone.
+            </Text>
+            <TouchableOpacity
+              style={[styles.successModalButton, { backgroundColor: theme.danger }]}
+              onPress={confirmDiscard}
+            >
+              <Text style={styles.successModalButtonText}>Discard</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.discardCancelButton, { backgroundColor: theme.surface }]}
+              onPress={() => {
+                setShowDiscardModal(false);
+                setShowPauseModal(true);
+              }}
+            >
+              <Text style={[styles.discardCancelButtonText, { color: theme.text }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* First Run Setup Modal */}
+      <Modal
+        visible={showSetupModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.setupModalContent, { backgroundColor: theme.cardBg }]}>
+            <View style={[styles.setupIconContainer, { backgroundColor: theme.primaryLight }]}>
+              <RecenterIcon size={40} color={theme.primary} />
+            </View>
+            <Text style={[styles.setupModalTitle, { color: theme.text }]}>
+              Welcome to TrailTrackerXP!
+            </Text>
+            <Text style={[styles.setupModalSubtitle, { color: theme.textSecondary }]}>
+              Let's get you set up
+            </Text>
+            
+            {/* Name Input */}
+            <View style={[styles.setupInputBox, { backgroundColor: theme.surface }]}>
+              <Text style={[styles.setupInputLabel, { color: theme.text }]}>
+                What's your name?
+              </Text>
+              <TextInput
+                style={[styles.setupInput, { 
+                  backgroundColor: theme.cardBg, 
+                  color: theme.text,
+                  borderColor: theme.border,
+                }]}
+                placeholder="Enter your name"
+                placeholderTextColor={theme.textSecondary}
+                value={setupUsername}
+                onChangeText={setSetupUsername}
+                autoCapitalize="words"
+                maxLength={20}
+              />
+            </View>
+            
+            {/* Battery Instructions */}
+            <View style={[styles.setupInstructionBox, { backgroundColor: theme.surface }]}>
+              <Text style={[styles.setupInstructionTitle, { color: theme.text }]}>
+                📱 Disable Battery Optimization
+              </Text>
+              <Text style={[styles.setupInstructionText, { color: theme.textSecondary }]}>
+                For tracking to work with the screen off:
+              </Text>
+              <View style={styles.setupSteps}>
+                <Text style={[styles.setupStep, { color: theme.text }]}>
+                  Settings → Apps → TrailTrackerXP → Battery → Unrestricted
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.setupButton, { backgroundColor: theme.primary }]}
+              onPress={openBatterySettings}
+            >
+              <Text style={styles.setupButtonText}>Open Settings</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.setupSecondaryButton, { backgroundColor: theme.surface }]}
+              onPress={completeSetup}
+            >
+              <Text style={[styles.setupSecondaryButtonText, { color: theme.text }]}>
+                {setupUsername.trim() ? `Let's Go, ${setupUsername.trim()}! 🚀` : 'Get Started'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const createStyles = (theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+  },
+  mapLoading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+  },
+  recenterButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  controlsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  activitySelector: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  activityButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    gap: 4,
+  },
+  activityText: {
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  statBox: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+  },
+  mapStyleBox: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  cacheBox: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  mapStyleText: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+  },
+  trackButton: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  trackButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontFamily: 'Inter_700Bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 8,
+  },
+  modalStats: {
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+    marginBottom: 24,
+  },
+  modalButton: {
+    flexDirection: 'row',
+    width: '100%',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+  },
+  successModalContent: {
+    width: '100%',
+    maxWidth: 300,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  successModalTitle: {
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    marginTop: 20,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  successModalMessage: {
+    fontSize: 15,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  successModalButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  successModalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+  },
+  discardCancelButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  discardCancelButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+  },
+  // Setup Modal Styles
+  setupModalContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  setupIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  setupModalTitle: {
+    fontSize: 24,
+    fontFamily: 'Inter_700Bold',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  setupModalSubtitle: {
+    fontSize: 15,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  setupInstructionBox: {
+    width: '100%',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  setupInputBox: {
+    width: '100%',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  setupInputLabel: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 10,
+  },
+  setupInput: {
+    width: '100%',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    fontSize: 16,
+    fontFamily: 'Inter_400Regular',
+  },
+  setupInstructionTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 8,
+  },
+  setupInstructionText: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  setupSteps: {
+    gap: 6,
+  },
+  setupStep: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 20,
+  },
+  setupButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  setupButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+  },
+  setupSecondaryButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  setupSecondaryButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+  },
+});
