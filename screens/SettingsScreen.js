@@ -244,7 +244,7 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
           <View style={styles.aboutRow}>
             <Text style={[styles.aboutLabel, { color: theme.textSecondary }]}>Version</Text>
-            <Text style={[styles.aboutValue, { color: theme.text }]}>0.2.4</Text>
+            <Text style={[styles.aboutValue, { color: theme.text }]}>1.0.0</Text>
           </View>
           
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
