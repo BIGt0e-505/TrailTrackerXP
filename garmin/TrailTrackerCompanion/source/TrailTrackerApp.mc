@@ -39,6 +39,9 @@ class TrailTrackerApp extends Application.AppBase {
             if (data.hasKey("activityType")) {
                 trackingData.activityType = data["activityType"] as Toybox.Lang.String;
             }
+            if (data.hasKey("distanceUnit")) {
+                trackingData.distanceUnit = data["distanceUnit"] as Toybox.Lang.String;
+            }
             if (data.hasKey("distance")) {
                 trackingData.distance = (data["distance"] as Toybox.Lang.Number).toFloat();
             }

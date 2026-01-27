@@ -85,6 +85,16 @@ class GarminBridgeManager {
   /**
    * Send tracking data to the watch
    * Call this periodically during tracking (every 1-2 seconds)
+   * 
+   * @param {Object} data - Tracking data object
+   * @param {boolean} data.isTracking - Whether tracking is active
+   * @param {boolean} data.isPaused - Whether tracking is paused
+   * @param {string} data.activityType - 'walking' or 'biking'
+   * @param {string} data.distanceUnit - 'miles' or 'km'
+   * @param {number} data.distance - Distance in the selected unit
+   * @param {number} data.duration - Duration in seconds
+   * @param {number} data.speed - Speed in the selected unit (mph or km/h)
+   * @param {number} data.altitude - Altitude in the selected unit (ft or m)
    */
   async sendTrackingUpdate(data) {
     if (!this.isInitialized || !GarminBridge) {
@@ -96,6 +106,7 @@ class GarminBridgeManager {
         isTracking: data.isTracking || false,
         isPaused: data.isPaused || false,
         activityType: data.activityType || 'walking',
+        distanceUnit: data.distanceUnit || 'miles',
         distance: data.distance || 0,
         duration: data.duration || 0,
         speed: data.speed || 0,

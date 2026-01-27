@@ -65,7 +65,7 @@ C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_Tr
     }
     [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 26; @symbol_functiondef = [onPhoneMessage,26,13,27]; @symbol_param<0> = [msg,26,28,31]; @symbol_param<0>_type<0> = [Communications,26,35,49]; @symbol_param<0>_type<1> = [PhoneAppMessage,26,50,65]; ]
     function onPhoneMessage(msg as Communications.PhoneAppMessage) as Void {
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_26_75_60_4_start:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_26_75_63_4_start:
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 27 8 ]
         symbol [ System %tmp.1 27 8 14 ];
         %tmp.1 = getm $.Toybox.System;
@@ -74,7 +74,7 @@ C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_Tr
         %tmp.3 = "Received message from phone";
         invoke %tmp.1 %tmp.2(%tmp.3);
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 29 8 ]
-        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_26_75_60_4_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_26_75_60_4_stop" ]
+        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_26_75_63_4_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_26_75_63_4_stop" ]
         %payload.1 = local;
         symbol [ payload %payload.1 29 12 19 ];
         %tmp.4 = lgetv %msg;
@@ -84,13 +84,13 @@ C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_Tr
         lputv %payload.1 %tmp.5;
         symbol [ payload %payload.1 29 12 19 ];
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 30 8 ]
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_59_8_if_stmt:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_62_8_if_stmt:
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_12_30_62_begin:
         %tmp.6 = lgetv %payload.1;
         symbol [ payload %tmp.6 30 12 19 ];
         %tmp.7 = null;
         %tmp.8 = ne %tmp.6 %tmp.7;
-        bf %tmp.8 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_59_8_if_end;
+        bf %tmp.8 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_62_8_if_end;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_31_30_62_true:
         %tmp.9 = lgetv %payload.1;
         symbol [ payload %tmp.9 30 31 38 ];
@@ -105,11 +105,11 @@ C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_Tr
         push %tmp.15;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_31_30_62_end:
         %tmp.16 = phi [%tmp.8 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_12_30_62_begin] [%tmp.15 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_31_30_62_true] [%tmp.16 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_31_30_62_end];
-        bf %tmp.16 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_59_8_if_end;
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_59_8_if_true:
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_74_59_8_start:
+        bf %tmp.16 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_62_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_62_8_if_true:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_74_62_8_start:
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 31 12 ]
-        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_74_59_8_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_74_59_8_stop" ]
+        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_74_62_8_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_74_62_8_stop" ]
         %data.2 = local;
         symbol [ data %data.2 31 16 20 ];
         %tmp.17 = lgetv %payload.1;
@@ -208,54 +208,54 @@ C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_Tr
         symbol [ data %tmp.47 42 16 20 ];
         symbol [ hasKey %tmp.48 42 21 27 ];
         %tmp.48 = getv function %tmp.47 :hasKey;
-        %tmp.49 = "distance";
+        %tmp.49 = "distanceUnit";
         %tmp.50 = invoke %tmp.47 %tmp.48(%tmp.49);
         bf %tmp.50 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_42_12_44_12_if_end;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_42_12_44_12_if_true:
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_42_41_44_12_start:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_42_45_44_12_start:
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 43 16 ]
         symbol [ trackingData %tmp.51 43 16 28 ];
         %tmp.51 = getv self :trackingData;
         %tmp.52 = lgetv %data.2;
-        symbol [ data %tmp.52 43 41 45 ];
-        %tmp.53 = "distance";
+        symbol [ data %tmp.52 43 44 48 ];
+        %tmp.53 = "distanceUnit";
         %tmp.54 = agetv %tmp.52 %tmp.53;
-        %tmp.55 = as %tmp.54 Toybox.Lang.Number;
-        symbol [ Toybox %tmp.55 43 61 67 ];
-        symbol [ Lang %tmp.55 43 68 72 ];
-        symbol [ Number %tmp.55 43 73 79 ];
-        symbol [ toFloat %tmp.56 43 81 88 ];
-        %tmp.56 = getv function %tmp.55 :toFloat;
-        %tmp.57 = invoke %tmp.55 %tmp.56();
-        symbol [ distance ? 43 29 37 ];
-        putv %tmp.51 :distance %tmp.57;
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_42_41_44_12_stop:
+        %tmp.55 = as %tmp.54 Toybox.Lang.String;
+        symbol [ Toybox %tmp.55 43 68 74 ];
+        symbol [ Lang %tmp.55 43 75 79 ];
+        symbol [ String %tmp.55 43 80 86 ];
+        symbol [ distanceUnit ? 43 29 41 ];
+        putv %tmp.51 :distanceUnit %tmp.55;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_42_45_44_12_stop:
         goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_42_12_44_12_if_end;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_42_12_44_12_if_end:
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 45 12 ]
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_45_12_47_12_if_stmt:
-        %tmp.58 = lgetv %data.2;
-        symbol [ data %tmp.58 45 16 20 ];
-        symbol [ hasKey %tmp.59 45 21 27 ];
-        %tmp.59 = getv function %tmp.58 :hasKey;
-        %tmp.60 = "duration";
-        %tmp.61 = invoke %tmp.58 %tmp.59(%tmp.60);
-        bf %tmp.61 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_45_12_47_12_if_end;
+        %tmp.56 = lgetv %data.2;
+        symbol [ data %tmp.56 45 16 20 ];
+        symbol [ hasKey %tmp.57 45 21 27 ];
+        %tmp.57 = getv function %tmp.56 :hasKey;
+        %tmp.58 = "distance";
+        %tmp.59 = invoke %tmp.56 %tmp.57(%tmp.58);
+        bf %tmp.59 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_45_12_47_12_if_end;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_45_12_47_12_if_true:
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_45_41_47_12_start:
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 46 16 ]
-        symbol [ trackingData %tmp.62 46 16 28 ];
-        %tmp.62 = getv self :trackingData;
-        %tmp.63 = lgetv %data.2;
-        symbol [ data %tmp.63 46 40 44 ];
-        %tmp.64 = "duration";
-        %tmp.65 = agetv %tmp.63 %tmp.64;
-        %tmp.66 = as %tmp.65 Toybox.Lang.Number;
-        symbol [ Toybox %tmp.66 46 60 66 ];
-        symbol [ Lang %tmp.66 46 67 71 ];
-        symbol [ Number %tmp.66 46 72 78 ];
-        symbol [ duration ? 46 29 37 ];
-        putv %tmp.62 :duration %tmp.66;
+        symbol [ trackingData %tmp.60 46 16 28 ];
+        %tmp.60 = getv self :trackingData;
+        %tmp.61 = lgetv %data.2;
+        symbol [ data %tmp.61 46 41 45 ];
+        %tmp.62 = "distance";
+        %tmp.63 = agetv %tmp.61 %tmp.62;
+        %tmp.64 = as %tmp.63 Toybox.Lang.Number;
+        symbol [ Toybox %tmp.64 46 61 67 ];
+        symbol [ Lang %tmp.64 46 68 72 ];
+        symbol [ Number %tmp.64 46 73 79 ];
+        symbol [ toFloat %tmp.65 46 81 88 ];
+        %tmp.65 = getv function %tmp.64 :toFloat;
+        %tmp.66 = invoke %tmp.64 %tmp.65();
+        symbol [ distance ? 46 29 37 ];
+        putv %tmp.60 :distance %tmp.66;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_45_41_47_12_stop:
         goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_45_12_47_12_if_end;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_45_12_47_12_if_end:
@@ -265,195 +265,222 @@ C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_Tr
         symbol [ data %tmp.67 48 16 20 ];
         symbol [ hasKey %tmp.68 48 21 27 ];
         %tmp.68 = getv function %tmp.67 :hasKey;
-        %tmp.69 = "speed";
+        %tmp.69 = "duration";
         %tmp.70 = invoke %tmp.67 %tmp.68(%tmp.69);
         bf %tmp.70 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_48_12_50_12_if_end;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_48_12_50_12_if_true:
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_48_38_50_12_start:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_48_41_50_12_start:
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 49 16 ]
         symbol [ trackingData %tmp.71 49 16 28 ];
         %tmp.71 = getv self :trackingData;
         %tmp.72 = lgetv %data.2;
-        symbol [ data %tmp.72 49 38 42 ];
-        %tmp.73 = "speed";
+        symbol [ data %tmp.72 49 40 44 ];
+        %tmp.73 = "duration";
         %tmp.74 = agetv %tmp.72 %tmp.73;
         %tmp.75 = as %tmp.74 Toybox.Lang.Number;
-        symbol [ Toybox %tmp.75 49 55 61 ];
-        symbol [ Lang %tmp.75 49 62 66 ];
-        symbol [ Number %tmp.75 49 67 73 ];
-        symbol [ toFloat %tmp.76 49 75 82 ];
-        %tmp.76 = getv function %tmp.75 :toFloat;
-        %tmp.77 = invoke %tmp.75 %tmp.76();
-        symbol [ speed ? 49 29 34 ];
-        putv %tmp.71 :speed %tmp.77;
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_48_38_50_12_stop:
+        symbol [ Toybox %tmp.75 49 60 66 ];
+        symbol [ Lang %tmp.75 49 67 71 ];
+        symbol [ Number %tmp.75 49 72 78 ];
+        symbol [ duration ? 49 29 37 ];
+        putv %tmp.71 :duration %tmp.75;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_48_41_50_12_stop:
         goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_48_12_50_12_if_end;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_48_12_50_12_if_end:
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 51 12 ]
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_12_53_12_if_stmt:
-        %tmp.78 = lgetv %data.2;
-        symbol [ data %tmp.78 51 16 20 ];
-        symbol [ hasKey %tmp.79 51 21 27 ];
-        %tmp.79 = getv function %tmp.78 :hasKey;
-        %tmp.80 = "altitude";
-        %tmp.81 = invoke %tmp.78 %tmp.79(%tmp.80);
-        bf %tmp.81 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_12_53_12_if_end;
+        %tmp.76 = lgetv %data.2;
+        symbol [ data %tmp.76 51 16 20 ];
+        symbol [ hasKey %tmp.77 51 21 27 ];
+        %tmp.77 = getv function %tmp.76 :hasKey;
+        %tmp.78 = "speed";
+        %tmp.79 = invoke %tmp.76 %tmp.77(%tmp.78);
+        bf %tmp.79 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_12_53_12_if_end;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_12_53_12_if_true:
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_41_53_12_start:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_38_53_12_start:
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 52 16 ]
-        symbol [ trackingData %tmp.82 52 16 28 ];
-        %tmp.82 = getv self :trackingData;
-        %tmp.83 = lgetv %data.2;
-        symbol [ data %tmp.83 52 41 45 ];
-        %tmp.84 = "altitude";
-        %tmp.85 = agetv %tmp.83 %tmp.84;
-        %tmp.86 = as %tmp.85 Toybox.Lang.Number;
-        symbol [ Toybox %tmp.86 52 61 67 ];
-        symbol [ Lang %tmp.86 52 68 72 ];
-        symbol [ Number %tmp.86 52 73 79 ];
-        symbol [ toFloat %tmp.87 52 81 88 ];
-        %tmp.87 = getv function %tmp.86 :toFloat;
-        %tmp.88 = invoke %tmp.86 %tmp.87();
-        symbol [ altitude ? 52 29 37 ];
-        putv %tmp.82 :altitude %tmp.88;
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_41_53_12_stop:
+        symbol [ trackingData %tmp.80 52 16 28 ];
+        %tmp.80 = getv self :trackingData;
+        %tmp.81 = lgetv %data.2;
+        symbol [ data %tmp.81 52 38 42 ];
+        %tmp.82 = "speed";
+        %tmp.83 = agetv %tmp.81 %tmp.82;
+        %tmp.84 = as %tmp.83 Toybox.Lang.Number;
+        symbol [ Toybox %tmp.84 52 55 61 ];
+        symbol [ Lang %tmp.84 52 62 66 ];
+        symbol [ Number %tmp.84 52 67 73 ];
+        symbol [ toFloat %tmp.85 52 75 82 ];
+        %tmp.85 = getv function %tmp.84 :toFloat;
+        %tmp.86 = invoke %tmp.84 %tmp.85();
+        symbol [ speed ? 52 29 34 ];
+        putv %tmp.80 :speed %tmp.86;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_38_53_12_stop:
         goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_12_53_12_if_end;
 C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_51_12_53_12_if_end:
-[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 55 12 ]
-        symbol [ trackingData %tmp.89 55 12 24 ];
-        %tmp.89 = getv self :trackingData;
-        %tmp.90 = true;
-        symbol [ isConnected ? 55 25 36 ];
-        putv %tmp.89 :isConnected %tmp.90;
-[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 56 12 ]
-        symbol [ trackingData %tmp.91 56 12 24 ];
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 54 12 ]
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_54_12_56_12_if_stmt:
+        %tmp.87 = lgetv %data.2;
+        symbol [ data %tmp.87 54 16 20 ];
+        symbol [ hasKey %tmp.88 54 21 27 ];
+        %tmp.88 = getv function %tmp.87 :hasKey;
+        %tmp.89 = "altitude";
+        %tmp.90 = invoke %tmp.87 %tmp.88(%tmp.89);
+        bf %tmp.90 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_54_12_56_12_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_54_12_56_12_if_true:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_54_41_56_12_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 55 16 ]
+        symbol [ trackingData %tmp.91 55 16 28 ];
         %tmp.91 = getv self :trackingData;
-        symbol [ System %tmp.92 56 38 44 ];
-        %tmp.92 = getm $.Toybox.System;
-        symbol [ getTimer %tmp.93 56 45 53 ];
-        %tmp.93 = getv function %tmp.92 :getTimer;
-        %tmp.94 = invoke %tmp.92 %tmp.93();
-        symbol [ lastUpdate ? 56 25 35 ];
-        putv %tmp.91 :lastUpdate %tmp.94;
+        %tmp.92 = lgetv %data.2;
+        symbol [ data %tmp.92 55 41 45 ];
+        %tmp.93 = "altitude";
+        %tmp.94 = agetv %tmp.92 %tmp.93;
+        %tmp.95 = as %tmp.94 Toybox.Lang.Number;
+        symbol [ Toybox %tmp.95 55 61 67 ];
+        symbol [ Lang %tmp.95 55 68 72 ];
+        symbol [ Number %tmp.95 55 73 79 ];
+        symbol [ toFloat %tmp.96 55 81 88 ];
+        %tmp.96 = getv function %tmp.95 :toFloat;
+        %tmp.97 = invoke %tmp.95 %tmp.96();
+        symbol [ altitude ? 55 29 37 ];
+        putv %tmp.91 :altitude %tmp.97;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_54_41_56_12_stop:
+        goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_54_12_56_12_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_54_12_56_12_if_end:
 [ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 58 12 ]
-        symbol [ WatchUi %tmp.95 58 12 19 ];
-        %tmp.95 = getm $.Toybox.WatchUi;
-        symbol [ requestUpdate %tmp.96 58 20 33 ];
-        %tmp.96 = getv function %tmp.95 :requestUpdate;
-        invoke %tmp.95 %tmp.96();
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_74_59_8_stop:
-        goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_59_8_if_end;
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_59_8_if_end:
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_26_75_60_4_stop:
+        symbol [ trackingData %tmp.98 58 12 24 ];
+        %tmp.98 = getv self :trackingData;
+        %tmp.99 = true;
+        symbol [ isConnected ? 58 25 36 ];
+        putv %tmp.98 :isConnected %tmp.99;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 59 12 ]
+        symbol [ trackingData %tmp.100 59 12 24 ];
+        %tmp.100 = getv self :trackingData;
+        symbol [ System %tmp.101 59 38 44 ];
+        %tmp.101 = getm $.Toybox.System;
+        symbol [ getTimer %tmp.102 59 45 53 ];
+        %tmp.102 = getv function %tmp.101 :getTimer;
+        %tmp.103 = invoke %tmp.101 %tmp.102();
+        symbol [ lastUpdate ? 59 25 35 ];
+        putv %tmp.100 :lastUpdate %tmp.103;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 61 12 ]
+        symbol [ WatchUi %tmp.104 61 12 19 ];
+        %tmp.104 = getm $.Toybox.WatchUi;
+        symbol [ requestUpdate %tmp.105 61 20 33 ];
+        %tmp.105 = getv function %tmp.104 :requestUpdate;
+        invoke %tmp.104 %tmp.105();
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_74_62_8_stop:
+        goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_62_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_30_8_62_8_if_end:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_26_75_63_4_stop:
     }
-    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 62; @symbol_functiondef = [getInitialView,62,13,27]; ]
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 65; @symbol_functiondef = [getInitialView,65,13,27]; ]
     function getInitialView() {
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_62_30_64_4_start:
-[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 63 8 ]
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_65_30_67_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 66 8 ]
         %tmp.1 = newa 2;
-        symbol [ TrailTrackerView %tmp.5 63 20 36 ];
+        symbol [ TrailTrackerView %tmp.5 66 20 36 ];
         %tmp.5 = getv ? :TrailTrackerView;
         %tmp.2 = newc %tmp.5 ();
         %tmp.6 = dup %tmp.1;
         %tmp.7 = aputv %tmp.6 0 %tmp.2;
-        symbol [ TrailTrackerDelegate %tmp.11 63 44 64 ];
+        symbol [ TrailTrackerDelegate %tmp.11 66 44 64 ];
         %tmp.11 = getv ? :TrailTrackerDelegate;
         %tmp.8 = newc %tmp.11 ();
         %tmp.12 = dup %tmp.7;
         %tmp.13 = aputv %tmp.12 1 %tmp.8;
         ret %tmp.13;
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_62_30_64_4_stop:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_65_30_67_4_stop:
     }
 }
-[ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 68; @symbol_functiondef = [sendCommandToPhone,68,9,27]; @symbol_param<0> = [command,68,28,35]; ]
+[ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 71; @symbol_functiondef = [sendCommandToPhone,71,9,27]; @symbol_param<0> = [command,71,28,35]; ]
 function sendCommandToPhone(command) {
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_68_37_76_0_start:
-[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 69 4 ]
-    [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_68_37_76_0_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_68_37_76_0_stop" ]
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_71_37_79_0_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 72 4 ]
+    [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_71_37_79_0_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_71_37_79_0_stop" ]
     %data.1 = local;
-    symbol [ data %data.1 69 8 12 ];
+    symbol [ data %data.1 72 8 12 ];
     %tmp.1 = newd 2;
     %tmp.2 = "command";
     %tmp.3 = lgetv %command;
-    symbol [ command %tmp.3 70 21 28 ];
+    symbol [ command %tmp.3 73 21 28 ];
     %tmp.4 = dup %tmp.1;
     %tmp.5 = aputv %tmp.4 %tmp.2 %tmp.3;
     %tmp.6 = "activityType";
-    symbol [ trackingData %tmp.8 71 26 38 ];
+    symbol [ trackingData %tmp.8 74 26 38 ];
     %tmp.8 = getv ? :trackingData;
-    symbol [ activityType %tmp.9 71 39 51 ];
+    symbol [ activityType %tmp.9 74 39 51 ];
     %tmp.9 = getv %tmp.8 :activityType;
     %tmp.10 = dup %tmp.5;
     %tmp.11 = aputv %tmp.10 %tmp.6 %tmp.9;
     lputv %data.1 %tmp.11;
-    symbol [ data %data.1 69 8 12 ];
-[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 74 4 ]
-    symbol [ Communications %tmp.12 74 4 18 ];
+    symbol [ data %data.1 72 8 12 ];
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 77 4 ]
+    symbol [ Communications %tmp.12 77 4 18 ];
     %tmp.12 = getm $.Toybox.Communications;
-    symbol [ transmit %tmp.13 74 19 27 ];
+    symbol [ transmit %tmp.13 77 19 27 ];
     %tmp.13 = getv function %tmp.12 :transmit;
     %tmp.14 = lgetv %data.1;
-    symbol [ data %tmp.14 74 28 32 ];
+    symbol [ data %tmp.14 77 28 32 ];
     %tmp.15 = null;
-    symbol [ CommListener %tmp.19 74 44 56 ];
+    symbol [ CommListener %tmp.19 77 44 56 ];
     %tmp.19 = getv ? :CommListener;
     %tmp.16 = newc %tmp.19 ();
     invoke %tmp.12 %tmp.13(%tmp.14, %tmp.15, %tmp.16);
-[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 75 4 ]
-    symbol [ System %tmp.20 75 4 10 ];
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 78 4 ]
+    symbol [ System %tmp.20 78 4 10 ];
     %tmp.20 = getm $.Toybox.System;
-    symbol [ println %tmp.21 75 11 18 ];
+    symbol [ println %tmp.21 78 11 18 ];
     %tmp.21 = getv function %tmp.20 :println;
     %tmp.22 = "Sent command to phone: ";
     %tmp.23 = lgetv %command;
-    symbol [ command %tmp.23 75 47 54 ];
+    symbol [ command %tmp.23 78 47 54 ];
     %tmp.24 = add %tmp.22 %tmp.23;
     invoke %tmp.20 %tmp.21(%tmp.24);
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_68_37_76_0_stop:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_71_37_79_0_stop:
 }
-[ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 78; @symbol_classdef = [CommListener,78,6,18]; @symbol_extends<0> = [Communications,78,27,41]; @symbol_extends<1> = [ConnectionListener,78,42,60]; ]
+[ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 81; @symbol_classdef = [CommListener,81,6,18]; @symbol_extends<0> = [Communications,81,27,41]; @symbol_extends<1> = [ConnectionListener,81,42,60]; ]
 class CommListener extends Communications.ConnectionListener {
-    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 78; ]
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 81; ]
     <init> {
     }
-    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 78; ]
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 81; ]
     static
     <init> {
     }
-    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 79; @symbol_functiondef = [initialize,79,13,23]; ]
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 82; @symbol_functiondef = [initialize,82,13,23]; ]
     function initialize() as Void {
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_79_26_81_4_start:
-[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 80 8 ]
-        symbol [ ConnectionListener %tmp.2 80 8 26 ];
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_82_26_84_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 83 8 ]
+        symbol [ ConnectionListener %tmp.2 83 8 26 ];
         %tmp.2 = getv ? :ConnectionListener;
-        symbol [ initialize %tmp.3 80 27 37 ];
+        symbol [ initialize %tmp.3 83 27 37 ];
         %tmp.3 = getv function %tmp.2 :initialize;
         invoke %tmp.2 %tmp.3();
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_79_26_81_4_stop:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_82_26_84_4_stop:
     }
-    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 83; @symbol_functiondef = [onComplete,83,13,23]; ]
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 86; @symbol_functiondef = [onComplete,86,13,23]; ]
     function onComplete() {
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_83_26_85_4_start:
-[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 84 8 ]
-        symbol [ System %tmp.1 84 8 14 ];
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_86_26_88_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 87 8 ]
+        symbol [ System %tmp.1 87 8 14 ];
         %tmp.1 = getm $.Toybox.System;
-        symbol [ println %tmp.2 84 15 22 ];
+        symbol [ println %tmp.2 87 15 22 ];
         %tmp.2 = getv function %tmp.1 :println;
         %tmp.3 = "Message sent successfully";
         invoke %tmp.1 %tmp.2(%tmp.3);
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_83_26_85_4_stop:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_86_26_88_4_stop:
     }
-    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 87; @symbol_functiondef = [onError,87,13,20]; ]
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 90; @symbol_functiondef = [onError,90,13,20]; ]
     function onError() {
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_87_23_89_4_start:
-[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 88 8 ]
-        symbol [ System %tmp.1 88 8 14 ];
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_90_23_92_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc" 91 8 ]
+        symbol [ System %tmp.1 91 8 14 ];
         %tmp.1 = getm $.Toybox.System;
-        symbol [ println %tmp.2 88 15 22 ];
+        symbol [ println %tmp.2 91 15 22 ];
         %tmp.2 = getv function %tmp.1 :println;
         %tmp.3 = "Failed to send message";
         invoke %tmp.1 %tmp.2(%tmp.3);
-C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_87_23_89_4_stop:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrailTrackerApp_mc_90_23_92_4_stop:
     }
 }
 [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrailTrackerApp.mc"; @line = 1; ]

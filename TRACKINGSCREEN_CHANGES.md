@@ -154,23 +154,19 @@ With this:
       return;
     }
     
-    // Send update immediately
+    // Send update function
     const sendUpdate = () => {
-      // Convert distance to miles if needed (watch always shows miles)
-      const distanceInMiles = distanceUnit === 'km' ? distance / 1.60934 : distance;
-      // Convert altitude to feet if needed
-      const altitudeInFeet = distanceUnit === 'km' ? currentAltitude * 3.28084 : currentAltitude;
-      // Convert speed to mph
-      const speedInMph = distanceUnit === 'km' ? currentSpeed / 1.60934 : currentSpeed;
-      
+      // Send data in the user's preferred units
+      // distanceUnit is 'miles' or 'km' from the app settings
       garminBridge.sendTrackingUpdate({
         isTracking,
         isPaused,
         activityType,
-        distance: distanceInMiles,
+        distanceUnit: distanceUnit,  // 'miles' or 'km'
+        distance: distance,          // Already in user's preferred unit
         duration,
-        speed: speedInMph,
-        altitude: altitudeInFeet,
+        speed: currentSpeed,         // Already in user's preferred unit
+        altitude: currentAltitude,   // Already in user's preferred unit
       });
     };
     
@@ -201,16 +197,13 @@ With this:
 
 ---
 
-## Quick Test
+## Notes on Units
 
-After making these changes and rebuilding:
+The watch app now respects the `distanceUnit` setting from TrailTrackerXP:
 
-1. Open TrailTrackerXP on phone
-2. Open TrailTrackerCompanion on watch
-3. Check Android logs: `adb logcat | grep -i garmin`
-4. You should see "Garmin bridge initialized" if everything is working
+| Setting | Distance | Speed | Pace | Altitude |
+|---------|----------|-------|------|----------|
+| `miles` | mi | mph | /mi | ft |
+| `km` | km | km/h | /km | m |
 
-The watch should show:
-- Orange dot → Garmin Connect not available or app not found
-- Green dot → Connected and ready
-- Live data → When phone app is tracking
+The phone sends data already converted to the user's preferred unit, and the watch displays it accordingly.
