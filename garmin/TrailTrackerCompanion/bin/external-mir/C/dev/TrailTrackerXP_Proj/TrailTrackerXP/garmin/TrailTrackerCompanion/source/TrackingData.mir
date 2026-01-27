@@ -1,0 +1,440 @@
+[ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 1; @symbol_usingdef<0> = [Toybox,1,6,12]; @symbol_usingdef<1> = [System,1,13,19]; ]
+using Toybox.System;
+[ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 2; @symbol_usingdef<0> = [Toybox,2,6,12]; @symbol_usingdef<1> = [Math,2,13,17]; ]
+using Toybox.Math;
+[ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 4; @symbol_classdef = [TrackingData,4,6,18]; ]
+class TrackingData {
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 4; ]
+    <init> {
+    }
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 4; ]
+    static
+    <init> {
+    }
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 5; @position = 8; @symbol_vardef = [isConnected,5,8,19]; ]
+    var isConnected = false;
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 6; @position = 8; @symbol_vardef = [lastUpdate,6,8,18]; ]
+    var lastUpdate = 0;
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 8; @position = 8; @symbol_vardef = [isTracking,8,8,18]; ]
+    var isTracking = false;
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 9; @position = 8; @symbol_vardef = [isPaused,9,8,16]; ]
+    var isPaused = false;
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 11; @position = 8; @symbol_vardef = [activityType,11,8,20]; ]
+    var activityType = "walking";
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 13; @position = 8; @symbol_vardef = [distance,13,8,16]; ]
+    var distance = 0.0;
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 14; @position = 8; @symbol_vardef = [duration,14,8,16]; ]
+    var duration = 0;
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 15; @position = 8; @symbol_vardef = [speed,15,8,13]; ]
+    var speed = 0.0;
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 16; @position = 8; @symbol_vardef = [altitude,16,8,16]; ]
+    var altitude = 0.0;
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 18; @symbol_functiondef = [initialize,18,13,23]; ]
+    function initialize() as Void {
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_18_26_27_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 19 8 ]
+        %tmp.1 = false;
+        symbol [ isConnected ? 19 8 19 ];
+        putv self :isConnected %tmp.1;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 20 8 ]
+        %tmp.2 = false;
+        symbol [ isTracking ? 20 8 18 ];
+        putv self :isTracking %tmp.2;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 21 8 ]
+        %tmp.3 = false;
+        symbol [ isPaused ? 21 8 16 ];
+        putv self :isPaused %tmp.3;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 22 8 ]
+        %tmp.4 = "walking";
+        symbol [ activityType ? 22 8 20 ];
+        putv self :activityType %tmp.4;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 23 8 ]
+        %tmp.5 = 0.0;
+        symbol [ distance ? 23 8 16 ];
+        putv self :distance %tmp.5;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 24 8 ]
+        %tmp.6 = 0;
+        symbol [ duration ? 24 8 16 ];
+        putv self :duration %tmp.6;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 25 8 ]
+        %tmp.7 = 0.0;
+        symbol [ speed ? 25 8 13 ];
+        putv self :speed %tmp.7;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 26 8 ]
+        %tmp.8 = 0.0;
+        symbol [ altitude ? 26 8 16 ];
+        putv self :altitude %tmp.8;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_18_26_27_4_stop:
+    }
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 29; @symbol_functiondef = [toggleActivityType,29,13,31]; ]
+    function toggleActivityType() {
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_29_34_36_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 30 8 ]
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_30_8_34_8_if_stmt:
+        symbol [ activityType %tmp.2 30 12 24 ];
+        %tmp.2 = getv ? :activityType;
+        symbol [ equals %tmp.3 30 25 31 ];
+        %tmp.3 = getv function %tmp.2 :equals;
+        %tmp.4 = "walking";
+        %tmp.5 = invoke %tmp.2 %tmp.3(%tmp.4);
+        bf %tmp.5 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_30_8_34_8_if_else_false;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_30_8_34_8_if_true:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_30_44_32_8_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 31 12 ]
+        %tmp.6 = "biking";
+        symbol [ activityType ? 31 12 24 ];
+        putv self :activityType %tmp.6;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_30_44_32_8_stop:
+        goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_30_8_34_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_30_8_34_8_if_else_false:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_32_15_34_8_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 33 12 ]
+        %tmp.7 = "walking";
+        symbol [ activityType ? 33 12 24 ];
+        putv self :activityType %tmp.7;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_32_15_34_8_stop:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_30_8_34_8_if_end:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 35 8 ]
+        symbol [ System %tmp.8 35 8 14 ];
+        %tmp.8 = getm $.Toybox.System;
+        symbol [ println %tmp.9 35 15 22 ];
+        %tmp.9 = getv function %tmp.8 :println;
+        %tmp.10 = "Activity type changed to: ";
+        symbol [ activityType %tmp.12 35 54 66 ];
+        %tmp.12 = getv ? :activityType;
+        %tmp.13 = add %tmp.10 %tmp.12;
+        invoke %tmp.8 %tmp.9(%tmp.13);
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_29_34_36_4_stop:
+    }
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 38; @symbol_functiondef = [getFormattedDuration,38,13,33]; ]
+    function getFormattedDuration() {
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_38_36_44_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 39 8 ]
+        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_38_36_44_4_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_38_36_44_4_stop" ]
+        %hours.1 = local;
+        symbol [ hours %hours.1 39 12 17 ];
+        symbol [ duration %tmp.2 39 20 28 ];
+        %tmp.2 = getv ? :duration;
+        %tmp.3 = 3600;
+        %tmp.4 = div %tmp.2 %tmp.3;
+        lputv %hours.1 %tmp.4;
+        symbol [ hours %hours.1 39 12 17 ];
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 40 8 ]
+        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_38_36_44_4_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_38_36_44_4_stop" ]
+        %mins.2 = local;
+        symbol [ mins %mins.2 40 12 16 ];
+        symbol [ duration %tmp.6 40 20 28 ];
+        %tmp.6 = getv ? :duration;
+        %tmp.7 = 3600;
+        %tmp.8 = mod %tmp.6 %tmp.7;
+        %tmp.9 = 60;
+        %tmp.10 = div %tmp.8 %tmp.9;
+        lputv %mins.2 %tmp.10;
+        symbol [ mins %mins.2 40 12 16 ];
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 41 8 ]
+        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_38_36_44_4_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_38_36_44_4_stop" ]
+        %secs.3 = local;
+        symbol [ secs %secs.3 41 12 16 ];
+        symbol [ duration %tmp.12 41 19 27 ];
+        %tmp.12 = getv ? :duration;
+        %tmp.13 = 60;
+        %tmp.14 = mod %tmp.12 %tmp.13;
+        lputv %secs.3 %tmp.14;
+        symbol [ secs %secs.3 41 12 16 ];
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 43 8 ]
+        %tmp.15 = lgetv %hours.1;
+        symbol [ hours %tmp.15 43 15 20 ];
+        symbol [ format %tmp.16 43 21 27 ];
+        %tmp.16 = getv function %tmp.15 :format;
+        %tmp.17 = "%02d";
+        %tmp.18 = invoke %tmp.15 %tmp.16(%tmp.17);
+        %tmp.19 = ":";
+        %tmp.20 = add %tmp.18 %tmp.19;
+        %tmp.21 = lgetv %mins.2;
+        symbol [ mins %tmp.21 43 44 48 ];
+        symbol [ format %tmp.22 43 49 55 ];
+        %tmp.22 = getv function %tmp.21 :format;
+        %tmp.23 = "%02d";
+        %tmp.24 = invoke %tmp.21 %tmp.22(%tmp.23);
+        %tmp.25 = add %tmp.20 %tmp.24;
+        %tmp.26 = ":";
+        %tmp.27 = add %tmp.25 %tmp.26;
+        %tmp.28 = lgetv %secs.3;
+        symbol [ secs %tmp.28 43 72 76 ];
+        symbol [ format %tmp.29 43 77 83 ];
+        %tmp.29 = getv function %tmp.28 :format;
+        %tmp.30 = "%02d";
+        %tmp.31 = invoke %tmp.28 %tmp.29(%tmp.30);
+        %tmp.32 = add %tmp.27 %tmp.31;
+        ret %tmp.32;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_38_36_44_4_stop:
+    }
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 46; @symbol_functiondef = [getFormattedDistance,46,13,33]; ]
+    function getFormattedDistance() {
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_46_36_52_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 47 8 ]
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_47_8_51_8_if_stmt:
+        symbol [ distance %tmp.2 47 12 20 ];
+        %tmp.2 = getv ? :distance;
+        %tmp.3 = 10;
+        %tmp.4 = lt %tmp.2 %tmp.3;
+        bf %tmp.4 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_47_8_51_8_if_else_false;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_47_8_51_8_if_true:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_47_27_49_8_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 48 12 ]
+        symbol [ distance %tmp.6 48 19 27 ];
+        %tmp.6 = getv ? :distance;
+        symbol [ format %tmp.7 48 28 34 ];
+        %tmp.7 = getv function %tmp.6 :format;
+        %tmp.8 = "%.2f";
+        %tmp.9 = invoke %tmp.6 %tmp.7(%tmp.8);
+        %tmp.10 = " mi";
+        %tmp.11 = add %tmp.9 %tmp.10;
+        ret %tmp.11;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_47_27_49_8_stop:
+        goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_47_8_51_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_47_8_51_8_if_else_false:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_49_15_51_8_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 50 12 ]
+        symbol [ distance %tmp.13 50 19 27 ];
+        %tmp.13 = getv ? :distance;
+        symbol [ format %tmp.14 50 28 34 ];
+        %tmp.14 = getv function %tmp.13 :format;
+        %tmp.15 = "%.1f";
+        %tmp.16 = invoke %tmp.13 %tmp.14(%tmp.15);
+        %tmp.17 = " mi";
+        %tmp.18 = add %tmp.16 %tmp.17;
+        ret %tmp.18;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_49_15_51_8_stop:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_47_8_51_8_if_end:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_46_36_52_4_stop:
+    }
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 54; @symbol_functiondef = [getFormattedSpeed,54,13,30]; ]
+    function getFormattedSpeed() {
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_54_33_56_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 55 8 ]
+        symbol [ speed %tmp.2 55 15 20 ];
+        %tmp.2 = getv ? :speed;
+        symbol [ format %tmp.3 55 21 27 ];
+        %tmp.3 = getv function %tmp.2 :format;
+        %tmp.4 = "%.1f";
+        %tmp.5 = invoke %tmp.2 %tmp.3(%tmp.4);
+        %tmp.6 = " mph";
+        %tmp.7 = add %tmp.5 %tmp.6;
+        ret %tmp.7;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_54_33_56_4_stop:
+    }
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 58; @symbol_functiondef = [getFormattedPace,58,13,29]; ]
+    function getFormattedPace() {
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_58_32_66_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 59 8 ]
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_59_8_61_8_if_stmt:
+        symbol [ speed %tmp.2 59 12 17 ];
+        %tmp.2 = getv ? :speed;
+        %tmp.3 = 0;
+        %tmp.4 = lte %tmp.2 %tmp.3;
+        bf %tmp.4 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_59_8_61_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_59_8_61_8_if_true:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_59_24_61_8_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 60 12 ]
+        %tmp.5 = "--:--";
+        ret %tmp.5;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_59_24_61_8_stop:
+        goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_59_8_61_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_59_8_61_8_if_end:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 62 8 ]
+        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_58_32_66_4_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_58_32_66_4_stop" ]
+        %paceMinutes.1 = local;
+        symbol [ paceMinutes %paceMinutes.1 62 12 23 ];
+        %tmp.6 = 60.0;
+        symbol [ speed %tmp.8 62 33 38 ];
+        %tmp.8 = getv ? :speed;
+        %tmp.9 = div %tmp.6 %tmp.8;
+        lputv %paceMinutes.1 %tmp.9;
+        symbol [ paceMinutes %paceMinutes.1 62 12 23 ];
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 63 8 ]
+        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_58_32_66_4_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_58_32_66_4_stop" ]
+        %mins.2 = local;
+        symbol [ mins %mins.2 63 12 16 ];
+        %tmp.10 = lgetv %paceMinutes.1;
+        symbol [ paceMinutes %tmp.10 63 19 30 ];
+        symbol [ toNumber %tmp.11 63 31 39 ];
+        %tmp.11 = getv function %tmp.10 :toNumber;
+        %tmp.12 = invoke %tmp.10 %tmp.11();
+        lputv %mins.2 %tmp.12;
+        symbol [ mins %mins.2 63 12 16 ];
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 64 8 ]
+        [ "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_58_32_66_4_start" "C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_58_32_66_4_stop" ]
+        %secs.3 = local;
+        symbol [ secs %secs.3 64 12 16 ];
+        %tmp.13 = lgetv %paceMinutes.1;
+        symbol [ paceMinutes %tmp.13 64 21 32 ];
+        %tmp.14 = lgetv %mins.2;
+        symbol [ mins %tmp.14 64 35 39 ];
+        %tmp.15 = sub %tmp.13 %tmp.14;
+        %tmp.16 = 60;
+        %tmp.17 = mul %tmp.15 %tmp.16;
+        symbol [ toNumber %tmp.18 64 47 55 ];
+        %tmp.18 = getv function %tmp.17 :toNumber;
+        %tmp.19 = invoke %tmp.17 %tmp.18();
+        lputv %secs.3 %tmp.19;
+        symbol [ secs %secs.3 64 12 16 ];
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 65 8 ]
+        %tmp.20 = lgetv %mins.2;
+        symbol [ mins %tmp.20 65 15 19 ];
+        symbol [ format %tmp.21 65 20 26 ];
+        %tmp.21 = getv function %tmp.20 :format;
+        %tmp.22 = "%d";
+        %tmp.23 = invoke %tmp.20 %tmp.21(%tmp.22);
+        %tmp.24 = ":";
+        %tmp.25 = add %tmp.23 %tmp.24;
+        %tmp.26 = lgetv %secs.3;
+        symbol [ secs %tmp.26 65 41 45 ];
+        symbol [ format %tmp.27 65 46 52 ];
+        %tmp.27 = getv function %tmp.26 :format;
+        %tmp.28 = "%02d";
+        %tmp.29 = invoke %tmp.26 %tmp.27(%tmp.28);
+        %tmp.30 = add %tmp.25 %tmp.29;
+        %tmp.31 = " /mi";
+        %tmp.32 = add %tmp.30 %tmp.31;
+        ret %tmp.32;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_58_32_66_4_stop:
+    }
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 68; @symbol_functiondef = [getFormattedAltitude,68,13,33]; ]
+    function getFormattedAltitude() {
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_68_36_70_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 69 8 ]
+        symbol [ altitude %tmp.2 69 15 23 ];
+        %tmp.2 = getv ? :altitude;
+        symbol [ format %tmp.3 69 24 30 ];
+        %tmp.3 = getv function %tmp.2 :format;
+        %tmp.4 = "%.0f";
+        %tmp.5 = invoke %tmp.2 %tmp.3(%tmp.4);
+        %tmp.6 = " ft";
+        %tmp.7 = add %tmp.5 %tmp.6;
+        ret %tmp.7;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_68_36_70_4_stop:
+    }
+    [ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 73; @symbol_functiondef = [simulateData,73,13,25]; ]
+    function simulateData() {
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_73_28_85_4_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 74 8 ]
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_8_84_8_if_stmt:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_12_74_43_begin:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_12_74_28_begin:
+        symbol [ isConnected %tmp.2 74 13 24 ];
+        %tmp.2 = getv ? :isConnected;
+        %tmp.3 = not %tmp.2;
+        bf %tmp.3 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_8_84_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_28_74_28_true:
+        symbol [ isTracking %tmp.5 74 28 38 ];
+        %tmp.5 = getv ? :isTracking;
+        push %tmp.5;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_28_74_28_end:
+        %tmp.6 = phi [%tmp.3 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_12_74_28_begin] [%tmp.5 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_28_74_28_true] [%tmp.6 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_28_74_28_end];
+        bf %tmp.6 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_8_84_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_42_74_43_true:
+        symbol [ isPaused %tmp.8 74 43 51 ];
+        %tmp.8 = getv ? :isPaused;
+        %tmp.9 = not %tmp.8;
+        push %tmp.9;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_42_74_43_end:
+        %tmp.10 = phi [%tmp.6 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_12_74_43_begin] [%tmp.9 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_42_74_43_true] [%tmp.10 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_42_74_43_end];
+        bf %tmp.10 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_8_84_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_8_84_8_if_true:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_53_84_8_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 75 12 ]
+        symbol [ duration %tmp.11 75 12 20 ];
+        %tmp.11 = getv self :duration;
+        %tmp.12 = 1;
+        %tmp.13 = add %tmp.11 %tmp.12;
+        symbol [ duration ? 75 12 20 ];
+        putv self :duration dup %tmp.13;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 76 12 ]
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_76_12_82_12_if_stmt:
+        symbol [ activityType %tmp.15 76 16 28 ];
+        %tmp.15 = getv ? :activityType;
+        symbol [ equals %tmp.16 76 29 35 ];
+        %tmp.16 = getv function %tmp.15 :equals;
+        %tmp.17 = "walking";
+        %tmp.18 = invoke %tmp.15 %tmp.16(%tmp.17);
+        bf %tmp.18 @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_76_12_82_12_if_else_false;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_76_12_82_12_if_true:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_76_48_79_12_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 77 16 ]
+        %tmp.19 = 3.2;
+        symbol [ Math %tmp.20 77 31 35 ];
+        %tmp.20 = getm $.Toybox.Math;
+        symbol [ rand %tmp.21 77 36 40 ];
+        %tmp.21 = getv function %tmp.20 :rand;
+        %tmp.22 = invoke %tmp.20 %tmp.21();
+        %tmp.23 = 10;
+        %tmp.24 = mod %tmp.22 %tmp.23;
+        %tmp.25 = 10.0;
+        %tmp.26 = div %tmp.24 %tmp.25;
+        %tmp.27 = add %tmp.19 %tmp.26;
+        symbol [ speed ? 77 16 21 ];
+        putv self :speed %tmp.27;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 78 16 ]
+        symbol [ distance %tmp.28 78 16 24 ];
+        %tmp.28 = getv self :distance;
+        symbol [ speed %tmp.30 78 28 33 ];
+        %tmp.30 = getv ? :speed;
+        %tmp.31 = 3600.0;
+        %tmp.32 = div %tmp.30 %tmp.31;
+        %tmp.33 = add %tmp.28 %tmp.32;
+        symbol [ distance ? 78 16 24 ];
+        putv self :distance dup %tmp.33;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_76_48_79_12_stop:
+        goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_76_12_82_12_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_76_12_82_12_if_else_false:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_79_19_82_12_start:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 80 16 ]
+        %tmp.34 = 12.5;
+        symbol [ Math %tmp.35 80 32 36 ];
+        %tmp.35 = getm $.Toybox.Math;
+        symbol [ rand %tmp.36 80 37 41 ];
+        %tmp.36 = getv function %tmp.35 :rand;
+        %tmp.37 = invoke %tmp.35 %tmp.36();
+        %tmp.38 = 30;
+        %tmp.39 = mod %tmp.37 %tmp.38;
+        %tmp.40 = 10.0;
+        %tmp.41 = div %tmp.39 %tmp.40;
+        %tmp.42 = add %tmp.34 %tmp.41;
+        symbol [ speed ? 80 16 21 ];
+        putv self :speed %tmp.42;
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 81 16 ]
+        symbol [ distance %tmp.43 81 16 24 ];
+        %tmp.43 = getv self :distance;
+        symbol [ speed %tmp.45 81 28 33 ];
+        %tmp.45 = getv ? :speed;
+        %tmp.46 = 3600.0;
+        %tmp.47 = div %tmp.45 %tmp.46;
+        %tmp.48 = add %tmp.43 %tmp.47;
+        symbol [ distance ? 81 16 24 ];
+        putv self :distance dup %tmp.48;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_79_19_82_12_stop:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_76_12_82_12_if_end:
+[ "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc" 83 12 ]
+        %tmp.49 = 850.0;
+        symbol [ Math %tmp.50 83 32 36 ];
+        %tmp.50 = getm $.Toybox.Math;
+        symbol [ rand %tmp.51 83 37 41 ];
+        %tmp.51 = getv function %tmp.50 :rand;
+        %tmp.52 = invoke %tmp.50 %tmp.51();
+        %tmp.53 = 100;
+        %tmp.54 = mod %tmp.52 %tmp.53;
+        %tmp.55 = add %tmp.49 %tmp.54;
+        %tmp.56 = 50;
+        %tmp.57 = sub %tmp.55 %tmp.56;
+        symbol [ altitude ? 83 12 20 ];
+        putv self :altitude %tmp.57;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_53_84_8_stop:
+        goto @C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_8_84_8_if_end;
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_74_8_84_8_if_end:
+C__dev_TrailTrackerXP_Proj_TrailTrackerXP_garmin_TrailTrackerCompanion_source_TrackingData_mc_73_28_85_4_stop:
+    }
+}
+[ @file = "C:\dev\TrailTrackerXP_Proj\TrailTrackerXP\garmin\TrailTrackerCompanion\source\TrackingData.mc"; @line = 1; ]
+<init> {
+}
