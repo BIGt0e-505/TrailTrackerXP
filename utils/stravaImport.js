@@ -37,7 +37,7 @@ const STRAVA_TYPE_MAP = {
 export const pickGPXFiles = async () => {
   try {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/gpx+xml', 'application/xml', 'text/xml', '*/*'],
+      type: '*/*',  // Allow all files - GPX has no standard MIME type
       multiple: true,
       copyToCacheDirectory: true,
     });
@@ -46,7 +46,7 @@ export const pickGPXFiles = async () => {
       return { canceled: true, files: [] };
     }
 
-    // Filter to only GPX files
+    // Filter to only GPX files by extension
     const gpxFiles = result.assets.filter(file => 
       file.name.toLowerCase().endsWith('.gpx')
     );
@@ -56,6 +56,7 @@ export const pickGPXFiles = async () => {
       files: gpxFiles,
       totalSelected: result.assets.length,
       gpxCount: gpxFiles.length,
+      nonGpxCount: result.assets.length - gpxFiles.length,
     };
   } catch (error) {
     console.error('Error picking files:', error);
@@ -69,7 +70,7 @@ export const pickGPXFiles = async () => {
 export const pickActivitiesCSV = async () => {
   try {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['text/csv', 'text/comma-separated-values', '*/*'],
+      type: '*/*',  // Allow all files
       multiple: false,
       copyToCacheDirectory: true,
     });
