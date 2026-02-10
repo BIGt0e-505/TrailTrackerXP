@@ -1,10 +1,37 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
-import { processActivity, recalculateGamification } from './gamification';
+import { processActivity, recalculateGamification, loadGamification } from './gamification';
+import { 
+  initFileStorage, 
+  saveActivityToFile, 
+  deleteActivityFromFile,
+  loadActivitiesFromFile,
+  loadActivityWithStreams,
+  syncCacheToFile,
+  recoverFromFileStorage,
+  exportCacheToFileStorage,
+  saveGamificationToFile,
+  loadGamificationFromFile,
+  getStorageStats,
+  verifyDataIntegrity,
+  createFullExport,
+} from './fileStorage';
 
 const ACTIVITIES_KEY = '@trail_tracker_activities';
 const CACHED_TILES_KEY = '@trail_tracker_cached_tiles';
 const TILE_CACHE_DIR = `${FileSystem.documentDirectory}tile_cache/`;
+
+// Re-export file storage functions for use elsewhere
+export { 
+  initFileStorage,
+  exportCacheToFileStorage,
+  recoverFromFileStorage,
+  getStorageStats,
+  verifyDataIntegrity,
+  createFullExport,
+  saveGamificationToFile,
+  loadGamificationFromFile,
+};
 
 export const saveActivity = async (activity) => {
   try {
@@ -17,8 +44,15 @@ export const saveActivity = async (activity) => {
     const updatedActivities = [...existingActivities, newActivity];
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updatedActivities));
     
+    // Also save to file storage for persistence
+    await saveActivityToFile(newActivity);
+    
     // Process gamification (XP, achievements, challenges)
     const gamificationResults = await processActivity(newActivity, updatedActivities);
+    
+    // Also save gamification to file storage
+    const gamificationData = await loadGamification();
+    await saveGamificationToFile(gamificationData);
     
     return { activity: newActivity, gamification: gamificationResults };
   } catch (error) {
@@ -37,8 +71,15 @@ export const updateActivity = async (id, updates) => {
     activities[index] = { ...activities[index], ...updates };
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(activities));
     
+    // Also update file storage
+    await saveActivityToFile(activities[index]);
+    
     // Recalculate gamification since activity type may affect achievements
     await recalculateGamification(activities);
+    
+    // Also save gamification to file storage
+    const gamificationData = await loadGamification();
+    await saveGamificationToFile(gamificationData);
     
     return activities[index];
   } catch (error) {
@@ -73,8 +114,15 @@ export const deleteActivity = async (id) => {
     const filteredActivities = activities.filter(a => a.id !== id);
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(filteredActivities));
     
+    // Also delete from file storage
+    await deleteActivityFromFile(id);
+    
     // Recalculate gamification based on remaining activities
     await recalculateGamification(filteredActivities);
+    
+    // Also save gamification to file storage
+    const gamificationData = await loadGamification();
+    await saveGamificationToFile(gamificationData);
   } catch (error) {
     console.error('Error deleting activity:', error);
     throw error;

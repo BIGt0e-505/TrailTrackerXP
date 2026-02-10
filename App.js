@@ -13,6 +13,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider, useTheme } from './utils/theme';
+import { initFileStorage } from './utils/storage';
 import TrackingScreen from './screens/TrackingScreen';
 import CalendarScreen from './screens/CalendarScreen';
 import StatsScreen from './screens/StatsScreen';
@@ -222,12 +223,15 @@ function AppContent() {
   });
 
   useEffect(() => {
-    async function hideSplash() {
+    async function initialize() {
+      // Initialize file storage directories
+      await initFileStorage();
+      
       if (fontsLoaded && themeLoaded) {
         await SplashScreen.hideAsync();
       }
     }
-    hideSplash();
+    initialize();
   }, [fontsLoaded, themeLoaded]);
 
   if (!fontsLoaded || !themeLoaded) {

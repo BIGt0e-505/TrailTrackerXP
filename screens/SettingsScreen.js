@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,22 @@ import {
   Switch,
   ScrollView,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import * as Sharing from 'expo-sharing';
 import { useTheme } from '../utils/theme';
-import { clearCachedTiles, getActivities } from '../utils/storage';
+import { 
+  clearCachedTiles, 
+  getActivities, 
+  exportCacheToFileStorage,
+  recoverFromFileStorage,
+  getStorageStats,
+  verifyDataIntegrity,
+  createFullExport,
+  initFileStorage,
+} from '../utils/storage';
+import { loadGamification } from '../utils/gamification';
 import { MoonIcon, SunIcon, MapIcon, ExportIcon } from '../components/Icons';
 
 // Icons for modals
@@ -35,6 +47,33 @@ const InfoIcon = ({ size = 24, color = '#2196F3' }) => (
   </Svg>
 );
 
+const DatabaseIcon = ({ size = 24, color = '#666' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 2C6.48 2 2 3.79 2 6v12c0 2.21 4.48 4 10 4s10-1.79 10-4V6c0-2.21-4.48-4-10-4z" stroke={color} strokeWidth="2" fill="none" />
+    <Path d="M2 6c0 2.21 4.48 4 10 4s10-1.79 10-4M2 12c0 2.21 4.48 4 10 4s10-1.79 10-4" stroke={color} strokeWidth="2" />
+  </Svg>
+);
+
+const SyncIcon = ({ size = 24, color = '#666' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M23 4v6h-6M1 20v-6h6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const DownloadIcon = ({ size = 24, color = '#666' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const WarningIcon = ({ size = 24, color = '#FF9800' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 2L1 21h22L12 2z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <Path d="M12 9v4M12 17h.01" stroke={color} strokeWidth="2" strokeLinecap="round" />
+  </Svg>
+);
+
 export default function SettingsScreen() {
   const { 
     theme, 
@@ -49,7 +88,29 @@ export default function SettingsScreen() {
   const [showClearCacheModal, setShowClearCacheModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showMigrateModal, setShowMigrateModal] = useState(false);
+  const [showRecoverModal, setShowRecoverModal] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
   const [activityCount, setActivityCount] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [operationResult, setOperationResult] = useState(null);
+  const [storageStats, setStorageStats] = useState(null);
+  const [integrityInfo, setIntegrityInfo] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Load storage stats on mount
+  useEffect(() => {
+    loadStorageInfo();
+  }, []);
+
+  const loadStorageInfo = async () => {
+    await initFileStorage();
+    const stats = await getStorageStats();
+    const cacheActivities = await getActivities();
+    const integrity = await verifyDataIntegrity(cacheActivities);
+    setStorageStats(stats);
+    setIntegrityInfo(integrity);
+  };
 
   const handleClearCache = () => {
     setShowClearCacheModal(true);
@@ -58,13 +119,106 @@ export default function SettingsScreen() {
   const confirmClearCache = async () => {
     await clearCachedTiles();
     setShowClearCacheModal(false);
+    setSuccessMessage('Map cache has been cleared.');
     setShowSuccessModal(true);
   };
 
   const handleExportData = async () => {
     const activities = await getActivities();
     setActivityCount(activities.length);
+    await loadStorageInfo();
     setShowExportModal(true);
+  };
+
+  const handleMigrateToFile = async () => {
+    setShowMigrateModal(true);
+    setIsProcessing(true);
+    setOperationResult(null);
+    
+    try {
+      const activities = await getActivities();
+      const gamification = await loadGamification();
+      const result = await exportCacheToFileStorage(activities, gamification);
+      setOperationResult(result);
+      await loadStorageInfo();
+    } catch (error) {
+      setOperationResult({ success: false, error: error.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRecoverFromFile = async () => {
+    setShowRecoverModal(true);
+  };
+
+  const confirmRecover = async () => {
+    setIsProcessing(true);
+    setOperationResult(null);
+    
+    try {
+      const result = await recoverFromFileStorage();
+      
+      if (result.success && result.activities.length > 0) {
+        // Save recovered activities to AsyncStorage
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        await AsyncStorage.setItem('@trail_tracker_activities', JSON.stringify(result.activities));
+        
+        setOperationResult(result);
+        await loadStorageInfo();
+      } else {
+        setOperationResult({ 
+          success: false, 
+          error: result.error || 'No activities found in file storage' 
+        });
+      }
+    } catch (error) {
+      setOperationResult({ success: false, error: error.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCreateBackup = async () => {
+    setShowBackupModal(true);
+    setIsProcessing(true);
+    setOperationResult(null);
+    
+    try {
+      // First ensure all current data is in file storage
+      const activities = await getActivities();
+      const gamification = await loadGamification();
+      await exportCacheToFileStorage(activities, gamification);
+      
+      // Then create the export file
+      const result = await createFullExport();
+      
+      if (result.success) {
+        // Try to share the file
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(result.filePath, {
+            mimeType: 'application/json',
+            dialogTitle: 'Share TrailTrackerXP Backup',
+          });
+        }
+        setOperationResult(result);
+      } else {
+        setOperationResult(result);
+      }
+    } catch (error) {
+      setOperationResult({ success: false, error: error.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const formatBytes = (bytes) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
   return (
@@ -191,7 +345,96 @@ export default function SettingsScreen() {
       {/* Storage Section */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-          DATA
+          DATA STORAGE
+        </Text>
+        
+        {/* Storage Info Card */}
+        {storageStats && (
+          <View style={[styles.storageInfoCard, { backgroundColor: theme.cardBg }]}>
+            <View style={styles.storageInfoRow}>
+              <Text style={[styles.storageLabel, { color: theme.textSecondary }]}>
+                File Storage
+              </Text>
+              <Text style={[styles.storageValue, { color: theme.text }]}>
+                {storageStats.activityCount} activities ({formatBytes(storageStats.totalSizeBytes)})
+              </Text>
+            </View>
+            {integrityInfo && integrityInfo.inCacheOnly > 0 && (
+              <View style={[styles.syncWarning, { backgroundColor: theme.warningLight || '#FFF3E0' }]}>
+                <WarningIcon size={16} color="#FF9800" />
+                <Text style={[styles.syncWarningText, { color: '#E65100' }]}>
+                  {integrityInfo.inCacheOnly} activities in cache not yet saved to file storage
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+        
+        <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
+          <TouchableOpacity 
+            style={styles.settingRow}
+            onPress={handleMigrateToFile}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <DatabaseIcon size={22} color={theme.icon} />
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Save to File Storage
+                </Text>
+                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+                  Export cache data to persistent file storage
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <TouchableOpacity 
+            style={styles.settingRow}
+            onPress={handleRecoverFromFile}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <SyncIcon size={22} color={theme.icon} />
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Recover from File Storage
+                </Text>
+                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+                  Restore activities if cache was corrupted
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <TouchableOpacity 
+            style={styles.settingRow}
+            onPress={handleCreateBackup}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <DownloadIcon size={22} color={theme.icon} />
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Create Backup File
+                </Text>
+                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+                  Export all data to shareable JSON file
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Cache Section */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+          CACHE
         </Text>
         
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
@@ -224,10 +467,10 @@ export default function SettingsScreen() {
               <ExportIcon size={22} color={theme.icon} />
               <View style={styles.settingInfo}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Export Activities
+                  View Storage Status
                 </Text>
                 <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Export your activity data (coming soon)
+                  Check data integrity between cache and file storage
                 </Text>
               </View>
             </View>
@@ -244,7 +487,7 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
           <View style={styles.aboutRow}>
             <Text style={[styles.aboutLabel, { color: theme.textSecondary }]}>Version</Text>
-            <Text style={[styles.aboutValue, { color: theme.text }]}>1.0.0</Text>
+            <Text style={[styles.aboutValue, { color: theme.text }]}>0.3.0</Text>
           </View>
           
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
@@ -259,7 +502,7 @@ export default function SettingsScreen() {
       {/* Info Card */}
       <View style={[styles.infoCard, { backgroundColor: theme.primaryLight }]}>
         <Text style={[styles.infoText, { color: theme.primary }]}>
-          TrailTracker stores all your data locally on your device. No account required, no data shared. Background tracking continues even when your screen is off.
+          TrailTracker now saves your data to both cache (fast access) and file storage (persistent backup). Use "Save to File Storage" after updating the app to protect your data. File storage persists across app updates.
         </Text>
       </View>
 
@@ -308,10 +551,10 @@ export default function SettingsScreen() {
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
             <CheckIcon size={56} color={theme.primary} />
             <Text style={[styles.modalTitle, { color: theme.text }]}>
-              Cache Cleared
+              Success
             </Text>
             <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-              Map cache has been cleared.
+              {successMessage || 'Operation completed successfully.'}
             </Text>
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: theme.primary }]}
@@ -323,7 +566,7 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* Export Info Modal */}
+      {/* Storage Status Modal */}
       <Modal
         visible={showExportModal}
         transparent={true}
@@ -334,17 +577,208 @@ export default function SettingsScreen() {
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
             <InfoIcon size={56} color="#2196F3" />
             <Text style={[styles.modalTitle, { color: theme.text }]}>
-              Export Data
+              Storage Status
             </Text>
-            <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-              You have {activityCount} activities.{'\n'}Export functionality coming soon.
-            </Text>
+            <View style={styles.modalStats}>
+              <Text style={[styles.modalStatRow, { color: theme.textSecondary }]}>
+                Cache: {activityCount} activities
+              </Text>
+              <Text style={[styles.modalStatRow, { color: theme.textSecondary }]}>
+                File Storage: {storageStats?.activityCount || 0} activities
+              </Text>
+              {integrityInfo && (
+                <>
+                  <Text style={[styles.modalStatRow, { color: theme.textSecondary }]}>
+                    Synchronized: {integrityInfo.synchronized || 0}
+                  </Text>
+                  {integrityInfo.inCacheOnly > 0 && (
+                    <Text style={[styles.modalStatRow, { color: '#FF9800' }]}>
+                      ⚠️ {integrityInfo.inCacheOnly} only in cache
+                    </Text>
+                  )}
+                  {integrityInfo.inFileOnly > 0 && (
+                    <Text style={[styles.modalStatRow, { color: '#4CAF50' }]}>
+                      ✓ {integrityInfo.inFileOnly} only in file storage
+                    </Text>
+                  )}
+                </>
+              )}
+            </View>
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: '#2196F3' }]}
               onPress={() => setShowExportModal(false)}
             >
               <Text style={styles.modalButtonText}>OK</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Migrate to File Modal */}
+      <Modal
+        visible={showMigrateModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !isProcessing && setShowMigrateModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            {isProcessing ? (
+              <>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Saving to File Storage...
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  Please wait while your data is being saved.
+                </Text>
+              </>
+            ) : operationResult ? (
+              <>
+                {operationResult.success ? (
+                  <CheckIcon size={56} color="#4CAF50" />
+                ) : (
+                  <WarningIcon size={56} color="#FF9800" />
+                )}
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  {operationResult.success ? 'Data Saved!' : 'Error'}
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  {operationResult.success 
+                    ? `Saved ${operationResult.exportedCount} activities.\n${operationResult.skippedCount} already existed.\nTotal in file storage: ${operationResult.totalInFile}`
+                    : operationResult.error
+                  }
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                  onPress={() => setShowMigrateModal(false)}
+                >
+                  <Text style={styles.modalButtonText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Recover Modal */}
+      <Modal
+        visible={showRecoverModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !isProcessing && setShowRecoverModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            {!isProcessing && !operationResult ? (
+              <>
+                <SyncIcon size={56} color={theme.primary} />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Recover Activities?
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  This will restore {storageStats?.activityCount || 0} activities from file storage to your cache. Use this if your cache data was lost or corrupted.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                  onPress={confirmRecover}
+                >
+                  <Text style={styles.modalButtonText}>Recover</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalCancelButton, { backgroundColor: theme.surface }]}
+                  onPress={() => setShowRecoverModal(false)}
+                >
+                  <Text style={[styles.modalCancelButtonText, { color: theme.text }]}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : isProcessing ? (
+              <>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Recovering...
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  Restoring activities from file storage.
+                </Text>
+              </>
+            ) : operationResult ? (
+              <>
+                {operationResult.success ? (
+                  <CheckIcon size={56} color="#4CAF50" />
+                ) : (
+                  <WarningIcon size={56} color="#FF9800" />
+                )}
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  {operationResult.success ? 'Recovery Complete!' : 'Error'}
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  {operationResult.success 
+                    ? `Recovered ${operationResult.count} activities.`
+                    : operationResult.error
+                  }
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                  onPress={() => {
+                    setShowRecoverModal(false);
+                    setOperationResult(null);
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Backup Modal */}
+      <Modal
+        visible={showBackupModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !isProcessing && setShowBackupModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            {isProcessing ? (
+              <>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Creating Backup...
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  Preparing your data for export.
+                </Text>
+              </>
+            ) : operationResult ? (
+              <>
+                {operationResult.success ? (
+                  <CheckIcon size={56} color="#4CAF50" />
+                ) : (
+                  <WarningIcon size={56} color="#FF9800" />
+                )}
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  {operationResult.success ? 'Backup Created!' : 'Error'}
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  {operationResult.success 
+                    ? `Exported ${operationResult.activityCount} activities.\nFormat: Strava-compatible JSON`
+                    : operationResult.error
+                  }
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                  onPress={() => {
+                    setShowBackupModal(false);
+                    setOperationResult(null);
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
           </View>
         </View>
       </Modal>
@@ -493,5 +927,47 @@ const styles = StyleSheet.create({
   modalCancelButtonText: {
     fontSize: 16,
     fontFamily: 'Inter_700Bold',
+  },
+  // Storage info styles
+  storageInfoCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  storageInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  storageLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+  },
+  storageValue: {
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+  },
+  syncWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  syncWarningText: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    flex: 1,
+  },
+  modalStats: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  modalStatRow: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    marginVertical: 4,
   },
 });
