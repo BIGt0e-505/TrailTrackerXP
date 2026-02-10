@@ -49,10 +49,21 @@ export const pickGPXFiles = async () => {
     
     // Read all files in the selected directory
     const directoryUri = permissions.directoryUri;
+    console.log('Directory URI:', directoryUri);
+    
     const files = await FileSystem.StorageAccessFramework.readDirectoryAsync(directoryUri);
+    console.log('Total files returned by SAF:', files.length);
+    
+    // Log first few URIs to debug format
+    if (files.length > 0) {
+      console.log('Sample URIs:');
+      files.slice(0, 3).forEach((uri, i) => console.log(`  ${i}: ${uri.substring(0, 100)}...`));
+    }
     
     // Filter to only GPX files and create file objects
     const gpxFiles = [];
+    const nonGpxFiles = [];
+    
     for (const fileUri of files) {
       // Extract filename from SAF URI
       // URIs can be double-encoded, so decode until stable
@@ -80,7 +91,14 @@ export const pickGPXFiles = async () => {
           uri: fileUri,
           name: fileName,
         });
+      } else {
+        nonGpxFiles.push(fileName);
       }
+    }
+    
+    console.log(`GPX files found: ${gpxFiles.length}, non-GPX files: ${nonGpxFiles.length}`);
+    if (nonGpxFiles.length > 0 && nonGpxFiles.length <= 10) {
+      console.log('Non-GPX files:', nonGpxFiles);
     }
 
     return {
@@ -496,32 +514,42 @@ export const importSelectedFiles = async (gpxFiles, metadata = {}, onProgress = 
         });
         
         // Add or update imported activities
+        // IMPORTANT: Don't include routeData in AsyncStorage - it's too large
+        // routeData is stored separately in file storage
         for (const activity of importedActivities) {
+          // Create a copy without routeData for AsyncStorage
+          const activityForStorage = { ...activity };
+          delete activityForStorage.routeData;
+          
           const existingById = existingMap.get(activity.id);
           const existingByStravaId = activity.stravaId ? existingMap.get(activity.stravaId) : null;
           
           if (existingById) {
             // Update existing by id
             const idx = existingActivities.findIndex(a => a.id === activity.id);
-            if (idx >= 0) existingActivities[idx] = activity;
+            if (idx >= 0) existingActivities[idx] = activityForStorage;
           } else if (existingByStravaId) {
             // Update existing by stravaId
             const idx = existingActivities.findIndex(a => a.stravaId === activity.stravaId);
-            if (idx >= 0) existingActivities[idx] = activity;
+            if (idx >= 0) existingActivities[idx] = activityForStorage;
           } else {
             // Add new
-            existingActivities.push(activity);
+            existingActivities.push(activityForStorage);
           }
           
           // Update map for next iteration
-          existingMap.set(activity.id, activity);
-          if (activity.stravaId) existingMap.set(activity.stravaId, activity);
+          existingMap.set(activity.id, activityForStorage);
+          if (activity.stravaId) existingMap.set(activity.stravaId, activityForStorage);
         }
         
-        await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(existingActivities));
-        console.log(`Saved ${importedActivities.length} activities to AsyncStorage. Total: ${existingActivities.length}`);
+        const jsonToSave = JSON.stringify(existingActivities);
+        console.log(`Saving to AsyncStorage: ${importedActivities.length} new activities, total ${existingActivities.length}, size: ${(jsonToSave.length / 1024).toFixed(1)}KB`);
+        
+        await AsyncStorage.setItem(ACTIVITIES_KEY, jsonToSave);
+        console.log('AsyncStorage save completed successfully');
       } catch (asyncError) {
         console.error('Error batch saving to AsyncStorage:', asyncError);
+        console.error('Error details:', asyncError.message);
       }
     }
     
