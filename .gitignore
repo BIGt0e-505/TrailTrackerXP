@@ -39,4 +39,4 @@ logs/
 
 # Keep release APKs
 releases/
-*.apk
+*.zip
