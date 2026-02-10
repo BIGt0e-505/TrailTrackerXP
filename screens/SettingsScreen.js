@@ -8,7 +8,10 @@ import {
   ScrollView,
   Modal,
   ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, { Path, Circle } from 'react-native-svg';
 import * as Sharing from 'expo-sharing';
 import { useTheme } from '../utils/theme';
@@ -22,7 +25,12 @@ import {
   createFullExport,
   initFileStorage,
 } from '../utils/storage';
-import { loadGamification } from '../utils/gamification';
+import { 
+  loadGamification, 
+  recalculateGamification,
+  getStatsCutoffDate,
+  setStatsCutoffDate,
+} from '../utils/gamification';
 import {
   pickGPXFiles,
   pickActivitiesCSV,
@@ -113,11 +121,57 @@ export default function SettingsScreen() {
   const [selectedGPXFiles, setSelectedGPXFiles] = useState([]);
   const [csvMetadata, setCsvMetadata] = useState(null);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0, file: '' });
+  
+  // Stats cutoff date
+  const [statsCutoffDate, setStatsCutoffDateState] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Load storage stats on mount
   useEffect(() => {
     loadStorageInfo();
+    loadCutoffDate();
   }, []);
+  
+  const loadCutoffDate = async () => {
+    const cutoff = await getStatsCutoffDate();
+    setStatsCutoffDateState(cutoff);
+  };
+  
+  const handleCutoffDateChange = async (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      // Set to start of day
+      const dateStart = new Date(selectedDate);
+      dateStart.setHours(0, 0, 0, 0);
+      setStatsCutoffDateState(dateStart);
+      await setStatsCutoffDate(dateStart);
+      
+      // Recalculate gamification with new cutoff
+      const activities = await getActivities();
+      await recalculateGamification(activities, dateStart);
+      
+      Alert.alert(
+        'Cutoff Date Updated',
+        `Stats and achievements will now only count activities from ${dateStart.toLocaleDateString()} onwards.`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+  
+  const clearCutoffDate = async () => {
+    setStatsCutoffDateState(null);
+    await setStatsCutoffDate(null);
+    
+    // Recalculate gamification without cutoff
+    const activities = await getActivities();
+    await recalculateGamification(activities, null);
+    
+    Alert.alert(
+      'Cutoff Date Cleared',
+      'All activities will now count towards stats and achievements.',
+      [{ text: 'OK' }]
+    );
+  };
 
   const loadStorageInfo = async () => {
     await initFileStorage();
@@ -406,6 +460,60 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </View>
+
+      {/* Stats Section */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+          STATS & ACHIEVEMENTS
+        </Text>
+        
+        <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
+          <View style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Stats Cutoff Date
+                </Text>
+                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+                  Only count activities from this date onwards for stats, XP, and achievements
+                </Text>
+              </View>
+            </View>
+          </View>
+          
+          <View style={styles.cutoffDateContainer}>
+            <TouchableOpacity
+              style={[styles.datePickerButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={[styles.datePickerButtonText, { color: theme.text }]}>
+                {statsCutoffDate 
+                  ? statsCutoffDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                  : 'No cutoff (all activities)'}
+              </Text>
+            </TouchableOpacity>
+            
+            {statsCutoffDate && (
+              <TouchableOpacity
+                style={[styles.clearDateButton, { backgroundColor: theme.surface }]}
+                onPress={clearCutoffDate}
+              >
+                <Text style={[styles.clearDateButtonText, { color: '#D32F2F' }]}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {showDatePicker && (
+            <DateTimePicker
+              value={statsCutoffDate || new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleCutoffDateChange}
+              maximumDate={new Date()}
+            />
+          )}
         </View>
       </View>
 
@@ -1039,6 +1147,34 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginLeft: 52,
+  },
+  cutoffDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  datePickerButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  datePickerButtonText: {
+    fontSize: 15,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+  },
+  clearDateButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  clearDateButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
   },
   unitToggle: {
     flexDirection: 'row',

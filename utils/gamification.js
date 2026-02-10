@@ -1,6 +1,47 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GAMIFICATION_KEY = '@trail_tracker_gamification';
+export const STATS_CUTOFF_DATE_KEY = '@trail_tracker_stats_cutoff_date';
+
+// Helper to get cutoff date
+export const getStatsCutoffDate = async () => {
+  try {
+    const cutoff = await AsyncStorage.getItem(STATS_CUTOFF_DATE_KEY);
+    return cutoff ? new Date(cutoff) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Helper to set cutoff date
+export const setStatsCutoffDate = async (date) => {
+  try {
+    if (date) {
+      await AsyncStorage.setItem(STATS_CUTOFF_DATE_KEY, date.toISOString());
+    } else {
+      await AsyncStorage.removeItem(STATS_CUTOFF_DATE_KEY);
+    }
+    return true;
+  } catch (e) {
+    console.error('Error saving cutoff date:', e);
+    return false;
+  }
+};
+
+// Helper to filter activities by cutoff date
+export const filterActivitiesByCutoff = (activities, cutoffDate) => {
+  if (!cutoffDate) return activities;
+  return activities.filter(a => new Date(a.timestamp) >= cutoffDate);
+};
+
+// Helper to calculate walking distance in last 365 days
+const getWalkingDistanceLast365Days = (activities) => {
+  const now = new Date();
+  const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+  return activities
+    .filter(a => a.type === 'walking' && new Date(a.timestamp) >= yearAgo)
+    .reduce((sum, a) => sum + (a.distance || 0), 0);
+};
 
 // Achievement definitions - separated into walking, biking (mountain biking focused), and general
 export const ACHIEVEMENTS = {
@@ -235,6 +276,18 @@ export const ACHIEVEMENTS = {
     icon: '👑',
     category: 'walking',
     check: (stats) => stats.walkingDistance >= 1000,
+  },
+  
+  // MAJOR ACHIEVEMENT - Rolling 365-day distance
+  walk_1000_miles_365_days: {
+    id: 'walk_1000_miles_365_days',
+    name: '🏆 1000 Mile Year',
+    description: 'Walk 1000 miles (1609km) within a 365-day period',
+    icon: '🏆',
+    category: 'walking',
+    isMajor: true,
+    // 1000 miles = 1609.34 km
+    check: (stats) => (stats.walkingDistanceLast365Days || 0) >= 1609.34,
   },
   
   // Walking elevation
@@ -1043,7 +1096,18 @@ export const resetGamification = async () => {
 
 // Recalculate all gamification from scratch based on current activities
 // Called when an activity is deleted or modified
-export const recalculateGamification = async (activities) => {
+// If cutoffDate is provided, only activities on or after that date count towards stats
+export const recalculateGamification = async (activities, cutoffDate = null) => {
+  // Get cutoff date from storage if not provided
+  if (cutoffDate === undefined) {
+    cutoffDate = await getStatsCutoffDate();
+  }
+  
+  // Filter activities by cutoff date for stats calculation
+  const activitiesForStats = cutoffDate 
+    ? activities.filter(a => new Date(a.timestamp) >= cutoffDate)
+    : activities;
+  
   // Start fresh
   const gamification = { ...defaultGamification };
   gamification.stats = { ...defaultGamification.stats };
@@ -1052,7 +1116,7 @@ export const recalculateGamification = async (activities) => {
   gamification.xp = 0;
   
   // Sort activities by timestamp
-  const sortedActivities = [...activities].sort((a, b) => 
+  const sortedActivities = [...activitiesForStats].sort((a, b) => 
     new Date(a.timestamp) - new Date(b.timestamp)
   );
   
@@ -1062,17 +1126,17 @@ export const recalculateGamification = async (activities) => {
     gamification.xp += calculateXP(activity);
     
     // Update stats
-    gamification.stats.totalDistance += activity.distance;
+    gamification.stats.totalDistance += activity.distance || 0;
     gamification.stats.totalActivities += 1;
     gamification.stats.totalElevation += (activity.elevationGain || 0);
     
     if (activity.type === 'walking') {
       gamification.stats.walkingActivities += 1;
-      gamification.stats.walkingDistance = (gamification.stats.walkingDistance || 0) + activity.distance;
+      gamification.stats.walkingDistance = (gamification.stats.walkingDistance || 0) + (activity.distance || 0);
       gamification.stats.walkingElevation = (gamification.stats.walkingElevation || 0) + (activity.elevationGain || 0);
     } else {
       gamification.stats.bikingActivities += 1;
-      gamification.stats.bikingDistance = (gamification.stats.bikingDistance || 0) + activity.distance;
+      gamification.stats.bikingDistance = (gamification.stats.bikingDistance || 0) + (activity.distance || 0);
       gamification.stats.bikingElevation = (gamification.stats.bikingElevation || 0) + (activity.elevationGain || 0);
       gamification.stats.bikingDescent = (gamification.stats.bikingDescent || 0) + (activity.elevationLoss || 0);
     }
@@ -1080,12 +1144,16 @@ export const recalculateGamification = async (activities) => {
     gamification.stats.lastActivityDate = activity.timestamp;
   }
   
+  // Calculate rolling 365-day walking distance (for major achievement)
+  // This uses ALL activities regardless of cutoff, as it's a rolling window
+  gamification.stats.walkingDistanceLast365Days = getWalkingDistanceLast365Days(activities);
+  
   // Calculate current streak
-  gamification.stats.currentStreak = calculateStreak(activities, new Date().toISOString());
+  gamification.stats.currentStreak = calculateStreak(activitiesForStats, new Date().toISOString());
   gamification.stats.longestStreak = Math.max(gamification.stats.currentStreak, gamification.stats.longestStreak);
   
   // Check weekend pair
-  gamification.stats.hasWeekendPair = checkWeekendPair(activities);
+  gamification.stats.hasWeekendPair = checkWeekendPair(activitiesForStats);
   
   // Check all achievements
   for (const [key, achievement] of Object.entries(ACHIEVEMENTS)) {
@@ -1116,16 +1184,16 @@ export const recalculateGamification = async (activities) => {
     
     if (unlocked) {
       gamification.unlockedAchievements.push(key);
-      // Add bonus XP for achievements
-      gamification.xp += 50;
+      // Add bonus XP for achievements - more for major achievements
+      gamification.xp += achievement.isMajor ? 500 : 50;
     }
   }
   
-  // Update challenges based on current activities
+  // Update challenges based on current activities (filtered)
   if (gamification.challenges.length > 0) {
     gamification.challenges = updateChallengeProgress(
       gamification.challenges,
-      activities,
+      activitiesForStats,
       gamification.stats.currentStreak
     );
   }

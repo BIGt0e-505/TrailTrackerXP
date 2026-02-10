@@ -658,6 +658,10 @@ export default function StatsScreen() {
     const graphW = GRAPH_WIDTH - padding.left - padding.right;
     const graphH = GRAPH_HEIGHT - padding.top - padding.bottom;
     const formatValue = (km) => distanceUnit === 'miles' ? (km * 0.621371).toFixed(1) : km.toFixed(1);
+    
+    // Calculate total for the visible period
+    const periodTotal = data.reduce((sum, d) => sum + d.value, 0);
+    
     const points = data.map((d, i) => ({
       x: padding.left + (i / Math.max(data.length - 1, 1)) * graphW,
       y: padding.top + graphH - (d.value / maxValue) * graphH,
@@ -679,7 +683,10 @@ export default function StatsScreen() {
             </TouchableOpacity>
           </View>
           <Text style={[styles.graphTitle, { color: theme.text }]}>{title}</Text>
-          <View style={styles.countControlSpacer} />
+          <View style={styles.graphTotalContainer}>
+            <Text style={[styles.graphTotalLabel, { color: theme.textSecondary }]}>Total:</Text>
+            <Text style={[styles.graphTotalValue, { color: theme.primary }]}>{formatDistance(periodTotal, distanceUnit)}</Text>
+          </View>
         </View>
         <Svg width={GRAPH_WIDTH} height={GRAPH_HEIGHT}>
           <Line x1={padding.left} y1={padding.top + graphH} x2={GRAPH_WIDTH - padding.right} y2={padding.top + graphH} stroke={theme.border} strokeWidth={1} />
@@ -969,4 +976,7 @@ const styles = StyleSheet.create({
   countButton: { width: 28, height: 28, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
   countText: { fontSize: 14, fontFamily: 'Inter_700Bold', minWidth: 24, textAlign: 'center' },
   countControlSpacer: { width: 60 },
+  graphTotalContainer: { alignItems: 'flex-end', minWidth: 70 },
+  graphTotalLabel: { fontSize: 10, fontFamily: 'Inter_400Regular' },
+  graphTotalValue: { fontSize: 14, fontFamily: 'Inter_700Bold' },
 });
