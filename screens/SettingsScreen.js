@@ -24,11 +24,10 @@ import {
 } from '../utils/storage';
 import { loadGamification } from '../utils/gamification';
 import {
-  initImportDir,
-  listImportFiles,
-  importStravaActivities,
-  clearImportFolder,
-  getImportFolderPath,
+  pickGPXFiles,
+  pickActivitiesCSV,
+  parseActivitiesCSV,
+  importSelectedFiles,
 } from '../utils/stravaImport';
 import { MoonIcon, SunIcon, MapIcon, ExportIcon } from '../components/Icons';
 
@@ -111,7 +110,8 @@ export default function SettingsScreen() {
   const [storageStats, setStorageStats] = useState(null);
   const [integrityInfo, setIntegrityInfo] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
-  const [importFiles, setImportFiles] = useState(null);
+  const [selectedGPXFiles, setSelectedGPXFiles] = useState([]);
+  const [csvMetadata, setCsvMetadata] = useState(null);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0, file: '' });
 
   // Load storage stats on mount
@@ -121,7 +121,6 @@ export default function SettingsScreen() {
 
   const loadStorageInfo = async () => {
     await initFileStorage();
-    await initImportDir();
     const stats = await getStorageStats();
     const cacheActivities = await getActivities();
     const integrity = await verifyDataIntegrity(cacheActivities);
@@ -242,29 +241,46 @@ export default function SettingsScreen() {
     setShowImportModal(true);
     setOperationResult(null);
     setIsProcessing(false);
-    
-    // Check what files are available
-    const files = await listImportFiles();
-    setImportFiles(files);
+    setSelectedGPXFiles([]);
+    setCsvMetadata(null);
+  };
+
+  const handlePickGPXFiles = async () => {
+    const result = await pickGPXFiles();
+    if (!result.canceled && result.files.length > 0) {
+      setSelectedGPXFiles(result.files);
+    }
+  };
+
+  const handlePickCSV = async () => {
+    const result = await pickActivitiesCSV();
+    if (!result.canceled && result.file) {
+      const metadata = await parseActivitiesCSV(result.file.uri);
+      setCsvMetadata({
+        file: result.file,
+        count: Object.keys(metadata).length,
+        data: metadata,
+      });
+    }
   };
 
   const confirmStravaImport = async () => {
     setIsProcessing(true);
     setOperationResult(null);
-    setImportProgress({ current: 0, total: importFiles?.totalGPX || 0, file: '' });
+    setImportProgress({ current: 0, total: selectedGPXFiles.length, file: '' });
     
     try {
-      const result = await importStravaActivities((current, total, file) => {
-        setImportProgress({ current, total, file });
-      });
+      const metadata = csvMetadata?.data || {};
+      const result = await importSelectedFiles(
+        selectedGPXFiles,
+        metadata,
+        (current, total, file) => {
+          setImportProgress({ current, total, file });
+        }
+      );
       
       setOperationResult(result);
       await loadStorageInfo();
-      
-      // Clear import folder on success
-      if (result.success && result.imported > 0) {
-        await clearImportFolder();
-      }
     } catch (error) {
       setOperationResult({ success: false, error: error.message });
     } finally {
@@ -862,51 +878,67 @@ export default function SettingsScreen() {
         onRequestClose={() => !isProcessing && setShowImportModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+          <View style={[styles.modalContentWide, { backgroundColor: theme.cardBg }]}>
             {!isProcessing && !operationResult ? (
               <>
                 <UploadIcon size={56} color={theme.primary} />
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
                   Import from Strava
                 </Text>
-                {importFiles ? (
-                  <View style={styles.modalStats}>
-                    <Text style={[styles.modalStatRow, { color: theme.textSecondary }]}>
-                      GPX files found: {importFiles.totalGPX}
-                    </Text>
-                    <Text style={[styles.modalStatRow, { color: theme.textSecondary }]}>
-                      Metadata CSV: {importFiles.hasActivitiesCSV ? '✓ Found' : '✗ Not found'}
-                    </Text>
-                    {importFiles.totalGPX === 0 && (
-                      <Text style={[styles.modalMessage, { color: '#FF9800', marginTop: 10 }]}>
-                        No GPX files found.{'\n\n'}
-                        Copy your Strava GPX files to:{'\n'}
-                        {getImportFolderPath()}
-                      </Text>
-                    )}
-                  </View>
-                ) : (
-                  <ActivityIndicator size="small" color={theme.primary} />
-                )}
-                {importFiles?.totalGPX > 0 && (
+                
+                <Text style={[styles.modalMessage, { color: theme.textSecondary, marginBottom: 16 }]}>
+                  Select GPX files from your Strava export
+                </Text>
+                
+                {/* Select GPX Files Button */}
+                <TouchableOpacity
+                  style={[styles.filePickerButton, { borderColor: theme.primary }]}
+                  onPress={handlePickGPXFiles}
+                >
+                  <Text style={[styles.filePickerButtonText, { color: theme.primary }]}>
+                    {selectedGPXFiles.length > 0 
+                      ? `✓ ${selectedGPXFiles.length} GPX files selected`
+                      : 'Select GPX Files'}
+                  </Text>
+                </TouchableOpacity>
+                
+                {/* Optional: Select CSV for metadata */}
+                <TouchableOpacity
+                  style={[styles.filePickerButtonSmall, { borderColor: theme.border }]}
+                  onPress={handlePickCSV}
+                >
+                  <Text style={[styles.filePickerButtonTextSmall, { color: theme.textSecondary }]}>
+                    {csvMetadata 
+                      ? `✓ activities.csv (${csvMetadata.count} entries)`
+                      : '+ Add activities.csv (optional)'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <Text style={[styles.modalHint, { color: theme.textSecondary }]}>
+                  The CSV file adds activity names, types, and stats
+                </Text>
+                
+                {selectedGPXFiles.length > 0 && (
                   <TouchableOpacity
-                    style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                    style={[styles.modalButton, { backgroundColor: theme.primary, marginTop: 16 }]}
                     onPress={confirmStravaImport}
                   >
                     <Text style={styles.modalButtonText}>
-                      Import {importFiles.totalGPX} Activities
+                      Import {selectedGPXFiles.length} Activities
                     </Text>
                   </TouchableOpacity>
                 )}
+                
                 <TouchableOpacity
                   style={[styles.modalCancelButton, { backgroundColor: theme.surface }]}
                   onPress={() => {
                     setShowImportModal(false);
-                    setImportFiles(null);
+                    setSelectedGPXFiles([]);
+                    setCsvMetadata(null);
                   }}
                 >
                   <Text style={[styles.modalCancelButtonText, { color: theme.text }]}>
-                    {importFiles?.totalGPX > 0 ? 'Cancel' : 'Close'}
+                    Cancel
                   </Text>
                 </TouchableOpacity>
               </>
@@ -946,7 +978,8 @@ export default function SettingsScreen() {
                   onPress={() => {
                     setShowImportModal(false);
                     setOperationResult(null);
-                    setImportFiles(null);
+                    setSelectedGPXFiles([]);
+                    setCsvMetadata(null);
                   }}
                 >
                   <Text style={styles.modalButtonText}>Done</Text>
@@ -1107,6 +1140,51 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
     marginTop: 4,
+  },
+  modalContentWide: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  filePickerButton: {
+    width: '100%',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  filePickerButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  filePickerButtonSmall: {
+    width: '100%',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  filePickerButtonTextSmall: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+  },
+  modalHint: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   // Storage info styles
   storageInfoCard: {

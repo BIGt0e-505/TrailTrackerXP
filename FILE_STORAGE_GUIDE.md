@@ -51,30 +51,19 @@ To export all your data to a shareable file:
 4. Wait for the email with your download link (can take a few hours)
 5. Download and unzip the export file
 
-### Step 2: Prepare Files for Import
-From your Strava export, you need:
-- All `.gpx` files from the `activities/` folder
-- (Optional) `activities.csv` - contains metadata like activity type, distance, elevation
-
-### Step 3: Copy Files to Import Folder
-Copy the files to your phone's TrailTrackerXP import folder:
-```
-/Android/data/com.trailtrackerxp.app/files/import/
-```
-
-You can use a file manager app or connect via USB.
-
-### Step 4: Import in App
+### Step 2: Import into TrailTrackerXP
 1. Go to **Settings > Data Storage > Import from Strava**
-2. The app will show how many GPX files it found
-3. Tap "Import X Activities"
-4. Wait for the import to complete
+2. Tap **"Select GPX Files"** and navigate to your Strava export's `activities` folder
+3. Select all the `.gpx` files you want to import (you can select multiple)
+4. (Optional) Tap **"+ Add activities.csv"** to include activity names, types, and accurate stats
+5. Tap **"Import X Activities"** and wait for completion
 
 ### Import Notes
-- Activities will be classified as "Walk" or "Ride" based on Strava type
-- If `activities.csv` is included, metadata (distance, elevation, etc.) will be used
+- The file picker lets you browse to wherever you saved your Strava export
+- Activities will be classified as "Walk" or "Ride" based on the type in the GPX file
+- Including `activities.csv` provides better metadata (activity names, accurate distance/elevation from Strava)
 - If only GPX files are provided, stats will be calculated from GPS data
-- The import folder is cleared after successful import
+- Large imports (200+ files) may take a few minutes
 
 ## Technical Details
 

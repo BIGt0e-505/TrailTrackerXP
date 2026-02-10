@@ -2,23 +2,17 @@
  * Strava/GPX Import for TrailTrackerXP
  * 
  * This module imports activities from Strava export files.
+ * Users can select GPX files directly using a file picker.
  * 
  * Strava Export Structure:
  * - activities.csv - Metadata for all activities (type, distance, elevation, etc.)
  * - activities/*.gpx - GPS track data for each activity
- * 
- * Usage:
- * 1. Place activities.csv in the import folder
- * 2. Place all GPX files in the import folder
- * 3. Call importStravaActivities() from Settings
  */
 
 import * as FileSystem from 'expo-file-system';
-import { saveActivityToFile, saveGamificationToFile } from './fileStorage';
+import * as DocumentPicker from 'expo-document-picker';
+import { saveActivityToFile, saveGamificationToFile, loadActivitiesFromFile } from './fileStorage';
 import { recalculateGamification } from './gamification';
-
-// Import folder location
-const IMPORT_DIR = `${FileSystem.documentDirectory}import/`;
 
 // Strava activity type mapping
 const STRAVA_TYPE_MAP = {
@@ -37,19 +31,62 @@ const STRAVA_TYPE_MAP = {
 };
 
 /**
- * Initialize the import directory
+ * Open file picker to select GPX files
+ * Returns array of selected file URIs
  */
-export const initImportDir = async () => {
+export const pickGPXFiles = async () => {
   try {
-    const dirInfo = await FileSystem.getInfoAsync(IMPORT_DIR);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(IMPORT_DIR, { intermediates: true });
-      console.log('Created import directory');
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/gpx+xml', 'application/xml', 'text/xml', '*/*'],
+      multiple: true,
+      copyToCacheDirectory: true,
+    });
+
+    if (result.canceled) {
+      return { canceled: true, files: [] };
     }
-    return IMPORT_DIR;
+
+    // Filter to only GPX files
+    const gpxFiles = result.assets.filter(file => 
+      file.name.toLowerCase().endsWith('.gpx')
+    );
+
+    return {
+      canceled: false,
+      files: gpxFiles,
+      totalSelected: result.assets.length,
+      gpxCount: gpxFiles.length,
+    };
   } catch (error) {
-    console.error('Error creating import directory:', error);
-    return null;
+    console.error('Error picking files:', error);
+    return { canceled: false, files: [], error: error.message };
+  }
+};
+
+/**
+ * Open file picker to select activities.csv (optional metadata)
+ */
+export const pickActivitiesCSV = async () => {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['text/csv', 'text/comma-separated-values', '*/*'],
+      multiple: false,
+      copyToCacheDirectory: true,
+    });
+
+    if (result.canceled) {
+      return { canceled: true, file: null };
+    }
+
+    const file = result.assets[0];
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      return { canceled: false, file: null, error: 'Please select a CSV file' };
+    }
+
+    return { canceled: false, file };
+  } catch (error) {
+    console.error('Error picking CSV:', error);
+    return { canceled: false, file: null, error: error.message };
   }
 };
 
@@ -60,9 +97,15 @@ export const parseGPX = (gpxContent) => {
   const routeData = [];
   
   try {
-    // Extract activity name
-    const nameMatch = gpxContent.match(/<n>([^<]+)<\/n>/);
-    const name = nameMatch ? nameMatch[1] : null;
+    // Extract activity name - try both <name> and <n> tags
+    let name = null;
+    const nameMatch = gpxContent.match(/<name>([^<]+)<\/name>/);
+    if (nameMatch) {
+      name = nameMatch[1];
+    } else {
+      const nMatch = gpxContent.match(/<n>([^<]+)<\/n>/);
+      if (nMatch) name = nMatch[1];
+    }
     
     // Extract activity type from GPX
     const typeMatch = gpxContent.match(/<type>([^<]+)<\/type>/);
@@ -130,12 +173,12 @@ const toRad = (deg) => deg * (Math.PI / 180);
 /**
  * Parse activities.csv from Strava export
  */
-export const parseActivitiesCSV = async (csvPath) => {
+export const parseActivitiesCSV = async (csvUri) => {
   try {
-    const content = await FileSystem.readAsStringAsync(csvPath);
+    const content = await FileSystem.readAsStringAsync(csvUri);
     const lines = content.split('\n');
     
-    if (lines.length < 2) return [];
+    if (lines.length < 2) return {};
     
     // Parse header
     const header = parseCSVLine(lines[0]);
@@ -167,7 +210,7 @@ export const parseActivitiesCSV = async (csvPath) => {
     const maxSpeedIndex = header.indexOf('Max Speed');
     const avgSpeedIndex = header.indexOf('Average Speed');
     
-    const activities = [];
+    const metadata = {};
     
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i].trim()) continue;
@@ -179,11 +222,13 @@ export const parseActivitiesCSV = async (csvPath) => {
       
       if (!activityId || !filename) continue;
       
+      // Extract just the filename from path like "activities/12345.gpx"
+      const gpxFilename = filename.split('/').pop();
+      
       // Parse date - format: "7 May 2017, 09:59:01"
       const dateStr = values[dateIndex];
       let timestamp;
       try {
-        // Convert "7 May 2017, 09:59:01" to parseable format
         timestamp = parseStravaDate(dateStr);
       } catch (e) {
         timestamp = new Date().toISOString();
@@ -191,9 +236,9 @@ export const parseActivitiesCSV = async (csvPath) => {
       
       const activityType = values[typeIndex] || 'Ride';
       
-      activities.push({
+      metadata[gpxFilename] = {
         stravaId: activityId,
-        filename: filename.replace('activities/', ''),
+        filename: gpxFilename,
         name: values[nameIndex] || `${activityType} Activity`,
         type: STRAVA_TYPE_MAP[activityType] || 'walking',
         stravaType: activityType,
@@ -205,13 +250,13 @@ export const parseActivitiesCSV = async (csvPath) => {
         elevationLoss: parseFloat(values[elevLossIndex]) || 0,
         maxSpeed: parseFloat(values[maxSpeedIndex]) * 3.6 || 0, // m/s to km/h
         avgSpeed: parseFloat(values[avgSpeedIndex]) * 3.6 || 0, // m/s to km/h
-      });
+      };
     }
     
-    return activities;
+    return metadata;
   } catch (error) {
     console.error('Error parsing activities.csv:', error);
-    return [];
+    return {};
   }
 };
 
@@ -274,36 +319,11 @@ const parseStravaDate = (dateStr) => {
 };
 
 /**
- * List GPX files in the import directory
+ * Import a single GPX file from a picked file
  */
-export const listImportFiles = async () => {
+export const importGPXFromUri = async (fileUri, fileName, metadata = null) => {
   try {
-    await initImportDir();
-    
-    const files = await FileSystem.readDirectoryAsync(IMPORT_DIR);
-    
-    const gpxFiles = files.filter(f => f.endsWith('.gpx'));
-    const csvFiles = files.filter(f => f.endsWith('.csv'));
-    
-    return {
-      gpxFiles,
-      csvFiles,
-      hasActivitiesCSV: csvFiles.includes('activities.csv'),
-      totalGPX: gpxFiles.length,
-    };
-  } catch (error) {
-    console.error('Error listing import files:', error);
-    return { gpxFiles: [], csvFiles: [], hasActivitiesCSV: false, totalGPX: 0 };
-  }
-};
-
-/**
- * Import a single GPX file
- */
-export const importGPXFile = async (filename, metadata = null) => {
-  try {
-    const gpxPath = `${IMPORT_DIR}${filename}`;
-    const gpxContent = await FileSystem.readAsStringAsync(gpxPath);
+    const gpxContent = await FileSystem.readAsStringAsync(fileUri);
     
     const parsed = parseGPX(gpxContent);
     
@@ -342,8 +362,8 @@ export const importGPXFile = async (filename, metadata = null) => {
     
     // Create activity object
     const activity = {
-      id: metadata?.stravaId || filename.replace('.gpx', ''),
-      timestamp: new Date(startTime).toISOString(),
+      id: metadata?.stravaId || fileName.replace('.gpx', '') || Date.now().toString(),
+      timestamp: metadata?.timestamp || new Date(startTime).toISOString(),
       name: metadata?.name || parsed.name || `Imported ${type === 'biking' ? 'Ride' : 'Walk'}`,
       type: type,
       distance: metadata?.distance || distance,
@@ -365,69 +385,57 @@ export const importGPXFile = async (filename, metadata = null) => {
     
     return { success: true, activity };
   } catch (error) {
-    console.error(`Error importing ${filename}:`, error);
+    console.error(`Error importing ${fileName}:`, error);
     return { success: false, error: error.message };
   }
 };
 
 /**
- * Import all activities from Strava export
+ * Import selected GPX files
  * 
- * @param {Function} onProgress - Callback for progress updates (current, total)
+ * @param {Array} gpxFiles - Array of file objects from document picker
+ * @param {Object} metadata - Optional metadata from activities.csv
+ * @param {Function} onProgress - Callback for progress updates (current, total, filename)
  * @returns {Object} Import results
  */
-export const importStravaActivities = async (onProgress = null) => {
+export const importSelectedFiles = async (gpxFiles, metadata = {}, onProgress = null) => {
   try {
-    await initImportDir();
-    
-    const files = await listImportFiles();
-    
-    if (files.totalGPX === 0) {
+    if (!gpxFiles || gpxFiles.length === 0) {
       return {
         success: false,
-        error: 'No GPX files found in import folder',
+        error: 'No GPX files selected',
         imported: 0,
         failed: 0,
       };
     }
     
-    // Load metadata from CSV if available
-    let metadata = {};
-    if (files.hasActivitiesCSV) {
-      const activities = await parseActivitiesCSV(`${IMPORT_DIR}activities.csv`);
-      activities.forEach(a => {
-        metadata[a.filename] = a;
-      });
-      console.log(`Loaded metadata for ${Object.keys(metadata).length} activities`);
-    }
-    
     let imported = 0;
     let failed = 0;
-    let skipped = 0;
     const errors = [];
     
-    for (let i = 0; i < files.gpxFiles.length; i++) {
-      const filename = files.gpxFiles[i];
+    for (let i = 0; i < gpxFiles.length; i++) {
+      const file = gpxFiles[i];
+      const fileName = file.name;
       
       if (onProgress) {
-        onProgress(i + 1, files.gpxFiles.length, filename);
+        onProgress(i + 1, gpxFiles.length, fileName);
       }
       
-      const activityMetadata = metadata[filename] || null;
-      const result = await importGPXFile(filename, activityMetadata);
+      // Look up metadata by filename
+      const fileMetadata = metadata[fileName] || null;
+      
+      const result = await importGPXFromUri(file.uri, fileName, fileMetadata);
       
       if (result.success) {
         imported++;
       } else {
         failed++;
-        errors.push({ file: filename, error: result.error });
+        errors.push({ file: fileName, error: result.error });
       }
     }
     
     // Recalculate gamification after import
     if (imported > 0) {
-      // Load all activities and recalculate
-      const { loadActivitiesFromFile } = require('./fileStorage');
       const allActivities = await loadActivitiesFromFile();
       const gamification = await recalculateGamification(allActivities);
       await saveGamificationToFile(gamification);
@@ -437,12 +445,11 @@ export const importStravaActivities = async (onProgress = null) => {
       success: true,
       imported,
       failed,
-      skipped,
-      total: files.totalGPX,
+      total: gpxFiles.length,
       errors: errors.slice(0, 10), // Only return first 10 errors
     };
   } catch (error) {
-    console.error('Error importing Strava activities:', error);
+    console.error('Error importing files:', error);
     return {
       success: false,
       error: error.message,
@@ -450,28 +457,4 @@ export const importStravaActivities = async (onProgress = null) => {
       failed: 0,
     };
   }
-};
-
-/**
- * Clear import folder after successful import
- */
-export const clearImportFolder = async () => {
-  try {
-    const dirInfo = await FileSystem.getInfoAsync(IMPORT_DIR);
-    if (dirInfo.exists) {
-      await FileSystem.deleteAsync(IMPORT_DIR, { idempotent: true });
-      await initImportDir(); // Recreate empty folder
-    }
-    return true;
-  } catch (error) {
-    console.error('Error clearing import folder:', error);
-    return false;
-  }
-};
-
-/**
- * Get the import folder path for the user
- */
-export const getImportFolderPath = () => {
-  return IMPORT_DIR;
 };
