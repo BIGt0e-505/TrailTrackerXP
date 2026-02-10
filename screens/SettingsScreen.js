@@ -23,6 +23,13 @@ import {
   initFileStorage,
 } from '../utils/storage';
 import { loadGamification } from '../utils/gamification';
+import {
+  initImportDir,
+  listImportFiles,
+  importStravaActivities,
+  clearImportFolder,
+  getImportFolderPath,
+} from '../utils/stravaImport';
 import { MoonIcon, SunIcon, MapIcon, ExportIcon } from '../components/Icons';
 
 // Icons for modals
@@ -67,6 +74,12 @@ const DownloadIcon = ({ size = 24, color = '#666' }) => (
   </Svg>
 );
 
+const UploadIcon = ({ size = 24, color = '#666' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const WarningIcon = ({ size = 24, color = '#FF9800' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M12 2L1 21h22L12 2z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -91,12 +104,15 @@ export default function SettingsScreen() {
   const [showMigrateModal, setShowMigrateModal] = useState(false);
   const [showRecoverModal, setShowRecoverModal] = useState(false);
   const [showBackupModal, setShowBackupModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [activityCount, setActivityCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [operationResult, setOperationResult] = useState(null);
   const [storageStats, setStorageStats] = useState(null);
   const [integrityInfo, setIntegrityInfo] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [importFiles, setImportFiles] = useState(null);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, file: '' });
 
   // Load storage stats on mount
   useEffect(() => {
@@ -105,6 +121,7 @@ export default function SettingsScreen() {
 
   const loadStorageInfo = async () => {
     await initFileStorage();
+    await initImportDir();
     const stats = await getStorageStats();
     const cacheActivities = await getActivities();
     const integrity = await verifyDataIntegrity(cacheActivities);
@@ -219,6 +236,40 @@ export default function SettingsScreen() {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const handleStravaImport = async () => {
+    setShowImportModal(true);
+    setOperationResult(null);
+    setIsProcessing(false);
+    
+    // Check what files are available
+    const files = await listImportFiles();
+    setImportFiles(files);
+  };
+
+  const confirmStravaImport = async () => {
+    setIsProcessing(true);
+    setOperationResult(null);
+    setImportProgress({ current: 0, total: importFiles?.totalGPX || 0, file: '' });
+    
+    try {
+      const result = await importStravaActivities((current, total, file) => {
+        setImportProgress({ current, total, file });
+      });
+      
+      setOperationResult(result);
+      await loadStorageInfo();
+      
+      // Clear import folder on success
+      if (result.success && result.imported > 0) {
+        await clearImportFolder();
+      }
+    } catch (error) {
+      setOperationResult({ success: false, error: error.message });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -424,6 +475,26 @@ export default function SettingsScreen() {
                 </Text>
                 <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
                   Export all data to shareable JSON file
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <TouchableOpacity 
+            style={styles.settingRow}
+            onPress={handleStravaImport}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <UploadIcon size={22} color={theme.icon} />
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Import from Strava
+                </Text>
+                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+                  Import GPX files from Strava export
                 </Text>
               </View>
             </View>
@@ -782,6 +853,109 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Import from Strava Modal */}
+      <Modal
+        visible={showImportModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !isProcessing && setShowImportModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            {!isProcessing && !operationResult ? (
+              <>
+                <UploadIcon size={56} color={theme.primary} />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Import from Strava
+                </Text>
+                {importFiles ? (
+                  <View style={styles.modalStats}>
+                    <Text style={[styles.modalStatRow, { color: theme.textSecondary }]}>
+                      GPX files found: {importFiles.totalGPX}
+                    </Text>
+                    <Text style={[styles.modalStatRow, { color: theme.textSecondary }]}>
+                      Metadata CSV: {importFiles.hasActivitiesCSV ? '✓ Found' : '✗ Not found'}
+                    </Text>
+                    {importFiles.totalGPX === 0 && (
+                      <Text style={[styles.modalMessage, { color: '#FF9800', marginTop: 10 }]}>
+                        No GPX files found.{'\n\n'}
+                        Copy your Strava GPX files to:{'\n'}
+                        {getImportFolderPath()}
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <ActivityIndicator size="small" color={theme.primary} />
+                )}
+                {importFiles?.totalGPX > 0 && (
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                    onPress={confirmStravaImport}
+                  >
+                    <Text style={styles.modalButtonText}>
+                      Import {importFiles.totalGPX} Activities
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.modalCancelButton, { backgroundColor: theme.surface }]}
+                  onPress={() => {
+                    setShowImportModal(false);
+                    setImportFiles(null);
+                  }}
+                >
+                  <Text style={[styles.modalCancelButtonText, { color: theme.text }]}>
+                    {importFiles?.totalGPX > 0 ? 'Cancel' : 'Close'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : isProcessing ? (
+              <>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Importing Activities...
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  {importProgress.current} of {importProgress.total}
+                </Text>
+                {importProgress.file && (
+                  <Text style={[styles.modalSubMessage, { color: theme.textSecondary }]}>
+                    {importProgress.file}
+                  </Text>
+                )}
+              </>
+            ) : operationResult ? (
+              <>
+                {operationResult.success ? (
+                  <CheckIcon size={56} color="#4CAF50" />
+                ) : (
+                  <WarningIcon size={56} color="#FF9800" />
+                )}
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  {operationResult.success ? 'Import Complete!' : 'Import Error'}
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  {operationResult.success 
+                    ? `Imported: ${operationResult.imported}\nFailed: ${operationResult.failed}`
+                    : operationResult.error
+                  }
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                  onPress={() => {
+                    setShowImportModal(false);
+                    setOperationResult(null);
+                    setImportFiles(null);
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -927,6 +1101,12 @@ const styles = StyleSheet.create({
   modalCancelButtonText: {
     fontSize: 16,
     fontFamily: 'Inter_700Bold',
+  },
+  modalSubMessage: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    marginTop: 4,
   },
   // Storage info styles
   storageInfoCard: {
