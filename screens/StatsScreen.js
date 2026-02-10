@@ -239,21 +239,35 @@ export default function StatsScreen() {
   const getWeeklyTotals = (type, count) => {
     const totals = [];
     const now = new Date();
+    
+    // Get the Monday of the current week
+    const getCurrentMonday = (date) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      // Adjust: Sunday (0) becomes 7, so we go back (day || 7) - 1 days to get Monday
+      const diff = (day === 0 ? 6 : day - 1);
+      d.setDate(d.getDate() - diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
+    
     for (let i = count - 1; i >= 0; i--) {
-      const weekStart = new Date(now);
-      weekStart.setDate(weekStart.getDate() - (i * 7) - weekStart.getDay());
-      weekStart.setHours(0, 0, 0, 0);
+      const weekStart = getCurrentMonday(now);
+      weekStart.setDate(weekStart.getDate() - (i * 7));
       const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 7);
+      weekEnd.setDate(weekEnd.getDate() + 7); // Sunday 23:59:59 is before next Monday 00:00:00
+      
       const weekActivities = activities.filter(a => {
         const activityDate = new Date(a.timestamp);
         return a.type === type && activityDate >= weekStart && activityDate < weekEnd;
       });
+      
+      // Calculate ISO week number (weeks start on Monday)
       const d = new Date(Date.UTC(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate()));
-      const dayNum = d.getUTCDay() || 7;
-      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
       const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
       const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+      
       totals.push({
         label: `W${weekNum}`,
         value: weekActivities.reduce((sum, a) => sum + (a.distance || 0), 0),

@@ -352,17 +352,22 @@ const parseStravaDate = (dateStr) => {
   dateStr = dateStr.replace(/"/g, '').trim();
   
   // Parse "7 May 2017, 09:59:01" format
+  // Note: Strava uses 'Sept' for September, not 'Sep'
   const months = {
     'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-    'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+    'Jul': 6, 'Aug': 7, 'Sep': 8, 'Sept': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
   };
   
   const match = dateStr.match(/(\d+)\s+(\w+)\s+(\d+),?\s+(\d+):(\d+):(\d+)/);
   if (match) {
     const [_, day, month, year, hour, min, sec] = match;
+    const monthNum = months[month];
+    if (monthNum === undefined) {
+      console.warn(`Unknown month: ${month} in date: ${dateStr}`);
+    }
     const date = new Date(
       parseInt(year),
-      months[month] || 0,
+      monthNum ?? 0,
       parseInt(day),
       parseInt(hour),
       parseInt(min),
