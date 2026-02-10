@@ -428,30 +428,6 @@ export const importGPXFromUri = async (fileUri, fileName, metadata = null) => {
     // Save to file storage
     await saveActivityToFile(activity);
     
-    // Also save to AsyncStorage so it appears in the app UI
-    try {
-      const existingJson = await AsyncStorage.getItem(ACTIVITIES_KEY);
-      const existingActivities = existingJson ? JSON.parse(existingJson) : [];
-      
-      // Check if activity already exists (by id or stravaId)
-      const existsIndex = existingActivities.findIndex(
-        a => a.id === activity.id || (a.stravaId && a.stravaId === activity.stravaId)
-      );
-      
-      if (existsIndex >= 0) {
-        // Update existing
-        existingActivities[existsIndex] = activity;
-      } else {
-        // Add new
-        existingActivities.push(activity);
-      }
-      
-      await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(existingActivities));
-    } catch (asyncError) {
-      console.error('Error saving to AsyncStorage:', asyncError);
-      // Continue even if AsyncStorage fails - file storage worked
-    }
-    
     return { success: true, activity };
   } catch (error) {
     console.error(`Error importing ${fileName}:`, error);
@@ -481,6 +457,7 @@ export const importSelectedFiles = async (gpxFiles, metadata = {}, onProgress = 
     let imported = 0;
     let failed = 0;
     const errors = [];
+    const importedActivities = []; // Collect all imported activities
     
     for (let i = 0; i < gpxFiles.length; i++) {
       const file = gpxFiles[i];
@@ -497,17 +474,67 @@ export const importSelectedFiles = async (gpxFiles, metadata = {}, onProgress = 
       
       if (result.success) {
         imported++;
+        importedActivities.push(result.activity);
       } else {
         failed++;
         errors.push({ file: fileName, error: result.error });
       }
     }
     
-    // Recalculate gamification after import
+    // Batch save all imported activities to AsyncStorage at the end
+    // This ensures consistency and avoids race conditions
+    if (importedActivities.length > 0) {
+      try {
+        const existingJson = await AsyncStorage.getItem(ACTIVITIES_KEY);
+        const existingActivities = existingJson ? JSON.parse(existingJson) : [];
+        
+        // Create a map of existing activities by id for faster lookup
+        const existingMap = new Map();
+        existingActivities.forEach(a => {
+          existingMap.set(a.id, a);
+          if (a.stravaId) existingMap.set(a.stravaId, a);
+        });
+        
+        // Add or update imported activities
+        for (const activity of importedActivities) {
+          const existingById = existingMap.get(activity.id);
+          const existingByStravaId = activity.stravaId ? existingMap.get(activity.stravaId) : null;
+          
+          if (existingById) {
+            // Update existing by id
+            const idx = existingActivities.findIndex(a => a.id === activity.id);
+            if (idx >= 0) existingActivities[idx] = activity;
+          } else if (existingByStravaId) {
+            // Update existing by stravaId
+            const idx = existingActivities.findIndex(a => a.stravaId === activity.stravaId);
+            if (idx >= 0) existingActivities[idx] = activity;
+          } else {
+            // Add new
+            existingActivities.push(activity);
+          }
+          
+          // Update map for next iteration
+          existingMap.set(activity.id, activity);
+          if (activity.stravaId) existingMap.set(activity.stravaId, activity);
+        }
+        
+        await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(existingActivities));
+        console.log(`Saved ${importedActivities.length} activities to AsyncStorage. Total: ${existingActivities.length}`);
+      } catch (asyncError) {
+        console.error('Error batch saving to AsyncStorage:', asyncError);
+      }
+    }
+    
+    // Recalculate gamification after import using AsyncStorage data
     if (imported > 0) {
-      const allActivities = await loadActivitiesFromFile();
-      const gamification = await recalculateGamification(allActivities);
-      await saveGamificationToFile(gamification);
+      try {
+        const allActivitiesJson = await AsyncStorage.getItem(ACTIVITIES_KEY);
+        const allActivities = allActivitiesJson ? JSON.parse(allActivitiesJson) : [];
+        const gamification = await recalculateGamification(allActivities);
+        await saveGamificationToFile(gamification);
+      } catch (gamError) {
+        console.error('Error recalculating gamification:', gamError);
+      }
     }
     
     return {
