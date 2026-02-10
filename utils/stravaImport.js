@@ -32,31 +32,60 @@ const STRAVA_TYPE_MAP = {
 
 /**
  * Open file picker to select GPX files
+ * Note: On Android, we use StorageAccessFramework to pick a directory
  * Returns array of selected file URIs
  */
 export const pickGPXFiles = async () => {
   try {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: '*/*',  // Allow all files - GPX has no standard MIME type
-      multiple: true,
-      copyToCacheDirectory: true,
-    });
-
-    if (result.canceled) {
+    // Request directory access permission
+    const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+    
+    if (!permissions.granted) {
       return { canceled: true, files: [] };
     }
-
-    // Filter to only GPX files by extension
-    const gpxFiles = result.assets.filter(file => 
-      file.name.toLowerCase().endsWith('.gpx')
-    );
+    
+    // Read all files in the selected directory
+    const directoryUri = permissions.directoryUri;
+    const files = await FileSystem.StorageAccessFramework.readDirectoryAsync(directoryUri);
+    
+    // Filter to only GPX files and create file objects
+    const gpxFiles = [];
+    for (const fileUri of files) {
+      // Extract filename from SAF URI
+      // URIs can be double-encoded, so decode until stable
+      let decoded = fileUri;
+      let prev = '';
+      while (decoded !== prev && decoded.includes('%')) {
+        prev = decoded;
+        try {
+          decoded = decodeURIComponent(decoded);
+        } catch (e) {
+          break; // Stop if decoding fails (invalid encoding)
+        }
+      }
+      
+      // SAF URIs often have the filename after the last colon or slash
+      // e.g., "content://.../document/primary:Download/strava/12345.gpx"
+      let fileName = decoded.split('/').pop();
+      // Also check for colon-separated paths (common in SAF)
+      if (fileName.includes(':')) {
+        fileName = fileName.split(':').pop();
+      }
+      
+      if (fileName.toLowerCase().endsWith('.gpx')) {
+        gpxFiles.push({
+          uri: fileUri,
+          name: fileName,
+        });
+      }
+    }
 
     return {
       canceled: false,
       files: gpxFiles,
-      totalSelected: result.assets.length,
+      totalSelected: files.length,
       gpxCount: gpxFiles.length,
-      nonGpxCount: result.assets.length - gpxFiles.length,
+      directoryUri: directoryUri,
     };
   } catch (error) {
     console.error('Error picking files:', error);
@@ -176,7 +205,13 @@ const toRad = (deg) => deg * (Math.PI / 180);
  */
 export const parseActivitiesCSV = async (csvUri) => {
   try {
-    const content = await FileSystem.readAsStringAsync(csvUri);
+    // For SAF URIs, we need to use StorageAccessFramework to read
+    let content;
+    if (csvUri.startsWith('content://')) {
+      content = await FileSystem.StorageAccessFramework.readAsStringAsync(csvUri);
+    } else {
+      content = await FileSystem.readAsStringAsync(csvUri);
+    }
     const lines = content.split('\n');
     
     if (lines.length < 2) return {};
@@ -324,7 +359,13 @@ const parseStravaDate = (dateStr) => {
  */
 export const importGPXFromUri = async (fileUri, fileName, metadata = null) => {
   try {
-    const gpxContent = await FileSystem.readAsStringAsync(fileUri);
+    // For SAF URIs, we need to use StorageAccessFramework to read
+    let gpxContent;
+    if (fileUri.startsWith('content://')) {
+      gpxContent = await FileSystem.StorageAccessFramework.readAsStringAsync(fileUri);
+    } else {
+      gpxContent = await FileSystem.readAsStringAsync(fileUri);
+    }
     
     const parsed = parseGPX(gpxContent);
     

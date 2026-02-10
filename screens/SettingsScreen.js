@@ -887,7 +887,7 @@ export default function SettingsScreen() {
                 </Text>
                 
                 <Text style={[styles.modalMessage, { color: theme.textSecondary, marginBottom: 16 }]}>
-                  Select GPX files from your Strava export
+                  Select the folder containing your Strava GPX files
                 </Text>
                 
                 {/* Select GPX Files Button */}
@@ -897,8 +897,8 @@ export default function SettingsScreen() {
                 >
                   <Text style={[styles.filePickerButtonText, { color: theme.primary }]}>
                     {selectedGPXFiles.length > 0 
-                      ? `✓ ${selectedGPXFiles.length} GPX files selected`
-                      : 'Select GPX Files'}
+                      ? `✓ ${selectedGPXFiles.length} GPX files found`
+                      : 'Select Activities Folder'}
                   </Text>
                 </TouchableOpacity>
                 
