@@ -11,8 +11,11 @@
 
 import * as FileSystem from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveActivityToFile, saveGamificationToFile, loadActivitiesFromFile } from './fileStorage';
 import { recalculateGamification } from './gamification';
+
+const ACTIVITIES_KEY = '@trail_tracker_activities';
 
 // Strava activity type mapping
 const STRAVA_TYPE_MAP = {
@@ -424,6 +427,30 @@ export const importGPXFromUri = async (fileUri, fileName, metadata = null) => {
     
     // Save to file storage
     await saveActivityToFile(activity);
+    
+    // Also save to AsyncStorage so it appears in the app UI
+    try {
+      const existingJson = await AsyncStorage.getItem(ACTIVITIES_KEY);
+      const existingActivities = existingJson ? JSON.parse(existingJson) : [];
+      
+      // Check if activity already exists (by id or stravaId)
+      const existsIndex = existingActivities.findIndex(
+        a => a.id === activity.id || (a.stravaId && a.stravaId === activity.stravaId)
+      );
+      
+      if (existsIndex >= 0) {
+        // Update existing
+        existingActivities[existsIndex] = activity;
+      } else {
+        // Add new
+        existingActivities.push(activity);
+      }
+      
+      await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(existingActivities));
+    } catch (asyncError) {
+      console.error('Error saving to AsyncStorage:', asyncError);
+      // Continue even if AsyncStorage fails - file storage worked
+    }
     
     return { success: true, activity };
   } catch (error) {
