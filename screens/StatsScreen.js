@@ -721,10 +721,8 @@ export default function StatsScreen() {
           {linePath && <Path d={linePath} stroke={theme.primary} strokeWidth={2} fill="none" />}
           {points.map((point, i) => (
             <React.Fragment key={i}>
-              {point.value > 0 ? (
+              {point.value > 0 && (
                 <SvgText x={point.x} y={point.y - 8} fontSize={10} fill={theme.text} textAnchor="middle">{formatValue(point.value)}</SvgText>
-              ) : (
-                <SvgText x={point.x} y={padding.top + graphH - 8} fontSize={10} fill={theme.text} textAnchor="middle">0</SvgText>
               )}
               <Circle cx={point.x} cy={point.value > 0 ? point.y : padding.top + graphH} r={6} fill={theme.primary} />
               {i % Math.max(1, Math.floor(points.length / 6)) === 0 && <SvgText x={point.x} y={GRAPH_HEIGHT - 5} fontSize={9} fill={theme.textSecondary} textAnchor="middle">{point.label}</SvgText>}
