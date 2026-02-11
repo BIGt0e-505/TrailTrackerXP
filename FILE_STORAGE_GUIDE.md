@@ -1,44 +1,43 @@
 # TrailTrackerXP File Storage System
 
-## Version 0.3.0 - File Storage & Strava Import Update
+## Version 0.3.1 - GPX-Based File Storage
 
-This update adds persistent file-based storage to protect your activity data from being lost, plus the ability to import your Strava history.
+This update uses GPX format for persistent file storage, making your activity data compatible with Strava and other fitness apps.
 
 ## Key Features
 
-### 1. Dual Storage System
-- **Cache Storage (AsyncStorage)**: Fast access for daily use
-- **File Storage (DocumentDirectory)**: Persistent backup that survives app updates
+### 1. GPX File Storage
+- **Each activity saved as individual GPX file**: Standard format readable by any fitness app
+- **Automatic save on completion**: Activities are saved to GPX immediately when finished
+- **Same format as Strava exports**: Easy to backup and restore
 
-### 2. Automatic Backup
-All new activities are automatically saved to both storage systems when you complete a tracking session.
+### 2. Dual Storage System
+- **Cache Storage (AsyncStorage)**: Fast access for daily use
+- **GPX File Storage (DocumentDirectory)**: Persistent backup that survives app updates
 
 ### 3. Recovery Option
-If your cache data is ever lost or corrupted, you can restore it from the file storage backup.
+If your cache data is ever lost or corrupted, you can restore it from the saved GPX files.
 
 ### 4. Strava Import
 Import your entire Strava activity history from a Strava data export.
 
-### 5. Strava-Compatible Format
-Activity data is stored in a format compatible with Strava exports.
-
 ## How to Use
 
-### Save Existing Activities to File Storage
-After updating to v0.3.0, go to **Settings > Data Storage > Save to File Storage** to backup your existing activities from cache to file storage.
+### Save Existing Activities to GPX Files
+Go to **Settings > Data Storage > Save to GPX Files** to save any activities that haven't been saved as GPX files yet.
 
 ### Check Storage Status
-Go to **Settings > Cache > View Storage Status** to see:
-- How many activities are in cache vs file storage
-- Whether any activities need to be synced
+The Settings screen shows:
+- How many GPX files exist
+- How many activities in cache need to be saved as GPX
 
 ### Recover Lost Data
 If you notice your activities are missing:
-1. Go to **Settings > Data Storage > Recover from File Storage**
-2. This will restore activities from the file backup to your cache
+1. Go to **Settings > Data Storage > Recover from GPX Files**
+2. This will restore activities from the GPX files to your cache
 
 ### Create Backup File
-To export all your data to a shareable file:
+To export all your data to a shareable JSON file:
 1. Go to **Settings > Data Storage > Create Backup File**
 2. A JSON file will be created and you can share it via email, cloud storage, etc.
 
@@ -54,15 +53,13 @@ To export all your data to a shareable file:
 ### Step 2: Import into TrailTrackerXP
 1. Go to **Settings > Data Storage > Import from Strava**
 2. Tap **"Select GPX Files"** and navigate to your Strava export's `activities` folder
-3. Select all the `.gpx` files you want to import (you can select multiple)
-4. (Optional) Tap **"+ Add activities.csv"** to include activity names, types, and accurate stats
+3. Select all the `.gpx` files you want to import
+4. (Optional) Tap **"+ Add activities.csv"** for better metadata
 5. Tap **"Import X Activities"** and wait for completion
 
 ### Import Notes
-- The file picker lets you browse to wherever you saved your Strava export
-- Activities will be classified as "Walk" or "Ride" based on the type in the GPX file
-- Including `activities.csv` provides better metadata (activity names, accurate distance/elevation from Strava)
-- If only GPX files are provided, stats will be calculated from GPS data
+- Activities will be classified as "Walk" or "Ride" based on GPX type
+- Including `activities.csv` provides better metadata (activity names, accurate stats)
 - Large imports (200+ files) may take a few minutes
 
 ## Technical Details
@@ -70,45 +67,54 @@ To export all your data to a shareable file:
 ### File Locations
 Files are stored in the app's document directory:
 ```
-/activities/activities.json    - Activity summaries (Strava-compatible format)
-/activities/streams/{id}.json  - GPS track data for each activity
-/activities/gamification.json  - XP, achievements, and challenges
-/import/                       - Place Strava GPX files here for import
-/export/                       - Backup files created by "Create Backup File"
+/activities/{id}.gpx          - Individual activity GPX files
+/activities/gamification.json - XP, achievements, and challenges
+/export/                      - Backup files created by "Create Backup File"
 ```
 
-### Data Format (Strava-Compatible)
+### GPX File Format
 
-Activities are stored with Strava-compatible field names:
-- `distance`: meters (Strava standard)
-- `elapsed_time`: seconds
-- `moving_time`: seconds
-- `total_elevation_gain`: meters
-- `start_date_local`: ISO 8601 timestamp
-- `type`/`sport_type`: "Walk", "Ride", etc.
-- `start_latlng`/`end_latlng`: [latitude, longitude]
+Each activity is stored as a standard GPX 1.1 file:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx creator="TrailTrackerXP" version="1.1" ...>
+ <metadata>
+  <time>2024-01-15T10:30:00Z</time>
+ </metadata>
+ <trk>
+  <name>Morning Walk</name>
+  <type>walking</type>
+  <trkseg>
+   <trkpt lat="51.7301110" lon="0.4978880">
+    <ele>21.3</ele>
+    <time>2024-01-15T10:30:00Z</time>
+   </trkpt>
+   ...
+  </trkseg>
+ </trk>
+</gpx>
+```
 
-GPS streams follow Strava's format:
-- `latlng`: Array of [lat, lng] pairs
-- `time`: Seconds from activity start
-- `distance`: Cumulative distance in meters
-- `altitude`: Elevation in meters
+- Activity name stored in `<name>` tag
+- Activity type stored in `<type>` tag (walking/cycling)
+- Each GPS point includes latitude, longitude, elevation, and timestamp
+- Format matches Strava GPX exports
 
 ## Troubleshooting
 
 ### Activities Not Appearing After Update
-1. First check Settings > Cache > View Storage Status
-2. If activities show "in cache only", use "Save to File Storage"
-3. If activities show "in file storage only", use "Recover from File Storage"
+1. Check Settings > Data Storage section
+2. If activities show "X activities with GPS data not yet saved", use "Save to GPX Files"
+3. If GPX files exist but cache is empty, use "Recover from GPX Files"
 
 ### Progress Shows 0 Miles But XP Exists
-This can happen if the cache was partially corrupted. Use "Recover from File Storage" to restore your activity data.
+This can happen if the cache was cleared. Use "Recover from GPX Files" to restore your activity data.
 
-### File Storage Shows 0 Activities
-Your existing activities are still in cache. Use "Save to File Storage" to back them up.
+### GPX Files Shows 0 Activities
+Your existing activities may only be in cache. Use "Save to GPX Files" to save them.
 
-### Strava Import Shows 0 GPX Files
-Make sure you copied the GPX files to the correct folder. The import folder path is shown in the import dialog.
+### Activities Have No Route Data
+Activities tracked without GPS (or before v0.3.0) won't have route data and can't be saved as GPX.
 
 ### Some Strava Activities Failed to Import
 - Check that the GPX file isn't corrupted
@@ -117,15 +123,14 @@ Make sure you copied the GPX files to the correct folder. The import folder path
 
 ## Changelog
 
+### v0.3.1
+- **GPX-based file storage**: Activities now saved as individual GPX files
+- Standard GPX 1.1 format compatible with Strava and other apps
+- Automatic GPX save when activity completes
+- Updated UI to show "GPX files" instead of "file storage"
+- Same Strava import functionality
+
 ### v0.3.0
 - Added file-based persistent storage system
 - Added Strava GPX import functionality
-- Added Strava-compatible data format
-- Added Settings UI for data management:
-  - Save to File Storage
-  - Recover from File Storage  
-  - Create Backup File
-  - Import from Strava
-  - View Storage Status
-- Automatic dual-write: activities now save to both cache and file storage
-- Added expo-sharing for backup file export
+- Added Settings UI for data management

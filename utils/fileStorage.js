@@ -1,39 +1,39 @@
 /**
- * File-based storage for TrailTrackerXP activities
+ * GPX File-based storage for TrailTrackerXP activities
  * 
- * This module provides persistent file storage for activity data,
- * using a format compatible with Strava exports to enable future import/export.
+ * This module provides persistent file storage for activity data using GPX format,
+ * making it compatible with Strava and other fitness apps.
  * 
  * Data is stored in the app's document directory which persists across app updates
  * and can only be cleared by uninstalling the app or manually clearing app data.
  * 
  * File Structure:
- * - /activities/activities.json - Main activity index (summary data)
- * - /activities/streams/{id}.json - Individual activity streams (GPS/sensor data)
- * - /export/trailtrackerxp_export_{date}.json - Full export files
+ * - /activities/{id}.gpx - Individual activity files in GPX format
+ * - /activities/gamification.json - Gamification data (separate from activities)
+ * - /export/trailtrackerxp_export_{date}.json - Full export files (legacy format for backup)
  */
 
 import * as FileSystem from 'expo-file-system';
 
 // File paths
 const ACTIVITIES_DIR = `${FileSystem.documentDirectory}activities/`;
-const STREAMS_DIR = `${FileSystem.documentDirectory}activities/streams/`;
 const EXPORT_DIR = `${FileSystem.documentDirectory}export/`;
-const ACTIVITIES_INDEX_FILE = `${ACTIVITIES_DIR}activities.json`;
 const GAMIFICATION_FILE = `${ACTIVITIES_DIR}gamification.json`;
 
-// Strava-compatible activity types mapping
-// TrailTrackerXP uses: 'walking', 'biking'
-// Strava uses: 'Walk', 'Ride', 'Run', 'MountainBikeRide', etc.
+// TrailTrackerXP activity types mapping to GPX types
 export const ACTIVITY_TYPE_MAP = {
-  // TrailTrackerXP -> Strava
-  walking: 'Walk',
-  biking: 'Ride',
-  // Strava -> TrailTrackerXP (for import)
+  // TrailTrackerXP -> GPX type
+  walking: 'walking',
+  biking: 'cycling',
+  // GPX/Strava -> TrailTrackerXP (for import)
   Walk: 'walking',
-  Run: 'walking', // Map runs to walking for now
+  Run: 'walking',
   Hike: 'walking',
+  walking: 'walking',
+  running: 'walking',
+  hiking: 'walking',
   Ride: 'biking',
+  cycling: 'biking',
   MountainBikeRide: 'biking',
   GravelRide: 'biking',
   EBikeRide: 'biking',
@@ -52,26 +52,10 @@ export const initFileStorage = async () => {
       console.log('Created activities directory');
     }
 
-    const streamsDirInfo = await FileSystem.getInfoAsync(STREAMS_DIR);
-    if (!streamsDirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(STREAMS_DIR, { intermediates: true });
-      console.log('Created streams directory');
-    }
-
     const exportDirInfo = await FileSystem.getInfoAsync(EXPORT_DIR);
     if (!exportDirInfo.exists) {
       await FileSystem.makeDirectoryAsync(EXPORT_DIR, { intermediates: true });
       console.log('Created export directory');
-    }
-
-    // Initialize activities index if it doesn't exist
-    const indexInfo = await FileSystem.getInfoAsync(ACTIVITIES_INDEX_FILE);
-    if (!indexInfo.exists) {
-      await FileSystem.writeAsStringAsync(
-        ACTIVITIES_INDEX_FILE,
-        JSON.stringify({ activities: [], version: 1, lastUpdated: new Date().toISOString() })
-      );
-      console.log('Created activities index file');
     }
 
     return true;
@@ -82,221 +66,321 @@ export const initFileStorage = async () => {
 };
 
 /**
- * Convert TrailTrackerXP activity to Strava-compatible format
- * This makes it easier to import Strava data later
+ * Convert activity to GPX format string
+ * Matches the Strava GPX format exactly
  */
-export const toStravaFormat = (activity) => {
-  return {
-    // Strava standard fields
-    id: activity.id,
-    name: activity.name || `${activity.type === 'walking' ? 'Walk' : 'Ride'} - ${new Date(activity.timestamp).toLocaleDateString()}`,
-    type: ACTIVITY_TYPE_MAP[activity.type] || 'Walk',
-    sport_type: ACTIVITY_TYPE_MAP[activity.type] || 'Walk',
-    start_date: activity.timestamp,
-    start_date_local: activity.timestamp,
-    distance: (activity.distance || 0) * 1000, // Convert km to meters (Strava uses meters)
-    moving_time: Math.round(activity.movingTime || activity.duration || 0), // seconds
-    elapsed_time: Math.round(activity.duration || 0), // seconds
-    total_elevation_gain: activity.elevationGain || 0, // meters
-    elev_high: activity.maxAltitude || null,
-    elev_low: activity.minAltitude || null,
-    start_latlng: activity.routeData?.[0] 
-      ? [activity.routeData[0].latitude, activity.routeData[0].longitude] 
-      : null,
-    end_latlng: activity.routeData?.length > 0
-      ? [activity.routeData[activity.routeData.length - 1].latitude, 
-         activity.routeData[activity.routeData.length - 1].longitude]
-      : null,
-    average_speed: activity.avgSpeed ? activity.avgSpeed / 3.6 : null, // Convert km/h to m/s
-    max_speed: activity.maxSpeed ? activity.maxSpeed / 3.6 : null, // Convert km/h to m/s
+export const activityToGPX = (activity) => {
+  const routeData = activity.routeData || activity.route || [];
+  
+  // Determine the name
+  const name = activity.name || 
+    `${activity.type === 'walking' ? 'Walk' : activity.type === 'biking' ? 'Ride' : 'Activity'} - ${new Date(activity.timestamp).toLocaleDateString()}`;
+  
+  // Determine GPX type
+  const gpxType = ACTIVITY_TYPE_MAP[activity.type] || 'walking';
+  
+  // Get metadata time from first point or activity timestamp
+  const metadataTime = routeData.length > 0 
+    ? new Date(routeData[0].timestamp).toISOString()
+    : activity.timestamp || new Date().toISOString();
+  
+  // Build trackpoints
+  let trackpoints = '';
+  for (const point of routeData) {
+    const lat = point.latitude.toFixed(7);
+    const lon = point.longitude.toFixed(7);
+    const ele = (point.altitude || 0).toFixed(1);
+    const time = new Date(point.timestamp).toISOString();
     
-    // TrailTrackerXP specific fields (preserved for our use)
-    _trailtrackerxp: {
-      version: 1,
-      original_type: activity.type,
-      elevation_loss: activity.elevationLoss || 0,
-      distance_km: activity.distance || 0,
-      avg_speed_kmh: activity.avgSpeed || 0,
-      max_speed_kmh: activity.maxSpeed || 0,
-    },
-  };
-};
-
-/**
- * Convert Strava format back to TrailTrackerXP format
- */
-export const fromStravaFormat = (stravaActivity) => {
-  // If it has TrailTrackerXP specific data, use that
-  const ttxpData = stravaActivity._trailtrackerxp || {};
+    trackpoints += `   <trkpt lat="${lat}" lon="${lon}">
+    <ele>${ele}</ele>
+    <time>${time}</time>
+   </trkpt>\n`;
+  }
   
-  return {
-    id: stravaActivity.id?.toString() || Date.now().toString(),
-    timestamp: stravaActivity.start_date_local || stravaActivity.start_date || new Date().toISOString(),
-    type: ttxpData.original_type || ACTIVITY_TYPE_MAP[stravaActivity.sport_type] || ACTIVITY_TYPE_MAP[stravaActivity.type] || 'walking',
-    distance: ttxpData.distance_km ?? (stravaActivity.distance / 1000), // Convert meters to km
-    duration: stravaActivity.elapsed_time || 0,
-    movingTime: stravaActivity.moving_time || stravaActivity.elapsed_time || 0,
-    elevationGain: stravaActivity.total_elevation_gain || 0,
-    elevationLoss: ttxpData.elevation_loss || 0,
-    maxAltitude: stravaActivity.elev_high || null,
-    minAltitude: stravaActivity.elev_low || null,
-    avgSpeed: ttxpData.avg_speed_kmh ?? (stravaActivity.average_speed ? stravaActivity.average_speed * 3.6 : null),
-    maxSpeed: ttxpData.max_speed_kmh ?? (stravaActivity.max_speed ? stravaActivity.max_speed * 3.6 : null),
-    name: stravaActivity.name,
-  };
-};
-
-/**
- * Convert route/GPS data to Strava-compatible stream format
- */
-export const toStravaStreams = (routeData) => {
-  if (!routeData || routeData.length === 0) return null;
-
-  const startTime = routeData[0].timestamp;
+  // Build the GPX document (matching Strava/sample format)
+  // Note: Using <n> tag for name as seen in Strava exports
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx creator="TrailTrackerXP" version="1.1" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+ <metadata>
+  <time>${metadataTime}</time>
+ </metadata>
+ <trk>
+  <name>${escapeXML(name)}</name>
+  <type>${gpxType}</type>
+  <trkseg>
+${trackpoints}  </trkseg>
+ </trk>
+</gpx>
+`;
   
-  return {
-    latlng: {
-      data: routeData.map(p => [p.latitude, p.longitude]),
-      series_type: 'distance',
-      original_size: routeData.length,
-      resolution: 'high',
-    },
-    time: {
-      data: routeData.map(p => Math.round((p.timestamp - startTime) / 1000)),
-      series_type: 'distance',
-      original_size: routeData.length,
-      resolution: 'high',
-    },
-    distance: {
-      data: routeData.map(p => (p.cumulativeDistance || 0) * 1000), // km to meters
-      series_type: 'distance',
-      original_size: routeData.length,
-      resolution: 'high',
-    },
-    altitude: {
-      data: routeData.map(p => p.altitude || 0),
-      series_type: 'distance',
-      original_size: routeData.length,
-      resolution: 'high',
-    },
-  };
+  return gpx;
 };
 
 /**
- * Convert Strava streams back to TrailTrackerXP route data format
+ * Escape XML special characters
  */
-export const fromStravaStreams = (streams, startTimestamp) => {
-  if (!streams || !streams.latlng?.data) return [];
+const escapeXML = (str) => {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+};
 
-  const startTime = new Date(startTimestamp).getTime();
+/**
+ * Parse GPX file content into activity data
+ */
+export const parseGPX = (gpxContent) => {
+  const routeData = [];
   
-  return streams.latlng.data.map((coords, index) => ({
-    latitude: coords[0],
-    longitude: coords[1],
-    timestamp: startTime + (streams.time?.data[index] || 0) * 1000,
-    altitude: streams.altitude?.data[index] || 0,
-    cumulativeDistance: (streams.distance?.data[index] || 0) / 1000, // meters to km
-  }));
+  try {
+    // Extract activity name - try both <n> and <name> tags (Strava uses <n> sometimes)
+    let name = null;
+    const nameMatch = gpxContent.match(/<name>([^<]+)<\/name>/);
+    if (nameMatch) {
+      name = nameMatch[1];
+    } else {
+      const nMatch = gpxContent.match(/<n>([^<]+)<\/n>/);
+      if (nMatch) name = nMatch[1];
+    }
+    
+    // Extract activity type from GPX
+    const typeMatch = gpxContent.match(/<type>([^<]+)<\/type>/);
+    const gpxType = typeMatch ? typeMatch[1] : null;
+    
+    // Extract metadata time
+    const metaTimeMatch = gpxContent.match(/<metadata>\s*<time>([^<]+)<\/time>/);
+    const metadataTime = metaTimeMatch ? metaTimeMatch[1] : null;
+    
+    // Extract all track points
+    const trkptRegex = /<trkpt\s+lat="([^"]+)"\s+lon="([^"]+)"[^>]*>\s*(?:<ele>([^<]*)<\/ele>)?\s*(?:<time>([^<]*)<\/time>)?/g;
+    
+    let match;
+    let cumulativeDistance = 0;
+    let prevLat = null;
+    let prevLon = null;
+    
+    while ((match = trkptRegex.exec(gpxContent)) !== null) {
+      const lat = parseFloat(match[1]);
+      const lon = parseFloat(match[2]);
+      const ele = match[3] ? parseFloat(match[3]) : 0;
+      const time = match[4] ? new Date(match[4]).getTime() : Date.now();
+      
+      // Calculate cumulative distance
+      if (prevLat !== null && prevLon !== null) {
+        cumulativeDistance += haversineDistance(prevLat, prevLon, lat, lon);
+      }
+      
+      routeData.push({
+        latitude: lat,
+        longitude: lon,
+        altitude: ele,
+        timestamp: time,
+        cumulativeDistance: cumulativeDistance,
+      });
+      
+      prevLat = lat;
+      prevLon = lon;
+    }
+    
+    return {
+      name,
+      type: gpxType,
+      metadataTime,
+      routeData,
+    };
+  } catch (error) {
+    console.error('Error parsing GPX:', error);
+    return { routeData: [], name: null, type: null };
+  }
 };
 
 /**
- * Load all activities from file storage
+ * Haversine distance calculation (returns km)
  */
-export const loadActivitiesFromFile = async () => {
+const haversineDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Earth's radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const toRad = (deg) => deg * (Math.PI / 180);
+
+/**
+ * Get list of all saved GPX activity IDs
+ */
+export const getSavedActivityIds = async () => {
   try {
     await initFileStorage();
     
-    const content = await FileSystem.readAsStringAsync(ACTIVITIES_INDEX_FILE);
-    const data = JSON.parse(content);
+    const files = await FileSystem.readDirectoryAsync(ACTIVITIES_DIR);
+    const gpxFiles = files.filter(f => f.endsWith('.gpx'));
     
-    // Convert from Strava format to TrailTrackerXP format
-    return (data.activities || []).map(fromStravaFormat);
+    // Extract IDs from filenames (remove .gpx extension)
+    return gpxFiles.map(f => f.replace('.gpx', ''));
   } catch (error) {
-    console.error('Error loading activities from file:', error);
+    console.error('Error getting saved activity IDs:', error);
     return [];
   }
 };
 
 /**
- * Load a single activity with its stream data (GPS track)
+ * Check if an activity is already saved as GPX
  */
-export const loadActivityWithStreams = async (activityId) => {
+export const isActivitySaved = async (activityId) => {
   try {
-    await initFileStorage();
-    
-    // Load activity index
-    const content = await FileSystem.readAsStringAsync(ACTIVITIES_INDEX_FILE);
-    const data = JSON.parse(content);
-    
-    const stravaActivity = data.activities.find(a => a.id?.toString() === activityId?.toString());
-    if (!stravaActivity) return null;
-    
-    const activity = fromStravaFormat(stravaActivity);
-    
-    // Load stream data if it exists
-    const streamFile = `${STREAMS_DIR}${activityId}.json`;
-    const streamInfo = await FileSystem.getInfoAsync(streamFile);
-    
-    if (streamInfo.exists) {
-      const streamContent = await FileSystem.readAsStringAsync(streamFile);
-      const streams = JSON.parse(streamContent);
-      activity.routeData = fromStravaStreams(streams, activity.timestamp);
-    }
-    
-    return activity;
+    const gpxFile = `${ACTIVITIES_DIR}${activityId}.gpx`;
+    const fileInfo = await FileSystem.getInfoAsync(gpxFile);
+    return fileInfo.exists;
   } catch (error) {
-    console.error('Error loading activity with streams:', error);
-    return null;
+    console.error('Error checking if activity saved:', error);
+    return false;
   }
 };
 
 /**
- * Save an activity to file storage
+ * Save an activity to file storage as GPX
  */
 export const saveActivityToFile = async (activity) => {
   try {
     await initFileStorage();
     
-    // Load current activities
-    const content = await FileSystem.readAsStringAsync(ACTIVITIES_INDEX_FILE);
-    const data = JSON.parse(content);
+    // Get the route data - it might be stored as 'route' or 'routeData'
+    const routeData = activity.routeData || activity.route || [];
     
-    // Convert to Strava format (without route data - that goes in streams)
-    const stravaActivity = toStravaFormat(activity);
-    
-    // Check if activity already exists
-    const existingIndex = data.activities.findIndex(
-      a => a.id?.toString() === activity.id?.toString()
-    );
-    
-    if (existingIndex >= 0) {
-      data.activities[existingIndex] = stravaActivity;
-    } else {
-      data.activities.push(stravaActivity);
+    // Only save if there's route data
+    if (routeData.length === 0) {
+      console.log(`Activity ${activity.id} has no route data, skipping GPX save`);
+      return false;
     }
     
-    data.lastUpdated = new Date().toISOString();
+    // Create activity object with routeData properly set
+    const activityWithRoute = {
+      ...activity,
+      routeData: routeData,
+    };
     
-    // Save activities index
-    await FileSystem.writeAsStringAsync(
-      ACTIVITIES_INDEX_FILE,
-      JSON.stringify(data, null, 2)
-    );
+    // Convert to GPX format
+    const gpxContent = activityToGPX(activityWithRoute);
     
-    // Save stream data separately if route data exists
-    if (activity.routeData && activity.routeData.length > 0) {
-      const streams = toStravaStreams(activity.routeData);
-      await FileSystem.writeAsStringAsync(
-        `${STREAMS_DIR}${activity.id}.json`,
-        JSON.stringify(streams, null, 2)
-      );
-    }
+    // Save to file
+    const gpxFile = `${ACTIVITIES_DIR}${activity.id}.gpx`;
+    await FileSystem.writeAsStringAsync(gpxFile, gpxContent);
     
-    console.log(`Activity ${activity.id} saved to file storage`);
+    console.log(`Activity ${activity.id} saved as GPX`);
     return true;
   } catch (error) {
-    console.error('Error saving activity to file:', error);
+    console.error('Error saving activity to GPX:', error);
     return false;
+  }
+};
+
+/**
+ * Load an activity from GPX file
+ */
+export const loadActivityFromFile = async (activityId) => {
+  try {
+    const gpxFile = `${ACTIVITIES_DIR}${activityId}.gpx`;
+    const fileInfo = await FileSystem.getInfoAsync(gpxFile);
+    
+    if (!fileInfo.exists) {
+      return null;
+    }
+    
+    const gpxContent = await FileSystem.readAsStringAsync(gpxFile);
+    const parsed = parseGPX(gpxContent);
+    
+    if (parsed.routeData.length === 0) {
+      return null;
+    }
+    
+    // Calculate stats from route data
+    const startTime = parsed.routeData[0].timestamp;
+    const endTime = parsed.routeData[parsed.routeData.length - 1].timestamp;
+    const duration = (endTime - startTime) / 1000; // seconds
+    const distance = parsed.routeData[parsed.routeData.length - 1].cumulativeDistance;
+    
+    // Calculate elevation
+    let elevGain = 0;
+    let elevLoss = 0;
+    let minAlt = Infinity;
+    let maxAlt = -Infinity;
+    
+    for (let i = 1; i < parsed.routeData.length; i++) {
+      const diff = parsed.routeData[i].altitude - parsed.routeData[i-1].altitude;
+      if (diff > 0) elevGain += diff;
+      else elevLoss += Math.abs(diff);
+      
+      minAlt = Math.min(minAlt, parsed.routeData[i].altitude);
+      maxAlt = Math.max(maxAlt, parsed.routeData[i].altitude);
+    }
+    if (parsed.routeData.length > 0) {
+      minAlt = Math.min(minAlt, parsed.routeData[0].altitude);
+      maxAlt = Math.max(maxAlt, parsed.routeData[0].altitude);
+    }
+    
+    // Determine activity type
+    const type = ACTIVITY_TYPE_MAP[parsed.type] || 'walking';
+    
+    // Create activity object
+    const activity = {
+      id: activityId,
+      timestamp: parsed.metadataTime || new Date(startTime).toISOString(),
+      name: parsed.name || `Imported ${type === 'biking' ? 'Ride' : 'Walk'}`,
+      type: type,
+      distance: distance,
+      duration: duration,
+      movingTime: duration, // We don't have moving time in GPX, use total duration
+      elevationGain: elevGain,
+      elevationLoss: elevLoss,
+      maxAltitude: maxAlt !== -Infinity ? maxAlt : null,
+      minAltitude: minAlt !== Infinity ? minAlt : null,
+      avgSpeed: duration > 0 ? (distance / (duration / 3600)) : 0,
+      maxSpeed: null,
+      routeData: parsed.routeData,
+      route: parsed.routeData, // Include both for compatibility
+    };
+    
+    return activity;
+  } catch (error) {
+    console.error('Error loading activity from GPX:', error);
+    return null;
+  }
+};
+
+/**
+ * Load all activities from GPX files in file storage
+ */
+export const loadActivitiesFromFile = async () => {
+  try {
+    await initFileStorage();
+    
+    const activityIds = await getSavedActivityIds();
+    const activities = [];
+    
+    for (const id of activityIds) {
+      const activity = await loadActivityFromFile(id);
+      if (activity) {
+        activities.push(activity);
+      }
+    }
+    
+    // Sort by timestamp (newest first)
+    activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    return activities;
+  } catch (error) {
+    console.error('Error loading activities from file:', error);
+    return [];
   }
 };
 
@@ -305,33 +389,17 @@ export const saveActivityToFile = async (activity) => {
  */
 export const deleteActivityFromFile = async (activityId) => {
   try {
-    await initFileStorage();
+    const gpxFile = `${ACTIVITIES_DIR}${activityId}.gpx`;
+    const fileInfo = await FileSystem.getInfoAsync(gpxFile);
     
-    // Load and update activities index
-    const content = await FileSystem.readAsStringAsync(ACTIVITIES_INDEX_FILE);
-    const data = JSON.parse(content);
-    
-    data.activities = data.activities.filter(
-      a => a.id?.toString() !== activityId?.toString()
-    );
-    data.lastUpdated = new Date().toISOString();
-    
-    await FileSystem.writeAsStringAsync(
-      ACTIVITIES_INDEX_FILE,
-      JSON.stringify(data, null, 2)
-    );
-    
-    // Delete stream file if it exists
-    const streamFile = `${STREAMS_DIR}${activityId}.json`;
-    const streamInfo = await FileSystem.getInfoAsync(streamFile);
-    if (streamInfo.exists) {
-      await FileSystem.deleteAsync(streamFile);
+    if (fileInfo.exists) {
+      await FileSystem.deleteAsync(gpxFile);
+      console.log(`Activity ${activityId} GPX file deleted`);
     }
     
-    console.log(`Activity ${activityId} deleted from file storage`);
     return true;
   } catch (error) {
-    console.error('Error deleting activity from file:', error);
+    console.error('Error deleting activity GPX:', error);
     return false;
   }
 };
@@ -376,8 +444,8 @@ export const loadGamificationFromFile = async () => {
 };
 
 /**
- * Export all data from AsyncStorage cache to file storage
- * This is the migration function for existing users
+ * Export activities from cache to file storage as GPX files
+ * Only saves activities that don't already exist as GPX files
  */
 export const exportCacheToFileStorage = async (cacheActivities, gamificationData) => {
   try {
@@ -385,20 +453,32 @@ export const exportCacheToFileStorage = async (cacheActivities, gamificationData
     
     let exportedCount = 0;
     let skippedCount = 0;
+    let noRouteCount = 0;
     
-    // Load existing file activities to avoid duplicates
-    const existingActivities = await loadActivitiesFromFile();
-    const existingIds = new Set(existingActivities.map(a => a.id?.toString()));
+    // Get existing GPX file IDs
+    const existingIds = new Set(await getSavedActivityIds());
     
     for (const activity of cacheActivities) {
-      // Skip if already in file storage
-      if (existingIds.has(activity.id?.toString())) {
+      const activityId = activity.id?.toString();
+      
+      // Skip if already saved as GPX
+      if (existingIds.has(activityId)) {
         skippedCount++;
         continue;
       }
       
-      await saveActivityToFile(activity);
-      exportedCount++;
+      // Check if activity has route data
+      const routeData = activity.routeData || activity.route || [];
+      if (routeData.length === 0) {
+        noRouteCount++;
+        continue;
+      }
+      
+      // Save as GPX
+      const saved = await saveActivityToFile(activity);
+      if (saved) {
+        exportedCount++;
+      }
     }
     
     // Save gamification data to file
@@ -406,13 +486,14 @@ export const exportCacheToFileStorage = async (cacheActivities, gamificationData
       await saveGamificationToFile(gamificationData);
     }
     
-    console.log(`Export complete: ${exportedCount} new activities, ${skippedCount} skipped (already exist)`);
+    console.log(`Export complete: ${exportedCount} new GPX files, ${skippedCount} already exist, ${noRouteCount} have no route data`);
     
     return {
       success: true,
       exportedCount,
       skippedCount,
-      totalInFile: existingActivities.length + exportedCount,
+      noRouteCount,
+      totalInFile: existingIds.size + exportedCount,
     };
   } catch (error) {
     console.error('Error exporting cache to file storage:', error);
@@ -424,95 +505,26 @@ export const exportCacheToFileStorage = async (cacheActivities, gamificationData
 };
 
 /**
- * Create a full export file (Strava-compatible JSON)
- * This can be used for backup or sharing
+ * Recover activities from GPX file storage to cache
+ * Use this when cache data is lost/corrupted
  */
-export const createFullExport = async () => {
+export const recoverFromFileStorage = async () => {
   try {
-    await initFileStorage();
+    const activities = await loadActivitiesFromFile();
     
-    // Load activities index (just metadata, not streams)
-    const content = await FileSystem.readAsStringAsync(ACTIVITIES_INDEX_FILE);
-    const data = JSON.parse(content);
-    
-    // Load gamification data
-    const gamificationData = await loadGamificationFromFile();
-    
-    // Build export in chunks to reduce memory pressure
-    // Process activities in smaller batches
-    const BATCH_SIZE = 20;
-    const allActivitiesData = [];
-    
-    for (let i = 0; i < data.activities.length; i += BATCH_SIZE) {
-      const batch = data.activities.slice(i, i + BATCH_SIZE);
-      
-      for (const activity of batch) {
-        const streamFile = `${STREAMS_DIR}${activity.id}.json`;
-        const streamInfo = await FileSystem.getInfoAsync(streamFile);
-        
-        const activityData = { ...activity };
-        
-        // Only include stream data if it exists
-        // This significantly reduces memory usage
-        if (streamInfo.exists) {
-          const streamContent = await FileSystem.readAsStringAsync(streamFile);
-          const streams = JSON.parse(streamContent);
-          
-          // Only include essential stream data to reduce size
-          // Keep route data but subsample if very large
-          if (streams.routeData && streams.routeData.length > 500) {
-            // Subsample to every 5th point for large routes to save memory
-            activityData.streams = {
-              routeData: streams.routeData.filter((_, idx) => idx % 5 === 0)
-            };
-          } else {
-            activityData.streams = streams;
-          }
-        }
-        
-        allActivitiesData.push(activityData);
-      }
-      
-      // Clear batch from memory
-      batch.length = 0;
-    }
-    
-    // Create export object
-    const exportData = {
-      version: 1,
-      app: 'TrailTrackerXP',
-      exported_at: new Date().toISOString(),
-      activities: allActivitiesData,
-      gamification: gamificationData,
-    };
-    
-    // Write export file
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const exportFile = `${EXPORT_DIR}trailtrackerxp_export_${timestamp}.json`;
-    
-    // Convert to JSON string - this is where OOM can occur
-    const jsonString = JSON.stringify(exportData, null, 2);
-    await FileSystem.writeAsStringAsync(exportFile, jsonString);
+    console.log(`Recovered ${activities.length} activities from GPX file storage`);
     
     return {
       success: true,
-      filePath: exportFile,
-      activityCount: allActivitiesData.length,
+      activities: activities,
+      count: activities.length,
     };
   } catch (error) {
-    console.error('Error creating full export:', error);
-    
-    // If OOM, provide a helpful error message
-    if (error.message && error.message.includes('OutOfMemoryError')) {
-      return {
-        success: false,
-        error: 'Not enough memory to create backup. Try clearing some app data first or backing up fewer activities.',
-      };
-    }
-    
+    console.error('Error recovering from file storage:', error);
     return {
       success: false,
       error: error.message,
+      activities: [],
     };
   }
 };
@@ -524,28 +536,26 @@ export const getStorageStats = async () => {
   try {
     await initFileStorage();
     
-    const content = await FileSystem.readAsStringAsync(ACTIVITIES_INDEX_FILE);
-    const data = JSON.parse(content);
+    const files = await FileSystem.readDirectoryAsync(ACTIVITIES_DIR);
+    const gpxFiles = files.filter(f => f.endsWith('.gpx'));
     
-    // Get size of all stream files
-    const streamFiles = await FileSystem.readDirectoryAsync(STREAMS_DIR);
-    let streamTotalSize = 0;
+    let totalSize = 0;
     
-    for (const file of streamFiles) {
-      const info = await FileSystem.getInfoAsync(`${STREAMS_DIR}${file}`);
-      streamTotalSize += info.size || 0;
+    for (const file of gpxFiles) {
+      const info = await FileSystem.getInfoAsync(`${ACTIVITIES_DIR}${file}`);
+      totalSize += info.size || 0;
     }
     
-    // Get size of activities index
-    const indexInfo = await FileSystem.getInfoAsync(ACTIVITIES_INDEX_FILE);
+    // Check gamification file
+    const gamInfo = await FileSystem.getInfoAsync(GAMIFICATION_FILE);
+    const gamSize = gamInfo.exists ? (gamInfo.size || 0) : 0;
     
     return {
-      activityCount: data.activities?.length || 0,
-      streamFileCount: streamFiles.length,
-      indexSizeBytes: indexInfo.size || 0,
-      streamsSizeBytes: streamTotalSize,
-      totalSizeBytes: (indexInfo.size || 0) + streamTotalSize,
-      lastUpdated: data.lastUpdated,
+      activityCount: gpxFiles.length,
+      gpxFileCount: gpxFiles.length,
+      gpxSizeBytes: totalSize,
+      gamificationSizeBytes: gamSize,
+      totalSizeBytes: totalSize + gamSize,
     };
   } catch (error) {
     console.error('Error getting storage stats:', error);
@@ -561,22 +571,27 @@ export const getStorageStats = async () => {
  */
 export const verifyDataIntegrity = async (cacheActivities) => {
   try {
-    const fileActivities = await loadActivitiesFromFile();
-    
+    const savedIds = new Set(await getSavedActivityIds());
     const cacheIds = new Set(cacheActivities.map(a => a.id?.toString()));
-    const fileIds = new Set(fileActivities.map(a => a.id?.toString()));
     
-    const inCacheOnly = cacheActivities.filter(a => !fileIds.has(a.id?.toString()));
-    const inFileOnly = fileActivities.filter(a => !cacheIds.has(a.id?.toString()));
-    const inBoth = cacheActivities.filter(a => fileIds.has(a.id?.toString()));
+    const inCacheOnly = cacheActivities.filter(a => !savedIds.has(a.id?.toString()));
+    const inFileOnly = [...savedIds].filter(id => !cacheIds.has(id));
+    const inBoth = cacheActivities.filter(a => savedIds.has(a.id?.toString()));
+    
+    // Check how many cache-only activities have route data
+    const cacheOnlyWithRoute = inCacheOnly.filter(a => {
+      const routeData = a.routeData || a.route || [];
+      return routeData.length > 0;
+    });
     
     return {
       cacheCount: cacheActivities.length,
-      fileCount: fileActivities.length,
+      fileCount: savedIds.size,
       inCacheOnly: inCacheOnly.length,
+      inCacheOnlyWithRoute: cacheOnlyWithRoute.length,
       inFileOnly: inFileOnly.length,
       synchronized: inBoth.length,
-      needsSync: inCacheOnly.length > 0,
+      needsSync: cacheOnlyWithRoute.length > 0,
       activitiesInCacheOnly: inCacheOnly,
       activitiesInFileOnly: inFileOnly,
     };
@@ -590,25 +605,27 @@ export const verifyDataIntegrity = async (cacheActivities) => {
 
 /**
  * Sync all cache activities to file storage
- * Call this when the app starts to ensure file storage is up to date
  */
 export const syncCacheToFile = async (cacheActivities) => {
   try {
     const integrity = await verifyDataIntegrity(cacheActivities);
     
     if (integrity.needsSync) {
-      console.log(`Syncing ${integrity.inCacheOnly} activities from cache to file...`);
+      console.log(`Syncing ${integrity.inCacheOnlyWithRoute} activities from cache to GPX files...`);
       
       for (const activity of integrity.activitiesInCacheOnly) {
-        await saveActivityToFile(activity);
+        const routeData = activity.routeData || activity.route || [];
+        if (routeData.length > 0) {
+          await saveActivityToFile(activity);
+        }
       }
       
       console.log('Sync complete');
     }
     
     return {
-      synced: integrity.inCacheOnly,
-      totalInFile: integrity.fileCount + integrity.inCacheOnly,
+      synced: integrity.inCacheOnlyWithRoute,
+      totalInFile: integrity.fileCount + integrity.inCacheOnlyWithRoute,
     };
   } catch (error) {
     console.error('Error syncing cache to file:', error);
@@ -617,46 +634,67 @@ export const syncCacheToFile = async (cacheActivities) => {
 };
 
 /**
- * Recover activities from file storage to cache
- * Use this when cache data is lost/corrupted
+ * Create a full export file (JSON format for backup compatibility)
+ * Includes all activity data from GPX files
  */
-export const recoverFromFileStorage = async () => {
+export const createFullExport = async () => {
   try {
-    // Load activities with their route data
-    const content = await FileSystem.readAsStringAsync(ACTIVITIES_INDEX_FILE);
-    const data = JSON.parse(content);
+    await initFileStorage();
     
-    const recoveredActivities = [];
+    // Load all activities from GPX files
+    const activities = await loadActivitiesFromFile();
     
-    for (const stravaActivity of data.activities) {
-      const activity = fromStravaFormat(stravaActivity);
-      
-      // Load stream data
-      const streamFile = `${STREAMS_DIR}${activity.id}.json`;
-      const streamInfo = await FileSystem.getInfoAsync(streamFile);
-      
-      if (streamInfo.exists) {
-        const streamContent = await FileSystem.readAsStringAsync(streamFile);
-        const streams = JSON.parse(streamContent);
-        activity.routeData = fromStravaStreams(streams, activity.timestamp);
-      }
-      
-      recoveredActivities.push(activity);
-    }
+    // Load gamification data
+    const gamificationData = await loadGamificationFromFile();
     
-    console.log(`Recovered ${recoveredActivities.length} activities from file storage`);
+    // Create export object
+    const exportData = {
+      version: 2,
+      app: 'TrailTrackerXP',
+      format: 'gpx-based',
+      exported_at: new Date().toISOString(),
+      activities: activities.map(a => ({
+        ...a,
+        // Subsample route data if very large to reduce file size
+        routeData: a.routeData && a.routeData.length > 500 
+          ? a.routeData.filter((_, idx) => idx % 5 === 0)
+          : a.routeData,
+      })),
+      gamification: gamificationData,
+    };
+    
+    // Write export file
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const exportFile = `${EXPORT_DIR}trailtrackerxp_export_${timestamp}.json`;
+    
+    const jsonString = JSON.stringify(exportData, null, 2);
+    await FileSystem.writeAsStringAsync(exportFile, jsonString);
     
     return {
       success: true,
-      activities: recoveredActivities,
-      count: recoveredActivities.length,
+      filePath: exportFile,
+      activityCount: activities.length,
     };
   } catch (error) {
-    console.error('Error recovering from file storage:', error);
+    console.error('Error creating full export:', error);
+    
+    if (error.message && error.message.includes('OutOfMemoryError')) {
+      return {
+        success: false,
+        error: 'Not enough memory to create backup. Try clearing some app data first.',
+      };
+    }
+    
     return {
       success: false,
       error: error.message,
-      activities: [],
     };
   }
 };
+
+// Legacy compatibility exports (deprecated, use GPX functions instead)
+export const toStravaFormat = (activity) => activity;
+export const fromStravaFormat = (activity) => activity;
+export const toStravaStreams = (routeData) => ({ routeData });
+export const fromStravaStreams = (streams, startTimestamp) => streams?.routeData || [];
+export const loadActivityWithStreams = loadActivityFromFile;

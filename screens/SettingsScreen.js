@@ -529,17 +529,17 @@ export default function SettingsScreen() {
           <View style={[styles.storageInfoCard, { backgroundColor: theme.cardBg }]}>
             <View style={styles.storageInfoRow}>
               <Text style={[styles.storageLabel, { color: theme.textSecondary }]}>
-                File Storage
+                GPX File Storage
               </Text>
               <Text style={[styles.storageValue, { color: theme.text }]}>
-                {storageStats.activityCount} activities ({formatBytes(storageStats.totalSizeBytes)})
+                {storageStats.activityCount} GPX files ({formatBytes(storageStats.totalSizeBytes)})
               </Text>
             </View>
-            {integrityInfo && integrityInfo.inCacheOnly > 0 && (
+            {integrityInfo && integrityInfo.inCacheOnlyWithRoute > 0 && (
               <View style={[styles.syncWarning, { backgroundColor: theme.warningLight || '#FFF3E0' }]}>
                 <WarningIcon size={16} color="#FF9800" />
                 <Text style={[styles.syncWarningText, { color: '#E65100' }]}>
-                  {integrityInfo.inCacheOnly} activities in cache not yet saved to file storage
+                  {integrityInfo.inCacheOnlyWithRoute} activities with GPS data not yet saved as GPX
                 </Text>
               </View>
             )}
@@ -556,10 +556,10 @@ export default function SettingsScreen() {
               <DatabaseIcon size={22} color={theme.icon} />
               <View style={styles.settingInfo}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Save to File Storage
+                  Save to GPX Files
                 </Text>
                 <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Export cache data to persistent file storage
+                  Save activities not yet stored as GPX files
                 </Text>
               </View>
             </View>
@@ -576,10 +576,10 @@ export default function SettingsScreen() {
               <SyncIcon size={22} color={theme.icon} />
               <View style={styles.settingInfo}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Recover from File Storage
+                  Recover from GPX Files
                 </Text>
                 <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Restore activities if cache was corrupted
+                  Restore activities from saved GPX files
                 </Text>
               </View>
             </View>
@@ -849,10 +849,10 @@ export default function SettingsScreen() {
               <>
                 <ActivityIndicator size="large" color={theme.primary} />
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
-                  Saving to File Storage...
+                  Saving to GPX Files...
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-                  Please wait while your data is being saved.
+                  Please wait while activities are saved as GPX files.
                 </Text>
               </>
             ) : operationResult ? (
@@ -863,11 +863,11 @@ export default function SettingsScreen() {
                   <WarningIcon size={56} color="#FF9800" />
                 )}
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
-                  {operationResult.success ? 'Data Saved!' : 'Error'}
+                  {operationResult.success ? 'GPX Files Saved!' : 'Error'}
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
                   {operationResult.success 
-                    ? `Saved ${operationResult.exportedCount} activities.\n${operationResult.skippedCount} already existed.\nTotal in file storage: ${operationResult.totalInFile}`
+                    ? `Saved ${operationResult.exportedCount} activities as GPX.\n${operationResult.skippedCount} already existed.${operationResult.noRouteCount > 0 ? `\n${operationResult.noRouteCount} had no GPS data.` : ''}\nTotal GPX files: ${operationResult.totalInFile}`
                     : operationResult.error
                   }
                 </Text>
@@ -896,10 +896,10 @@ export default function SettingsScreen() {
               <>
                 <SyncIcon size={56} color={theme.primary} />
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
-                  Recover Activities?
+                  Recover from GPX Files?
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-                  This will restore {storageStats?.activityCount || 0} activities from file storage to your cache. Use this if your cache data was lost or corrupted.
+                  This will restore {storageStats?.activityCount || 0} activities from GPX files to your cache. Use this if your cache data was lost or corrupted.
                 </Text>
                 <TouchableOpacity
                   style={[styles.modalButton, { backgroundColor: theme.primary }]}
@@ -921,7 +921,7 @@ export default function SettingsScreen() {
                   Recovering...
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-                  Restoring activities from file storage.
+                  Restoring activities from GPX files.
                 </Text>
               </>
             ) : operationResult ? (
@@ -936,7 +936,7 @@ export default function SettingsScreen() {
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
                   {operationResult.success 
-                    ? `Recovered ${operationResult.count} activities.`
+                    ? `Recovered ${operationResult.count} activities from GPX files.`
                     : operationResult.error
                   }
                 </Text>
