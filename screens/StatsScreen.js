@@ -691,8 +691,12 @@ export default function StatsScreen() {
       y: padding.top + graphH - (d.value / maxValue) * graphH,
       value: d.value, label: d.label,
     }));
-    const validPoints = points.filter(p => p.value > 0);
-    const linePath = validPoints.length > 1 ? validPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') : '';
+    
+    // Line connects ALL points including 0 values (drops to baseline for 0s)
+    const linePath = points.length > 1 ? points.map((p, i) => {
+      const y = p.value > 0 ? p.y : padding.top + graphH;
+      return `${i === 0 ? 'M' : 'L'} ${p.x} ${y}`;
+    }).join(' ') : '';
 
     return (
       <View style={[styles.graphCard, { backgroundColor: theme.cardBg }]}>
@@ -720,9 +724,9 @@ export default function StatsScreen() {
               {point.value > 0 ? (
                 <SvgText x={point.x} y={point.y - 8} fontSize={10} fill={theme.text} textAnchor="middle">{formatValue(point.value)}</SvgText>
               ) : (
-                <SvgText x={point.x} y={padding.top + graphH - 8} fontSize={9} fill={theme.textSecondary} textAnchor="middle">0</SvgText>
+                <SvgText x={point.x} y={padding.top + graphH - 8} fontSize={10} fill={theme.text} textAnchor="middle">0</SvgText>
               )}
-              <Circle cx={point.x} cy={point.value > 0 ? point.y : padding.top + graphH} r={point.value > 0 ? 6 : 4} fill={point.value > 0 ? theme.primary : theme.textSecondary} />
+              <Circle cx={point.x} cy={point.value > 0 ? point.y : padding.top + graphH} r={6} fill={theme.primary} />
               {i % Math.max(1, Math.floor(points.length / 6)) === 0 && <SvgText x={point.x} y={GRAPH_HEIGHT - 5} fontSize={9} fill={theme.textSecondary} textAnchor="middle">{point.label}</SvgText>}
             </React.Fragment>
           ))}
