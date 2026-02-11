@@ -13,6 +13,7 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Svg, { Path, Circle } from 'react-native-svg';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { useTheme } from '../utils/theme';
 import { 
   clearCachedTiles, 
@@ -253,6 +254,11 @@ export default function SettingsScreen() {
 
   const handleExportGPX = async () => {
     setShowBackupModal(true);
+    setIsProcessing(false);
+    setOperationResult(null);
+  };
+
+  const confirmExportGPX = async () => {
     setIsProcessing(true);
     setOperationResult(null);
     
@@ -273,32 +279,52 @@ export default function SettingsScreen() {
         return;
       }
       
-      // Share all GPX files
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        // Share files one at a time or as a batch depending on platform
-        // For now, share the first file and show count
-        // On Android, we can use the share dialog which may support multiple files
-        if (gpxPaths.length === 1) {
-          await Sharing.shareAsync(gpxPaths[0], {
-            mimeType: 'application/gpx+xml',
-            dialogTitle: 'Export GPX File',
-          });
-        } else {
-          // For multiple files, we'll share them as a batch using expo-sharing
-          // Note: This opens the share dialog for each file on some platforms
-          // A better approach would be to zip them, but for simplicity we'll share one at a time
-          // and let the user know how many there are
-          await Sharing.shareAsync(gpxPaths[0], {
-            mimeType: 'application/gpx+xml',
-            dialogTitle: `Export GPX Files (1 of ${gpxPaths.length})`,
-          });
+      // Request directory access permission using Storage Access Framework
+      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      
+      if (!permissions.granted) {
+        setOperationResult({ 
+          success: false, 
+          error: 'Permission denied. Please select a folder to save GPX files.' 
+        });
+        return;
+      }
+      
+      const destinationUri = permissions.directoryUri;
+      let exportedCount = 0;
+      let failedCount = 0;
+      
+      // Copy each GPX file to the selected directory
+      for (const gpxPath of gpxPaths) {
+        try {
+          // Extract filename from path
+          const fileName = gpxPath.split('/').pop();
+          
+          // Read the GPX file content
+          const content = await FileSystem.readAsStringAsync(gpxPath);
+          
+          // Create file in the selected directory using SAF
+          const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+            destinationUri,
+            fileName,
+            'application/gpx+xml'
+          );
+          
+          // Write content to the new file
+          await FileSystem.writeAsStringAsync(newFileUri, content);
+          
+          exportedCount++;
+        } catch (err) {
+          console.error(`Error exporting ${gpxPath}:`, err);
+          failedCount++;
         }
       }
       
       setOperationResult({
-        success: true,
-        count: gpxPaths.length,
+        success: exportedCount > 0,
+        count: exportedCount,
+        failed: failedCount,
+        total: gpxPaths.length,
       });
     } catch (error) {
       setOperationResult({ success: false, error: error.message });
@@ -987,14 +1013,36 @@ export default function SettingsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
-            {isProcessing ? (
+            {!isProcessing && !operationResult ? (
+              <>
+                <DownloadIcon size={56} color={theme.primary} />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  Export GPX Files
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+                  This will save {storageStats?.activityCount || 0} GPX files to a folder you choose.{'\n\n'}You can then copy them to your computer or import them into other apps like Strava.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                  onPress={confirmExportGPX}
+                >
+                  <Text style={styles.modalButtonText}>Choose Folder</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalCancelButton, { backgroundColor: theme.surface }]}
+                  onPress={() => setShowBackupModal(false)}
+                >
+                  <Text style={[styles.modalCancelButtonText, { color: theme.text }]}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : isProcessing ? (
               <>
                 <ActivityIndicator size="large" color={theme.primary} />
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
-                  Preparing GPX Export...
+                  Exporting GPX Files...
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-                  Getting your activity files ready to share.
+                  Saving your activity files to the selected folder.
                 </Text>
               </>
             ) : operationResult ? (
@@ -1005,11 +1053,11 @@ export default function SettingsScreen() {
                   <WarningIcon size={56} color="#FF9800" />
                 )}
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
-                  {operationResult.success ? 'GPX Export Ready!' : 'Error'}
+                  {operationResult.success ? 'Export Complete!' : 'Error'}
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
                   {operationResult.success 
-                    ? `${operationResult.count} GPX file${operationResult.count !== 1 ? 's' : ''} available.\nUse the share dialog to save or send your files.`
+                    ? `Exported ${operationResult.count} GPX file${operationResult.count !== 1 ? 's' : ''} to selected folder.${operationResult.failed > 0 ? `\n${operationResult.failed} file${operationResult.failed !== 1 ? 's' : ''} failed.` : ''}`
                     : operationResult.error
                   }
                 </Text>
