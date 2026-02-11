@@ -7,6 +7,8 @@ import {
   deleteActivityFromFile,
   loadActivitiesFromFile,
   loadActivityWithStreams,
+  loadRouteFromFile,
+  enrichActivitiesWithRoutes,
   syncCacheToFile,
   recoverFromFileStorage,
   exportCacheToFileStorage,
@@ -15,6 +17,9 @@ import {
   getStorageStats,
   verifyDataIntegrity,
   createFullExport,
+  exportGPXFiles,
+  getGPXFilePath,
+  getAllGPXFilePaths,
 } from './fileStorage';
 
 const ACTIVITIES_KEY = '@trail_tracker_activities';
@@ -31,6 +36,11 @@ export {
   createFullExport,
   saveGamificationToFile,
   loadGamificationFromFile,
+  exportGPXFiles,
+  getGPXFilePath,
+  getAllGPXFilePaths,
+  loadRouteFromFile,
+  enrichActivitiesWithRoutes,
 };
 
 export const saveActivity = async (activity) => {
@@ -101,7 +111,19 @@ export const getActivities = async () => {
 export const getActivityById = async (id) => {
   try {
     const activities = await getActivities();
-    return activities.find(a => a.id === id) || null;
+    const activity = activities.find(a => a.id === id) || null;
+    
+    if (activity) {
+      // If activity doesn't have route data, try to load from GPX
+      if (!activity.route || activity.route.length === 0) {
+        const route = await loadRouteFromFile(id);
+        if (route) {
+          activity.route = route;
+        }
+      }
+    }
+    
+    return activity;
   } catch (error) {
     console.error('Error getting activity:', error);
     return null;

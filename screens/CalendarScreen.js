@@ -12,7 +12,7 @@ import { Calendar } from 'react-native-calendars';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Svg, { Path, Polyline, Circle as SvgCircle, Rect } from 'react-native-svg';
 import { useTheme } from '../utils/theme';
-import { getActivities, deleteActivity, formatDistance, formatDuration } from '../utils/storage';
+import { getActivities, deleteActivity, formatDistance, formatDuration, enrichActivitiesWithRoutes } from '../utils/storage';
 import { WalkingIcon, BikingIcon, ChevronRightIcon, TrackIcon } from '../components/Icons';
 
 // Trash icon for delete modal
@@ -132,10 +132,12 @@ export default function CalendarScreen() {
 
   const loadActivities = async () => {
     const data = await getActivities();
-    setActivities(data);
+    // Enrich activities with route data from GPX files (for imported activities)
+    const enrichedData = await enrichActivitiesWithRoutes(data);
+    setActivities(enrichedData);
     
     const marks = {};
-    data.forEach(activity => {
+    enrichedData.forEach(activity => {
       const date = activity.timestamp.split('T')[0];
       if (!marks[date]) {
         marks[date] = { marked: true, dots: [] };

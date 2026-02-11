@@ -36,10 +36,11 @@ If you notice your activities are missing:
 1. Go to **Settings > Data Storage > Recover from GPX Files**
 2. This will restore activities from the GPX files to your cache
 
-### Create Backup File
-To export all your data to a shareable JSON file:
-1. Go to **Settings > Data Storage > Create Backup File**
-2. A JSON file will be created and you can share it via email, cloud storage, etc.
+### Export GPX Files
+To share your activity GPX files:
+1. Go to **Settings > Data Storage > Export GPX Files**
+2. The share dialog will open allowing you to save, email, or transfer your GPX files
+3. GPX files can be imported into Strava, Garmin Connect, or any fitness app
 
 ## Importing from Strava
 

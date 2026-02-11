@@ -385,6 +385,63 @@ export const loadActivitiesFromFile = async () => {
 };
 
 /**
+ * Load just the route data from a GPX file (lightweight, for thumbnails)
+ * Returns the route array or null if not found
+ */
+export const loadRouteFromFile = async (activityId) => {
+  try {
+    const gpxFile = `${ACTIVITIES_DIR}${activityId}.gpx`;
+    const fileInfo = await FileSystem.getInfoAsync(gpxFile);
+    
+    if (!fileInfo.exists) {
+      return null;
+    }
+    
+    const gpxContent = await FileSystem.readAsStringAsync(gpxFile);
+    const parsed = parseGPX(gpxContent);
+    
+    if (parsed.routeData.length === 0) {
+      return null;
+    }
+    
+    return parsed.routeData;
+  } catch (error) {
+    console.error('Error loading route from GPX:', error);
+    return null;
+  }
+};
+
+/**
+ * Enrich activities with route data from GPX files
+ * For activities that don't have route data in memory, load it from file
+ */
+export const enrichActivitiesWithRoutes = async (activities) => {
+  const enriched = [];
+  
+  for (const activity of activities) {
+    // If activity already has route data, use it
+    if (activity.route && activity.route.length > 0) {
+      enriched.push(activity);
+      continue;
+    }
+    if (activity.routeData && activity.routeData.length > 0) {
+      enriched.push({ ...activity, route: activity.routeData });
+      continue;
+    }
+    
+    // Try to load route from GPX file
+    const route = await loadRouteFromFile(activity.id);
+    if (route) {
+      enriched.push({ ...activity, route });
+    } else {
+      enriched.push(activity);
+    }
+  }
+  
+  return enriched;
+};
+
+/**
  * Delete an activity from file storage
  */
 export const deleteActivityFromFile = async (activityId) => {
@@ -689,6 +746,102 @@ export const createFullExport = async () => {
       success: false,
       error: error.message,
     };
+  }
+};
+
+/**
+ * Export all GPX files to a shareable location
+ * Copies GPX files to a zip-friendly export directory and returns the path
+ */
+export const exportGPXFiles = async () => {
+  try {
+    await initFileStorage();
+    
+    // Get all GPX files
+    const files = await FileSystem.readDirectoryAsync(ACTIVITIES_DIR);
+    const gpxFiles = files.filter(f => f.endsWith('.gpx'));
+    
+    if (gpxFiles.length === 0) {
+      return {
+        success: false,
+        error: 'No GPX files to export',
+        count: 0,
+      };
+    }
+    
+    // Create export directory with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const exportSubDir = `${EXPORT_DIR}gpx_export_${timestamp}/`;
+    
+    await FileSystem.makeDirectoryAsync(exportSubDir, { intermediates: true });
+    
+    // Copy all GPX files to export directory
+    let copiedCount = 0;
+    const exportedFiles = [];
+    
+    for (const file of gpxFiles) {
+      try {
+        const sourcePath = `${ACTIVITIES_DIR}${file}`;
+        const destPath = `${exportSubDir}${file}`;
+        await FileSystem.copyAsync({ from: sourcePath, to: destPath });
+        exportedFiles.push(destPath);
+        copiedCount++;
+      } catch (err) {
+        console.error(`Error copying ${file}:`, err);
+      }
+    }
+    
+    // Also copy gamification data as JSON
+    const gamInfo = await FileSystem.getInfoAsync(GAMIFICATION_FILE);
+    if (gamInfo.exists) {
+      await FileSystem.copyAsync({ 
+        from: GAMIFICATION_FILE, 
+        to: `${exportSubDir}gamification.json` 
+      });
+    }
+    
+    return {
+      success: true,
+      exportDir: exportSubDir,
+      count: copiedCount,
+      files: exportedFiles,
+    };
+  } catch (error) {
+    console.error('Error exporting GPX files:', error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
+
+/**
+ * Get a single GPX file path for sharing
+ */
+export const getGPXFilePath = async (activityId) => {
+  const gpxFile = `${ACTIVITIES_DIR}${activityId}.gpx`;
+  const fileInfo = await FileSystem.getInfoAsync(gpxFile);
+  
+  if (fileInfo.exists) {
+    return gpxFile;
+  }
+  return null;
+};
+
+/**
+ * Get all GPX file paths for sharing
+ */
+export const getAllGPXFilePaths = async () => {
+  try {
+    await initFileStorage();
+    
+    const files = await FileSystem.readDirectoryAsync(ACTIVITIES_DIR);
+    const gpxFiles = files.filter(f => f.endsWith('.gpx'));
+    
+    return gpxFiles.map(f => `${ACTIVITIES_DIR}${f}`);
+  } catch (error) {
+    console.error('Error getting GPX file paths:', error);
+    return [];
   }
 };
 
