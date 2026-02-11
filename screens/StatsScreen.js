@@ -24,6 +24,8 @@ import {
   updateChallengeProgress,
   calculateStreak,
   saveGamification,
+  getStatsCutoffDate,
+  filterActivitiesByCutoff,
 } from '../utils/gamification';
 import { WalkingIcon, BikingIcon, ChevronRightIcon, TrackIcon } from '../components/Icons';
 
@@ -82,6 +84,7 @@ export default function StatsScreen() {
   const [activeTab, setActiveTab] = useState('overview');
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   const [selectedAchievement, setSelectedAchievement] = useState(null);
+  const [cutoffDate, setCutoffDate] = useState(null);
   
   const [progressSettings, setProgressSettings] = useState({
     walking: { daily: 10, weekly: 10, monthly: 10 },
@@ -161,6 +164,10 @@ export default function StatsScreen() {
     const activitiesData = await getActivities();
     setActivities(activitiesData);
     
+    // Load cutoff date for stats filtering
+    const cutoff = await getStatsCutoffDate();
+    setCutoffDate(cutoff);
+    
     let gamificationData = await loadGamification();
     
     if (activitiesData.length > 0) {
@@ -213,7 +220,10 @@ export default function StatsScreen() {
     });
   };
 
-  const getTotalDistance = () => activities.reduce((sum, a) => sum + (a.distance || 0), 0);
+  const getTotalDistance = () => {
+    const filteredActivities = filterActivitiesByCutoff(activities, cutoffDate);
+    return filteredActivities.reduce((sum, a) => sum + (a.distance || 0), 0);
+  };
 
   const getDailyTotals = (type, count) => {
     const totals = [];

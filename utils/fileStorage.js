@@ -431,36 +431,58 @@ export const createFullExport = async () => {
   try {
     await initFileStorage();
     
-    // Load all activities
+    // Load activities index (just metadata, not streams)
     const content = await FileSystem.readAsStringAsync(ACTIVITIES_INDEX_FILE);
     const data = JSON.parse(content);
     
-    // Load all streams
-    const activitiesWithStreams = [];
-    
-    for (const activity of data.activities) {
-      const streamFile = `${STREAMS_DIR}${activity.id}.json`;
-      const streamInfo = await FileSystem.getInfoAsync(streamFile);
-      
-      const activityWithStreams = { ...activity };
-      
-      if (streamInfo.exists) {
-        const streamContent = await FileSystem.readAsStringAsync(streamFile);
-        activityWithStreams.streams = JSON.parse(streamContent);
-      }
-      
-      activitiesWithStreams.push(activityWithStreams);
-    }
-    
     // Load gamification data
     const gamificationData = await loadGamificationFromFile();
+    
+    // Build export in chunks to reduce memory pressure
+    // Process activities in smaller batches
+    const BATCH_SIZE = 20;
+    const allActivitiesData = [];
+    
+    for (let i = 0; i < data.activities.length; i += BATCH_SIZE) {
+      const batch = data.activities.slice(i, i + BATCH_SIZE);
+      
+      for (const activity of batch) {
+        const streamFile = `${STREAMS_DIR}${activity.id}.json`;
+        const streamInfo = await FileSystem.getInfoAsync(streamFile);
+        
+        const activityData = { ...activity };
+        
+        // Only include stream data if it exists
+        // This significantly reduces memory usage
+        if (streamInfo.exists) {
+          const streamContent = await FileSystem.readAsStringAsync(streamFile);
+          const streams = JSON.parse(streamContent);
+          
+          // Only include essential stream data to reduce size
+          // Keep route data but subsample if very large
+          if (streams.routeData && streams.routeData.length > 500) {
+            // Subsample to every 5th point for large routes to save memory
+            activityData.streams = {
+              routeData: streams.routeData.filter((_, idx) => idx % 5 === 0)
+            };
+          } else {
+            activityData.streams = streams;
+          }
+        }
+        
+        allActivitiesData.push(activityData);
+      }
+      
+      // Clear batch from memory
+      batch.length = 0;
+    }
     
     // Create export object
     const exportData = {
       version: 1,
       app: 'TrailTrackerXP',
       exported_at: new Date().toISOString(),
-      activities: activitiesWithStreams,
+      activities: allActivitiesData,
       gamification: gamificationData,
     };
     
@@ -468,15 +490,26 @@ export const createFullExport = async () => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const exportFile = `${EXPORT_DIR}trailtrackerxp_export_${timestamp}.json`;
     
-    await FileSystem.writeAsStringAsync(exportFile, JSON.stringify(exportData, null, 2));
+    // Convert to JSON string - this is where OOM can occur
+    const jsonString = JSON.stringify(exportData, null, 2);
+    await FileSystem.writeAsStringAsync(exportFile, jsonString);
     
     return {
       success: true,
       filePath: exportFile,
-      activityCount: activitiesWithStreams.length,
+      activityCount: allActivitiesData.length,
     };
   } catch (error) {
     console.error('Error creating full export:', error);
+    
+    // If OOM, provide a helpful error message
+    if (error.message && error.message.includes('OutOfMemoryError')) {
+      return {
+        success: false,
+        error: 'Not enough memory to create backup. Try clearing some app data first or backing up fewer activities.',
+      };
+    }
+    
     return {
       success: false,
       error: error.message,

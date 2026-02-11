@@ -8,7 +8,6 @@ import {
   ScrollView,
   Modal,
   ActivityIndicator,
-  Alert,
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -112,6 +111,8 @@ export default function SettingsScreen() {
   const [showRecoverModal, setShowRecoverModal] = useState(false);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [infoModalContent, setInfoModalContent] = useState({ title: '', message: '' });
   const [activityCount, setActivityCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [operationResult, setOperationResult] = useState(null);
@@ -150,11 +151,11 @@ export default function SettingsScreen() {
       const activities = await getActivities();
       await recalculateGamification(activities, dateStart);
       
-      Alert.alert(
-        'Cutoff Date Updated',
-        `Stats and achievements will now only count activities from ${dateStart.toLocaleDateString()} onwards.`,
-        [{ text: 'OK' }]
-      );
+      setInfoModalContent({
+        title: 'Cutoff Date Updated',
+        message: `Stats and achievements will now only count activities from ${dateStart.toLocaleDateString()} onwards.`
+      });
+      setShowInfoModal(true);
     }
   };
   
@@ -166,11 +167,11 @@ export default function SettingsScreen() {
     const activities = await getActivities();
     await recalculateGamification(activities, null);
     
-    Alert.alert(
-      'Cutoff Date Cleared',
-      'All activities will now count towards stats and achievements.',
-      [{ text: 'OK' }]
-    );
+    setInfoModalContent({
+      title: 'Cutoff Date Cleared',
+      message: 'All activities will now count towards stats and achievements.'
+    });
+    setShowInfoModal(true);
   };
 
   const loadStorageInfo = async () => {
@@ -756,6 +757,32 @@ export default function SettingsScreen() {
               onPress={() => setShowSuccessModal(false)}
             >
               <Text style={styles.modalButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Info Modal (for cutoff date confirmations) */}
+      <Modal
+        visible={showInfoModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowInfoModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            <InfoIcon size={56} color={theme.primary} />
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              {infoModalContent.title}
+            </Text>
+            <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+              {infoModalContent.message}
+            </Text>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: theme.primary }]}
+              onPress={() => setShowInfoModal(false)}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
             </TouchableOpacity>
           </View>
         </View>
