@@ -206,6 +206,7 @@ export default function CalendarScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Calendar
+        firstDay={1}
         onDayPress={onDayPress}
         markedDates={{
           ...markedDates,
