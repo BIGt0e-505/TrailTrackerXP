@@ -32,14 +32,46 @@ import { WalkingIcon, BikingIcon, PlayIcon, StopIcon, MapIcon, DownloadIcon } fr
 import Svg, { Path, Circle } from 'react-native-svg';
 
 const LOCATION_TASK_NAME = 'background-location-task';
+const TRACKING_RECOVERY_KEY = '@trail_tracker_recovery_data';
 
 // Global state for background tracking
 let backgroundRouteData = [];
 let backgroundStartTime = null;
 let backgroundActivityType = 'walking';
 let backgroundDistanceUnit = 'miles';
+let lastAutoSaveTime = 0;
+const AUTO_SAVE_INTERVAL = 30000; // Save every 30 seconds
 
+// Auto-save tracking data to AsyncStorage (called from background task)
+const autoSaveTrackingData = async () => {
+  const now = Date.now();
+  if (now - lastAutoSaveTime < AUTO_SAVE_INTERVAL) return;
+  lastAutoSaveTime = now;
+  
+  try {
+    const recoveryData = {
+      routeData: backgroundRouteData,
+      startTime: backgroundStartTime,
+      activityType: backgroundActivityType,
+      distanceUnit: backgroundDistanceUnit,
+      lastSaveTime: now,
+    };
+    await AsyncStorage.setItem(TRACKING_RECOVERY_KEY, JSON.stringify(recoveryData));
+    console.log('Auto-saved tracking data:', backgroundRouteData.length, 'points');
+  } catch (e) {
+    console.error('Error auto-saving tracking data:', e);
+  }
+};
 
+// Clear recovery data (called when tracking is properly stopped)
+const clearRecoveryData = async () => {
+  try {
+    await AsyncStorage.removeItem(TRACKING_RECOVERY_KEY);
+    console.log('Cleared recovery data');
+  } catch (e) {
+    console.error('Error clearing recovery data:', e);
+  }
+};
 
 // Define the background task
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
@@ -66,6 +98,9 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       }
       
       backgroundRouteData.push(newCoord);
+      
+      // Auto-save periodically
+      autoSaveTrackingData();
     }
   }
 });
@@ -128,6 +163,8 @@ export default function TrackingScreen() {
   const [cacheProgress, setCacheProgress] = useState({ current: 0, total: 0 });
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [setupUsername, setSetupUsername] = useState('');
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [recoveryData, setRecoveryData] = useState(null);
   
   const webViewRef = useRef(null);
   const cachingCancelled = useRef(false);
@@ -141,6 +178,7 @@ export default function TrackingScreen() {
 
   useEffect(() => {
     checkFirstRun();
+    checkForRecoveryData();
     requestPermissions();
     backgroundDistanceUnit = distanceUnit;
     
@@ -157,6 +195,64 @@ export default function TrackingScreen() {
       deactivateKeepAwake();
     };
   }, []);
+
+  // Check for recovery data from interrupted tracking session
+  const checkForRecoveryData = async () => {
+    try {
+      const savedData = await AsyncStorage.getItem(TRACKING_RECOVERY_KEY);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        // Only offer recovery if data is less than 24 hours old
+        const ageMs = Date.now() - parsed.lastSaveTime;
+        const maxAgeMs = 24 * 60 * 60 * 1000; // 24 hours
+        
+        if (ageMs < maxAgeMs && parsed.routeData && parsed.routeData.length > 0) {
+          setRecoveryData(parsed);
+          setShowRecoveryModal(true);
+        } else {
+          // Data too old, clear it
+          await clearRecoveryData();
+        }
+      }
+    } catch (e) {
+      console.log('Error checking recovery data:', e);
+    }
+  };
+
+  // Recover the interrupted tracking session
+  const recoverTracking = async () => {
+    if (!recoveryData) return;
+    
+    // Restore the data
+    backgroundRouteData = recoveryData.routeData;
+    backgroundStartTime = recoveryData.startTime;
+    backgroundActivityType = recoveryData.activityType;
+    
+    // Calculate elapsed duration
+    const elapsed = Math.floor((recoveryData.lastSaveTime - recoveryData.startTime) / 1000);
+    
+    // Update UI state
+    setActivityType(recoveryData.activityType);
+    setRouteCoordinates(recoveryData.routeData);
+    setDistance(calculateDistance(recoveryData.routeData));
+    setDuration(elapsed);
+    startTime.current = recoveryData.startTime;
+    
+    setShowRecoveryModal(false);
+    setRecoveryData(null);
+    
+    // Show as paused so user can review and save
+    setIsTracking(true);
+    setIsPaused(true);
+    setShowPauseModal(true);
+  };
+
+  // Discard recovery data
+  const discardRecovery = async () => {
+    await clearRecoveryData();
+    setShowRecoveryModal(false);
+    setRecoveryData(null);
+  };
 
   const checkFirstRun = async () => {
     try {
@@ -428,6 +524,9 @@ export default function TrackingScreen() {
     }
 
     deactivateKeepAwake();
+    
+    // Clear recovery data since we're properly saving
+    await clearRecoveryData();
 
     const finalRouteData = backgroundRouteData.length > 0 ? backgroundRouteData : routeCoordinates;
 
@@ -513,6 +612,9 @@ export default function TrackingScreen() {
     }
 
     deactivateKeepAwake();
+    
+    // Clear recovery data since we're discarding
+    await clearRecoveryData();
 
     setIsTracking(false);
     setIsPaused(false);
@@ -1489,6 +1591,42 @@ export default function TrackingScreen() {
                 {setupUsername.trim() ? `Let's Go, ${setupUsername.trim()}! 🚀` : 'Get Started'}
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Recovery Modal */}
+      <Modal
+        visible={showRecoveryModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            <View style={[styles.modalIconContainer, { backgroundColor: '#FFF3E0' }]}>
+              <RecenterIcon size={32} color="#FF9800" />
+            </View>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              Recover Activity?
+            </Text>
+            <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
+              {recoveryData ? `Found an interrupted ${recoveryData.activityType} session with ${recoveryData.routeData.length} GPS points.\n\nDistance: ${formatDistance(calculateDistance(recoveryData.routeData), distanceUnit)}\nDuration: ${formatDuration(Math.floor((recoveryData.lastSaveTime - recoveryData.startTime) / 1000))}` : 'Recovery data found.'}
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSecondary, { backgroundColor: theme.surface }]}
+                onPress={discardRecovery}
+              >
+                <Text style={[styles.modalButtonText, { color: theme.text }]}>Discard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: theme.primary }]}
+                onPress={recoverTracking}
+              >
+                <Text style={[styles.modalButtonText, { color: '#fff' }]}>Recover</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
