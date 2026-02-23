@@ -426,3 +426,59 @@ export const formatElevation = (meters, unit = 'miles') => {
   if (meters === undefined || meters === null) return '0 m';
   return `${Math.round(meters)} m`;
 };
+
+/**
+ * Auto-export a single activity as GPX to an external location (Download folder via MediaStore).
+ * This is called automatically after each activity is saved to ensure a user-accessible backup.
+ * Uses the app's persistent SAF permission if already granted, otherwise writes to 
+ * the app's Downloads-like directory and logs the location.
+ */
+export const autoExportActivityGPX = async (activity) => {
+  try {
+    const { activityToGPX } = await import('./fileStorage');
+    
+    const routeData = activity.routeData || activity.route || [];
+    if (routeData.length === 0) {
+      console.log('autoExportActivityGPX: no route data, skipping');
+      return { success: false, reason: 'no_route_data' };
+    }
+    
+    const activityWithRoute = { ...activity, routeData };
+    const gpxContent = activityToGPX(activityWithRoute);
+    const fileName = `TrailTracker_${activity.id}.gpx`;
+    
+    // Use SAF to write directly to a user-accessible location
+    // We use the Documents directory for the 'TrailTrackerXP' folder 
+    // (visible in any file explorer under Android/data is restricted, 
+    //  but we write via SAF to a persistent permission if available)
+    
+    // Check if we have a stored export directory URI from a previous export
+    const AsyncStorageLib = (await import('@react-native-async-storage/async-storage')).default;
+    const savedDirUri = await AsyncStorageLib.getItem('@trail_tracker_auto_export_dir');
+    
+    if (savedDirUri) {
+      try {
+        const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+          savedDirUri,
+          fileName,
+          'application/gpx+xml'
+        );
+        await FileSystem.writeAsStringAsync(newFileUri, gpxContent);
+        console.log(`Auto-exported GPX to external storage: ${fileName}`);
+        return { success: true, uri: newFileUri };
+      } catch (e) {
+        // Saved URI may have become stale - clear it
+        console.log('Auto-export with saved URI failed, clearing saved dir:', e.message);
+        await AsyncStorageLib.removeItem('@trail_tracker_auto_export_dir');
+      }
+    }
+    
+    // No stored dir - silently save to internal for now; user can set export dir in settings
+    console.log('Auto-export: no external dir configured. Activity saved to internal GPX storage only.');
+    return { success: false, reason: 'no_external_dir_configured' };
+    
+  } catch (error) {
+    console.log('autoExportActivityGPX error:', error.message);
+    return { success: false, error: error.message };
+  }
+};

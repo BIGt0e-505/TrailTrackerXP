@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import { Calendar } from 'react-native-calendars';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Svg, { Path, Polyline, Circle as SvgCircle, Rect } from 'react-native-svg';
 import { useTheme } from '../utils/theme';
-import { getActivities, deleteActivity, formatDistance, formatDuration, enrichActivitiesWithRoutes } from '../utils/storage';
+import { getActivities, deleteActivity, formatDistance, formatDuration } from '../utils/storage';
+import { loadRouteFromFile } from '../utils/fileStorage';
 import { WalkingIcon, BikingIcon, ChevronRightIcon, TrackIcon } from '../components/Icons';
 
 // Trash icon for delete modal
@@ -123,6 +124,8 @@ export default function CalendarScreen() {
   const [markedDates, setMarkedDates] = useState({});
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activityToDelete, setActivityToDelete] = useState(null);
+  // Route cache: activityId -> route array (loaded on-demand)
+  const routeCache = useRef({});
 
   useFocusEffect(
     useCallback(() => {
@@ -131,13 +134,12 @@ export default function CalendarScreen() {
   );
 
   const loadActivities = async () => {
+    // Load activity metadata only (fast - no GPX file reads)
     const data = await getActivities();
-    // Enrich activities with route data from GPX files (for imported activities)
-    const enrichedData = await enrichActivitiesWithRoutes(data);
-    setActivities(enrichedData);
+    setActivities(data);
     
     const marks = {};
-    enrichedData.forEach(activity => {
+    data.forEach(activity => {
       const date = activity.timestamp.split('T')[0];
       if (!marks[date]) {
         marks[date] = { marked: true, dots: [] };
@@ -148,10 +150,45 @@ export default function CalendarScreen() {
     });
     
     setMarkedDates(marks);
+    
+    // Pre-load routes for today's activities (most likely to be viewed first)
+    const todayActivities = data.filter(a => a.timestamp.startsWith(today));
+    for (const activity of todayActivities) {
+      if (!routeCache.current[activity.id]) {
+        const existingRoute = activity.route || activity.routeData;
+        if (existingRoute && existingRoute.length > 0) {
+          routeCache.current[activity.id] = existingRoute;
+        } else {
+          const route = await loadRouteFromFile(activity.id);
+          if (route) routeCache.current[activity.id] = route;
+        }
+      }
+    }
+    if (todayActivities.length > 0) {
+      setActivities(prev => [...prev]);
+    }
   };
 
-  const onDayPress = (day) => {
+  const onDayPress = async (day) => {
     setSelectedDate(day.dateString);
+    // Lazy-load routes for activities on the selected day
+    const dayActivities = activities.filter(a => a.timestamp.startsWith(day.dateString));
+    for (const activity of dayActivities) {
+      if (!routeCache.current[activity.id]) {
+        const existingRoute = activity.route || activity.routeData;
+        if (existingRoute && existingRoute.length > 0) {
+          routeCache.current[activity.id] = existingRoute;
+        } else {
+          // Load from GPX file on-demand
+          const route = await loadRouteFromFile(activity.id);
+          if (route) {
+            routeCache.current[activity.id] = route;
+          }
+        }
+      }
+    }
+    // Trigger re-render with updated cache
+    setActivities(prev => [...prev]);
   };
 
   const getActivitiesForDate = (date) => {
@@ -234,7 +271,7 @@ export default function CalendarScreen() {
                 <View style={styles.activityMainRow}>
                   {/* Map Thumbnail */}
                   <ActivityThumbnail 
-                    route={activity.route} 
+                    route={routeCache.current[activity.id] || activity.route || activity.routeData} 
                     type={activity.type} 
                     theme={theme} 
                     size={80} 

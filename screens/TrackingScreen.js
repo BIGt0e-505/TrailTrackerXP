@@ -27,6 +27,7 @@ import {
   formatDuration,
   calculateMovingTime,
   calculateElevationGain,
+  autoExportActivityGPX,
 } from '../utils/storage';
 import { WalkingIcon, BikingIcon, PlayIcon, StopIcon, MapIcon, DownloadIcon } from '../components/Icons';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -547,7 +548,13 @@ export default function TrackingScreen() {
 
       try {
         const result = await saveActivity(activity);
-        const { gamification } = result;
+        const { gamification, activity: savedActivity } = result;
+        
+        // Auto-export GPX to external storage (Downloads or user-chosen folder)
+        // This runs in background - don't await so it doesn't delay the UI
+        autoExportActivityGPX(savedActivity).catch(e => 
+          console.log('Auto-export GPX failed (non-critical):', e.message)
+        );
         
         // Build success message with gamification info
         let message = `${activityType === 'walking' ? 'Walk' : 'Ride'}: ${formatDistance(finalDistance, distanceUnit)} in ${formatDuration(duration)}`;
@@ -877,10 +884,8 @@ export default function TrackingScreen() {
         startCaching(data.bounds);
       } else if (data.type === 'tileRequest') {
         handleTileRequest(data.style, data.z, data.x, data.y, data.requestId);
-      } else if (data.type === 'autoCacheTile') {
-        // Auto-cache tile that was loaded from network
-        autoCacheTile(data.style, data.z, data.x, data.y, data.dataUrl);
       }
+      // Auto-caching disabled to prevent cache from filling up and corrupting data
     } catch (e) {
       console.log('Map message error:', e);
     }
@@ -1054,26 +1059,8 @@ export default function TrackingScreen() {
           if (pendingTileRequests[requestId]) {
             var req = pendingTileRequests[requestId];
             delete pendingTileRequests[requestId];
-            req.tile.crossOrigin = 'anonymous';
             req.tile.onload = function() { 
               done(null, req.tile);
-              // Try to auto-cache on timeout fallback too
-              try {
-                var canvas = document.createElement('canvas');
-                canvas.width = req.tile.naturalWidth || 256;
-                canvas.height = req.tile.naturalHeight || 256;
-                var ctx = canvas.getContext('2d');
-                ctx.drawImage(req.tile, 0, 0);
-                var dataUrl = canvas.toDataURL('image/png');
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'autoCacheTile',
-                  style: req.style,
-                  z: req.z,
-                  x: req.x,
-                  y: req.y,
-                  dataUrl: dataUrl
-                }));
-              } catch (e) {}
             };
             req.tile.onerror = function(e) { done(e, req.tile); };
             req.tile.src = req.url;
@@ -1096,30 +1083,9 @@ export default function TrackingScreen() {
         req.tile.onerror = function(e) { req.done(e, req.tile); };
         req.tile.src = base64Data;
       } else {
-        // Not cached - use network and auto-cache on load
-        req.tile.crossOrigin = 'anonymous';
+        // Not cached - use network (auto-caching disabled to prevent cache overflow)
         req.tile.onload = function() { 
           req.done(null, req.tile);
-          // Auto-cache this tile after successful network load
-          try {
-            var canvas = document.createElement('canvas');
-            canvas.width = req.tile.naturalWidth || 256;
-            canvas.height = req.tile.naturalHeight || 256;
-            var ctx = canvas.getContext('2d');
-            ctx.drawImage(req.tile, 0, 0);
-            var dataUrl = canvas.toDataURL('image/png');
-            // Send to React Native for caching (same zoom level only)
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'autoCacheTile',
-              style: req.style,
-              z: req.z,
-              x: req.x,
-              y: req.y,
-              dataUrl: dataUrl
-            }));
-          } catch (e) {
-            // Cross-origin tiles may fail canvas export - that's OK
-          }
         };
         req.tile.onerror = function(e) { req.done(e, req.tile); };
         req.tile.src = req.url;

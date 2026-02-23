@@ -291,6 +291,10 @@ export default function SettingsScreen() {
       }
       
       const destinationUri = permissions.directoryUri;
+      
+      // Save this directory URI so future activities auto-export here
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.setItem('@trail_tracker_auto_export_dir', destinationUri);
       let exportedCount = 0;
       let failedCount = 0;
       
@@ -598,26 +602,6 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
           <TouchableOpacity 
             style={styles.settingRow}
-            onPress={handleMigrateToFile}
-            activeOpacity={0.7}
-          >
-            <View style={styles.settingLeft}>
-              <DatabaseIcon size={22} color={theme.icon} />
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  Save to GPX Files
-                </Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Save activities not yet stored as GPX files
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
-
-          <TouchableOpacity 
-            style={styles.settingRow}
             onPress={handleRecoverFromFile}
             activeOpacity={0.7}
           >
@@ -642,13 +626,13 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.settingLeft}>
-              <DownloadIcon size={22} color={theme.icon} />
+              <UploadIcon size={22} color={theme.icon} />
               <View style={styles.settingInfo}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>
                   Export GPX Files
                 </Text>
                 <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  Share your activity GPX files
+                  Save your activity GPX files to a folder you choose
                 </Text>
               </View>
             </View>
@@ -662,7 +646,7 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.settingLeft}>
-              <UploadIcon size={22} color={theme.icon} />
+              <DownloadIcon size={22} color={theme.icon} />
               <View style={styles.settingInfo}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>
                   Import from Strava
@@ -747,7 +731,7 @@ export default function SettingsScreen() {
       {/* Info Card */}
       <View style={[styles.infoCard, { backgroundColor: theme.primaryLight }]}>
         <Text style={[styles.infoText, { color: theme.primary }]}>
-          TrailTracker now saves your data to both cache (fast access) and file storage (persistent backup). Use "Save to File Storage" after updating the app to protect your data. File storage persists across app updates.
+          TrailTracker automatically saves activities as GPX files. Use "Export GPX Files" to choose a folder — after that, new activities will be automatically exported there too.
         </Text>
       </View>
 
