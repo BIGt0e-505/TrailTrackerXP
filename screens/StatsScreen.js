@@ -788,34 +788,48 @@ export default function StatsScreen() {
 
   // Progress graph - generic for both distance and pace
   const renderProgressGraph = (data, title, activityType, graphType, count, isPace = false) => {
-    const maxValue = Math.max(...data.map(d => d.value), 0.1);
     const padding = { left: 10, right: 10, top: 30, bottom: 25 };
     const graphW = GRAPH_WIDTH - padding.left - padding.right;
     const graphH = GRAPH_HEIGHT - padding.top - padding.bottom;
-    const unitLabel = distanceUnit === 'miles' ? '/mi' : '/km';
 
-    // For distance: show formatted distance. For pace: show decimal minutes.
+    // Scale only to the max of data points that actually have values
+    const validValues = data.filter(d => d.hasData !== false && d.value > 0).map(d => d.value);
+    const maxValue = validValues.length > 0 ? Math.max(...validValues) : 1;
+    // For pace, also need min to spread the scale properly
+    const minValue = isPace && validValues.length > 0 ? Math.min(...validValues) : 0;
+    const valueRange = isPace ? Math.max(maxValue - minValue, 0.5) : maxValue;
+
+    // For distance: show formatted distance. For pace: show decimal minutes only (e.g. 14.6')
     const formatValue = (val) => {
-      if (isPace) return val > 0 ? `${val}'${unitLabel}` : '';
+      if (isPace) return val > 0 ? `${val}'` : '';
       return distanceUnit === 'miles' ? (val * 0.621371).toFixed(1) : val.toFixed(1);
     };
 
-    // For pace, lower is better - invert y so faster (lower) is higher on the chart
-    const getY = (val) => {
-      if (val === 0) return padding.top + graphH; // no data -> baseline
+    // Y position: for both distance and pace, higher value = higher on graph (lower Y coord).
+    // For pace: slower (higher number) plots higher, faster (lower number) plots lower.
+    // This means a pace improvement (getting faster) shows as a downward trend - correct.
+    const getY = (val, hasData) => {
+      if (!hasData || val === 0) return padding.top + graphH; // no data -> baseline
       if (isPace) {
-        // Invert: faster (lower min/unit) = higher on graph
-        return padding.top + graphH - ((maxValue - val + 0.001) / maxValue) * graphH;
+        // Map value within [minValue, maxValue] range across graph height
+        // Add 10% padding above max and below min so dots aren't right at the edge
+        const paddedMin = minValue - valueRange * 0.1;
+        const paddedMax = maxValue + valueRange * 0.1;
+        const paddedRange = paddedMax - paddedMin;
+        return padding.top + graphH - ((val - paddedMin) / paddedRange) * graphH;
       }
       return padding.top + graphH - (val / maxValue) * graphH;
     };
 
-    const points = data.map((d, i) => ({
-      x: padding.left + (i / Math.max(data.length - 1, 1)) * graphW,
-      y: getY(d.value),
-      value: d.value, label: d.label,
-      hasData: d.hasData !== undefined ? d.hasData : d.value > 0,
-    }));
+    const points = data.map((d, i) => {
+      const hasData = d.hasData !== undefined ? d.hasData : d.value > 0;
+      return {
+        x: padding.left + (i / Math.max(data.length - 1, 1)) * graphW,
+        y: getY(d.value, hasData),
+        value: d.value, label: d.label,
+        hasData,
+      };
+    });
 
     const linePath = points.length > 1 ? points.map((p, i) => {
       const y = p.hasData ? p.y : padding.top + graphH;
@@ -830,7 +844,7 @@ export default function StatsScreen() {
       if (validPoints.length > 0) {
         const avg = validPoints.reduce((s, d) => s + d.value, 0) / validPoints.length;
         summaryLabel = 'Avg:';
-        summaryValue = `${avg.toFixed(1)}'${unitLabel}`;
+        summaryValue = `${avg.toFixed(1)}'`;
       }
     } else {
       const periodTotal = data.reduce((sum, d) => sum + d.value, 0);
