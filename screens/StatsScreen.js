@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -81,6 +81,8 @@ export default function StatsScreen() {
   const [gamification, setGamification] = useState(null);
   const [timeWindow, setTimeWindow] = useState('week');
   const [progressType, setProgressType] = useState(null);
+  const [progressActivePage, setProgressActivePage] = useState(0);
+  const progressPagerRef = useRef(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   const [selectedAchievement, setSelectedAchievement] = useState(null);
@@ -208,12 +210,25 @@ export default function StatsScreen() {
     return activities.filter(activity => {
       const activityDate = new Date(activity.timestamp);
       switch (timeWindow) {
-        case 'week':
-          return activityDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        case 'month':
-          return activityDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        case 'year':
-          return activityDate >= new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        case 'week': {
+          // Calendar week: Monday 00:00 to now
+          const day = now.getDay();
+          const diff = day === 0 ? 6 : day - 1;
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - diff);
+          weekStart.setHours(0, 0, 0, 0);
+          return activityDate >= weekStart;
+        }
+        case 'month': {
+          // Calendar month: 1st of this month 00:00 to now
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          return activityDate >= monthStart;
+        }
+        case 'year': {
+          // Calendar year: Jan 1st 00:00 to now
+          const yearStart = new Date(now.getFullYear(), 0, 1);
+          return activityDate >= yearStart;
+        }
         default:
           return true;
       }
@@ -299,6 +314,102 @@ export default function StatsScreen() {
       totals.push({
         label: monthStart.toLocaleDateString('en-GB', { month: 'short' }),
         value: monthActivities.reduce((sum, a) => sum + (a.distance || 0), 0),
+      });
+    }
+    return totals;
+  };
+
+  // Pace helper: returns avg pace in min/unit for a set of activities
+  // Returns null if no valid data
+  const calcAvgPace = (activityList, unit) => {
+    const valid = activityList.filter(a => a.distance > 0 && a.duration > 0);
+    if (valid.length === 0) return null;
+    // Total distance in chosen unit, total time in minutes
+    const totalDistUnit = valid.reduce((sum, a) => {
+      return sum + (unit === 'miles' ? a.distance * 0.621371 : a.distance);
+    }, 0);
+    const totalMinutes = valid.reduce((sum, a) => sum + a.duration / 60, 0);
+    if (totalDistUnit === 0) return null;
+    return totalMinutes / totalDistUnit; // min per unit
+  };
+
+  const formatPaceValue = (minPerUnit) => {
+    if (minPerUnit === null || minPerUnit === undefined) return null;
+    return parseFloat(minPerUnit.toFixed(1)); // decimal minutes e.g. 17.5
+  };
+
+  const getDailyPaceTotals = (type, count) => {
+    const totals = [];
+    const now = new Date();
+    for (let i = count - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const dayActivities = activities.filter(a => {
+        const activityDate = new Date(a.timestamp);
+        return a.type === type && activityDate >= date && activityDate < nextDate;
+      });
+      const pace = calcAvgPace(dayActivities, distanceUnit);
+      totals.push({
+        label: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+        value: pace !== null ? formatPaceValue(pace) : 0,
+        hasData: pace !== null,
+      });
+    }
+    return totals;
+  };
+
+  const getWeeklyPaceTotals = (type, count) => {
+    const totals = [];
+    const now = new Date();
+    const getCurrentMonday = (date) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = (day === 0 ? 6 : day - 1);
+      d.setDate(d.getDate() - diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
+    for (let i = count - 1; i >= 0; i--) {
+      const weekStart = getCurrentMonday(now);
+      weekStart.setDate(weekStart.getDate() - (i * 7));
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      const weekActivities = activities.filter(a => {
+        const activityDate = new Date(a.timestamp);
+        return a.type === type && activityDate >= weekStart && activityDate < weekEnd;
+      });
+      const d = new Date(Date.UTC(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate()));
+      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+      const pace = calcAvgPace(weekActivities, distanceUnit);
+      totals.push({
+        label: `W${weekNum}`,
+        value: pace !== null ? formatPaceValue(pace) : 0,
+        hasData: pace !== null,
+      });
+    }
+    return totals;
+  };
+
+  const getMonthlyPaceTotals = (type, count) => {
+    const totals = [];
+    const now = new Date();
+    for (let i = count - 1; i >= 0; i--) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const monthActivities = activities.filter(a => {
+        const activityDate = new Date(a.timestamp);
+        return a.type === type && activityDate >= monthStart && activityDate < monthEnd;
+      });
+      const pace = calcAvgPace(monthActivities, distanceUnit);
+      totals.push({
+        label: monthStart.toLocaleDateString('en-GB', { month: 'short' }),
+        value: pace !== null ? formatPaceValue(pace) : 0,
+        hasData: pace !== null,
       });
     }
     return totals;
@@ -675,28 +786,57 @@ export default function StatsScreen() {
     );
   };
 
-  // Progress graph
-  const renderProgressGraph = (data, title, activityType, graphType, count) => {
+  // Progress graph - generic for both distance and pace
+  const renderProgressGraph = (data, title, activityType, graphType, count, isPace = false) => {
     const maxValue = Math.max(...data.map(d => d.value), 0.1);
     const padding = { left: 10, right: 10, top: 30, bottom: 25 };
     const graphW = GRAPH_WIDTH - padding.left - padding.right;
     const graphH = GRAPH_HEIGHT - padding.top - padding.bottom;
-    const formatValue = (km) => distanceUnit === 'miles' ? (km * 0.621371).toFixed(1) : km.toFixed(1);
-    
-    // Calculate total for the visible period
-    const periodTotal = data.reduce((sum, d) => sum + d.value, 0);
-    
+    const unitLabel = distanceUnit === 'miles' ? '/mi' : '/km';
+
+    // For distance: show formatted distance. For pace: show decimal minutes.
+    const formatValue = (val) => {
+      if (isPace) return val > 0 ? `${val}'${unitLabel}` : '';
+      return distanceUnit === 'miles' ? (val * 0.621371).toFixed(1) : val.toFixed(1);
+    };
+
+    // For pace, lower is better - invert y so faster (lower) is higher on the chart
+    const getY = (val) => {
+      if (val === 0) return padding.top + graphH; // no data -> baseline
+      if (isPace) {
+        // Invert: faster (lower min/unit) = higher on graph
+        return padding.top + graphH - ((maxValue - val + 0.001) / maxValue) * graphH;
+      }
+      return padding.top + graphH - (val / maxValue) * graphH;
+    };
+
     const points = data.map((d, i) => ({
       x: padding.left + (i / Math.max(data.length - 1, 1)) * graphW,
-      y: padding.top + graphH - (d.value / maxValue) * graphH,
+      y: getY(d.value),
       value: d.value, label: d.label,
+      hasData: d.hasData !== undefined ? d.hasData : d.value > 0,
     }));
-    
-    // Line connects ALL points including 0 values (drops to baseline for 0s)
+
     const linePath = points.length > 1 ? points.map((p, i) => {
-      const y = p.value > 0 ? p.y : padding.top + graphH;
+      const y = p.hasData ? p.y : padding.top + graphH;
       return `${i === 0 ? 'M' : 'L'} ${p.x} ${y}`;
     }).join(' ') : '';
+
+    // Summary line: total distance or avg pace
+    let summaryLabel = '';
+    let summaryValue = '';
+    if (isPace) {
+      const validPoints = data.filter(d => d.hasData && d.value > 0);
+      if (validPoints.length > 0) {
+        const avg = validPoints.reduce((s, d) => s + d.value, 0) / validPoints.length;
+        summaryLabel = 'Avg:';
+        summaryValue = `${avg.toFixed(1)}'${unitLabel}`;
+      }
+    } else {
+      const periodTotal = data.reduce((sum, d) => sum + d.value, 0);
+      summaryLabel = 'Total:';
+      summaryValue = formatDistance(periodTotal, distanceUnit);
+    }
 
     return (
       <View style={[styles.graphCard, { backgroundColor: theme.cardBg }]}>
@@ -712,8 +852,12 @@ export default function StatsScreen() {
           </View>
           <Text style={[styles.graphTitle, { color: theme.text }]}>{title}</Text>
           <View style={styles.graphTotalContainer}>
-            <Text style={[styles.graphTotalLabel, { color: theme.textSecondary }]}>Total:</Text>
-            <Text style={[styles.graphTotalValue, { color: theme.primary }]}>{formatDistance(periodTotal, distanceUnit)}</Text>
+            {summaryLabel ? (
+              <>
+                <Text style={[styles.graphTotalLabel, { color: theme.textSecondary }]}>{summaryLabel}</Text>
+                <Text style={[styles.graphTotalValue, { color: theme.primary }]}>{summaryValue}</Text>
+              </>
+            ) : null}
           </View>
         </View>
         <Svg width={GRAPH_WIDTH} height={GRAPH_HEIGHT}>
@@ -721,10 +865,10 @@ export default function StatsScreen() {
           {linePath && <Path d={linePath} stroke={theme.primary} strokeWidth={2} fill="none" />}
           {points.map((point, i) => (
             <React.Fragment key={i}>
-              {point.value > 0 && (
+              {point.hasData && (
                 <SvgText x={point.x} y={point.y - 8} fontSize={10} fill={theme.text} textAnchor="middle">{formatValue(point.value)}</SvgText>
               )}
-              <Circle cx={point.x} cy={point.value > 0 ? point.y : padding.top + graphH} r={6} fill={theme.primary} />
+              <Circle cx={point.x} cy={point.hasData ? point.y : padding.top + graphH} r={6} fill={point.hasData ? theme.primary : theme.border} />
               {i % Math.max(1, Math.floor(points.length / 6)) === 0 && <SvgText x={point.x} y={GRAPH_HEIGHT - 5} fontSize={9} fill={theme.textSecondary} textAnchor="middle">{point.label}</SvgText>}
             </React.Fragment>
           ))}
@@ -733,13 +877,18 @@ export default function StatsScreen() {
     );
   };
 
-  // Progress view
+  // Progress view with horizontal swipe: Distance (left) | Pace (right)
   const renderProgressView = () => {
     const settings = progressSettings[progressType];
+    const handleScroll = (event) => {
+      const page = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+      setProgressActivePage(page);
+    };
+
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.progressHeader}>
-          <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.surface }]} onPress={() => setProgressType(null)}>
+          <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.surface }]} onPress={() => { setProgressType(null); setProgressActivePage(0); }}>
             <Text style={[styles.backButtonText, { color: theme.primary }]}>← Back</Text>
           </TouchableOpacity>
           <View style={styles.progressTitleContainer}>
@@ -748,12 +897,45 @@ export default function StatsScreen() {
           </View>
           <View style={styles.backButton} />
         </View>
-        <ScrollView style={styles.progressScroll}>
-          <View style={styles.progressContent}>
-            {renderProgressGraph(getDailyTotals(progressType, settings.daily), 'Daily Distance', progressType, 'daily', settings.daily)}
-            {renderProgressGraph(getWeeklyTotals(progressType, settings.weekly), 'Weekly Distance', progressType, 'weekly', settings.weekly)}
-            {renderProgressGraph(getMonthlyTotals(progressType, settings.monthly), 'Monthly Distance', progressType, 'monthly', settings.monthly)}
-          </View>
+
+        {/* Page indicator tabs */}
+        <View style={styles.pageTabRow}>
+          <TouchableOpacity
+            style={[styles.pageTab, progressActivePage === 0 && { borderBottomColor: theme.primary, borderBottomWidth: 2 }]}
+            onPress={() => progressPagerRef.current?.scrollTo({ x: 0, animated: true })}
+          >
+            <Text style={[styles.pageTabText, { color: progressActivePage === 0 ? theme.primary : theme.textSecondary }]}>📏 Distance</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.pageTab, progressActivePage === 1 && { borderBottomColor: theme.primary, borderBottomWidth: 2 }]}
+            onPress={() => progressPagerRef.current?.scrollTo({ x: SCREEN_WIDTH, animated: true })}
+          >
+            <Text style={[styles.pageTabText, { color: progressActivePage === 1 ? theme.primary : theme.textSecondary }]}>⏱ Pace</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          ref={progressPagerRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleScroll}
+          style={{ flex: 1 }}
+          scrollEventThrottle={16}
+        >
+          {/* Page 1: Distance */}
+          <ScrollView style={{ width: SCREEN_WIDTH }} contentContainerStyle={styles.progressContent}>
+            {renderProgressGraph(getDailyTotals(progressType, settings.daily), 'Daily Distance', progressType, 'daily', settings.daily, false)}
+            {renderProgressGraph(getWeeklyTotals(progressType, settings.weekly), 'Weekly Distance', progressType, 'weekly', settings.weekly, false)}
+            {renderProgressGraph(getMonthlyTotals(progressType, settings.monthly), 'Monthly Distance', progressType, 'monthly', settings.monthly, false)}
+          </ScrollView>
+
+          {/* Page 2: Pace */}
+          <ScrollView style={{ width: SCREEN_WIDTH }} contentContainerStyle={styles.progressContent}>
+            {renderProgressGraph(getDailyPaceTotals(progressType, settings.daily), 'Daily Pace', progressType, 'daily', settings.daily, true)}
+            {renderProgressGraph(getWeeklyPaceTotals(progressType, settings.weekly), 'Weekly Pace', progressType, 'weekly', settings.weekly, true)}
+            {renderProgressGraph(getMonthlyPaceTotals(progressType, settings.monthly), 'Monthly Pace', progressType, 'monthly', settings.monthly, true)}
+          </ScrollView>
         </ScrollView>
       </View>
     );
@@ -993,6 +1175,9 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: 48 },
   emptyStateText: { fontSize: 15, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 16 },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
+  pageTabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.2)' },
+  pageTab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+  pageTabText: { fontSize: 14, fontFamily: 'Inter_700Bold' },
   progressTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   progressTitle: { fontSize: 18, fontFamily: 'Inter_700Bold' },
   backButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, minWidth: 80 },
