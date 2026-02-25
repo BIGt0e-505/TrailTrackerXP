@@ -82,7 +82,6 @@ export default function StatsScreen() {
   const [timeWindow, setTimeWindow] = useState('week');
   const [progressType, setProgressType] = useState(null);
   const [progressActivePage, setProgressActivePage] = useState(0);
-  const [graphPageHeight, setGraphPageHeight] = useState(0);
   const progressPagerRef = useRef(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [showAchievementModal, setShowAchievementModal] = useState(false);
@@ -788,12 +787,14 @@ export default function StatsScreen() {
   };
 
   // Progress graph - generic for both distance and pace
-  const renderProgressGraph = (data, title, activityType, graphType, count, isPace = false, pageHeight = 0) => {
-    const padding = { left: 10, right: 10, top: 30, bottom: 25 };
+  const renderProgressGraph = (data, title, activityType, graphType, count, isPace = false) => {
+    const padding = { left: 10, right: 10, top: 28, bottom: 22 };
     const graphW = GRAPH_WIDTH - padding.left - padding.right;
-    // If we have a measured page height, divide it among 3 graphs (card padding + header ~52px each)
-    const cardH = pageHeight > 0 ? Math.floor(pageHeight / 3) - 16 : GRAPH_HEIGHT;
-    const graphH = Math.max(cardH - padding.top - padding.bottom, 40);
+    // Available height: screen minus status(24) + progressHeader(50) + tabRow(38) + bottomNav(80) + gap(8)
+    // Divided by 3 graphs, minus card overhead (graphHeader ~40 + card padding top+bottom 16)
+    const availableH = SCREEN_HEIGHT - 24 - 50 - 38 - 80 - 8;
+    const cardH = Math.floor(availableH / 3) - 8; // 8px gap between cards
+    const graphH = Math.max(cardH - padding.top - padding.bottom - 40, 40); // 40 = header row height
 
     // Scale only to the max of data points that actually have values
     const validValues = data.filter(d => d.hasData !== false && d.value > 0).map(d => d.value);
@@ -877,7 +878,7 @@ export default function StatsScreen() {
             ) : null}
           </View>
         </View>
-        <Svg width={GRAPH_WIDTH} height={Math.max(cardH, 60)}>
+        <Svg width={GRAPH_WIDTH} height={cardH - 40}>
           <Line x1={padding.left} y1={padding.top + graphH} x2={GRAPH_WIDTH - padding.right} y2={padding.top + graphH} stroke={theme.border} strokeWidth={1} />
           {linePath && <Path d={linePath} stroke={theme.primary} strokeWidth={2} fill="none" />}
           {points.map((point, i) => (
@@ -886,7 +887,7 @@ export default function StatsScreen() {
                 <SvgText x={point.x} y={point.y - 8} fontSize={10} fill={theme.text} textAnchor="middle">{formatValue(point.value)}</SvgText>
               )}
               <Circle cx={point.x} cy={point.hasData ? point.y : padding.top + graphH} r={6} fill={point.hasData ? theme.primary : theme.border} />
-              {i % Math.max(1, Math.floor(points.length / 6)) === 0 && <SvgText x={point.x} y={Math.max(cardH, 60) - 5} fontSize={9} fill={theme.textSecondary} textAnchor="middle">{point.label}</SvgText>}
+              {i % Math.max(1, Math.floor(points.length / 6)) === 0 && <SvgText x={point.x} y={cardH - 40 - 3} fontSize={9} fill={theme.textSecondary} textAnchor="middle">{point.label}</SvgText>}
             </React.Fragment>
           ))}
         </Svg>
@@ -941,17 +942,17 @@ export default function StatsScreen() {
           scrollEventThrottle={16}
         >
           {/* Page 1: Distance */}
-          <View style={[styles.progressPage, { width: SCREEN_WIDTH }]} onLayout={(e) => setGraphPageHeight(e.nativeEvent.layout.height)}>
-            {renderProgressGraph(getDailyTotals(progressType, settings.daily), 'Daily Distance', progressType, 'daily', settings.daily, false, graphPageHeight)}
-            {renderProgressGraph(getWeeklyTotals(progressType, settings.weekly), 'Weekly Distance', progressType, 'weekly', settings.weekly, false, graphPageHeight)}
-            {renderProgressGraph(getMonthlyTotals(progressType, settings.monthly), 'Monthly Distance', progressType, 'monthly', settings.monthly, false, graphPageHeight)}
+          <View style={[styles.progressPage, { width: SCREEN_WIDTH }]}>
+            {renderProgressGraph(getDailyTotals(progressType, settings.daily), 'Daily Distance', progressType, 'daily', settings.daily, false)}
+            {renderProgressGraph(getWeeklyTotals(progressType, settings.weekly), 'Weekly Distance', progressType, 'weekly', settings.weekly, false)}
+            {renderProgressGraph(getMonthlyTotals(progressType, settings.monthly), 'Monthly Distance', progressType, 'monthly', settings.monthly, false)}
           </View>
 
           {/* Page 2: Pace */}
           <View style={[styles.progressPage, { width: SCREEN_WIDTH }]}>
-            {renderProgressGraph(getDailyPaceTotals(progressType, settings.daily), 'Daily Pace', progressType, 'daily', settings.daily, true, graphPageHeight)}
-            {renderProgressGraph(getWeeklyPaceTotals(progressType, settings.weekly), 'Weekly Pace', progressType, 'weekly', settings.weekly, true, graphPageHeight)}
-            {renderProgressGraph(getMonthlyPaceTotals(progressType, settings.monthly), 'Monthly Pace', progressType, 'monthly', settings.monthly, true, graphPageHeight)}
+            {renderProgressGraph(getDailyPaceTotals(progressType, settings.daily), 'Daily Pace', progressType, 'daily', settings.daily, true)}
+            {renderProgressGraph(getWeeklyPaceTotals(progressType, settings.weekly), 'Weekly Pace', progressType, 'weekly', settings.weekly, true)}
+            {renderProgressGraph(getMonthlyPaceTotals(progressType, settings.monthly), 'Monthly Pace', progressType, 'monthly', settings.monthly, true)}
           </View>
         </ScrollView>
       </View>
@@ -1201,8 +1202,8 @@ const styles = StyleSheet.create({
   backButtonText: { fontSize: 14, fontFamily: 'Inter_700Bold' },
   progressScroll: { flex: 1 },
   progressContent: { padding: 16, paddingTop: 0 },
-  progressPage: { flex: 1, padding: 8, gap: 8 },
-  graphCard: { borderRadius: 12, padding: 8, marginBottom: 0, flex: 1 },
+  progressPage: { flex: 1, paddingHorizontal: 8, paddingTop: 4, gap: 4 },
+  graphCard: { borderRadius: 12, padding: 8, marginBottom: 0 },
   graphHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   graphTitle: { fontSize: 14, fontFamily: 'Inter_700Bold', flex: 1, textAlign: 'center' },
   countControl: { flexDirection: 'row', alignItems: 'center', gap: 4 },
