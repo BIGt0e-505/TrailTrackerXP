@@ -43,27 +43,36 @@ export {
   enrichActivitiesWithRoutes,
 };
 
+// Strip route data from an activity for lightweight AsyncStorage caching.
+// Full route data lives in GPX files — AsyncStorage only holds metadata.
+const stripRouteForCache = (activity) => {
+  const { route, routeData, ...metadata } = activity;
+  return metadata;
+};
+
 export const saveActivity = async (activity) => {
   try {
-    const existingActivities = await getActivities();
     const newActivity = {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
       ...activity,
     };
-    const updatedActivities = [...existingActivities, newActivity];
-    await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updatedActivities));
-    
-    // Also save to file storage for persistence
+
+    // Save full activity (with route) to GPX file first — this is the source of truth
     await saveActivityToFile(newActivity);
-    
+
+    // Cache only metadata in AsyncStorage (no route data — prevents size limit corruption)
+    const existingActivities = await getActivities();
+    const updatedActivities = [...existingActivities, stripRouteForCache(newActivity)];
+    await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updatedActivities));
+
     // Process gamification (XP, achievements, challenges)
     const gamificationResults = await processActivity(newActivity, updatedActivities);
-    
+
     // Also save gamification to file storage
     const gamificationData = await loadGamification();
     await saveGamificationToFile(gamificationData);
-    
+
     return { activity: newActivity, gamification: gamificationResults };
   } catch (error) {
     console.error('Error saving activity:', error);
@@ -79,10 +88,17 @@ export const updateActivity = async (id, updates) => {
     if (index === -1) throw new Error('Activity not found');
     
     activities[index] = { ...activities[index], ...updates };
-    await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(activities));
-    
-    // Also update file storage
-    await saveActivityToFile(activities[index]);
+
+    // Update GPX file with full data (load route from file if needed)
+    const fullActivity = { ...activities[index] };
+    if (!fullActivity.route && !fullActivity.routeData) {
+      const route = await loadRouteFromFile(id);
+      if (route) fullActivity.route = route;
+    }
+    await saveActivityToFile(fullActivity);
+
+    // Cache only metadata in AsyncStorage
+    await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(activities.map(stripRouteForCache)));
     
     // Recalculate gamification since activity type may affect achievements
     await recalculateGamification(activities);
@@ -100,10 +116,31 @@ export const updateActivity = async (id, updates) => {
 
 export const getActivities = async () => {
   try {
-    const activities = await AsyncStorage.getItem(ACTIVITIES_KEY);
-    return activities ? JSON.parse(activities) : [];
+    const json = await AsyncStorage.getItem(ACTIVITIES_KEY);
+    const activities = json ? JSON.parse(json) : [];
+    if (activities.length > 0) return activities;
+
+    // Cache is empty — try to rebuild from GPX files (source of truth)
+    const fileActivities = await loadActivitiesFromFile();
+    if (fileActivities.length > 0) {
+      console.log(`Cache empty, rebuilt from ${fileActivities.length} GPX files`);
+      const stripped = fileActivities.map(({ route, routeData, ...metadata }) => metadata);
+      await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(stripped));
+      return stripped;
+    }
+    return [];
   } catch (error) {
-    console.error('Error getting activities:', error);
+    console.error('Error getting activities, attempting GPX recovery:', error);
+    try {
+      const fileActivities = await loadActivitiesFromFile();
+      if (fileActivities.length > 0) {
+        const stripped = fileActivities.map(({ route, routeData, ...metadata }) => metadata);
+        await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(stripped));
+        return stripped;
+      }
+    } catch (recoveryError) {
+      console.error('GPX recovery also failed:', recoveryError);
+    }
     return [];
   }
 };

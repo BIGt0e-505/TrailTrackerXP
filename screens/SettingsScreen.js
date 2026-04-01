@@ -15,6 +15,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { useTheme } from '../utils/theme';
+import appJson from '../app.json';
 import { 
   clearCachedTiles, 
   getActivities, 
@@ -233,9 +234,10 @@ export default function SettingsScreen() {
       const result = await recoverFromFileStorage();
       
       if (result.success && result.activities.length > 0) {
-        // Save recovered activities to AsyncStorage
+        // Save recovered activities to AsyncStorage — strip route data to prevent size limit corruption
         const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-        await AsyncStorage.setItem('@trail_tracker_activities', JSON.stringify(result.activities));
+        const stripped = result.activities.map(({ route, routeData, ...metadata }) => metadata);
+        await AsyncStorage.setItem('@trail_tracker_activities', JSON.stringify(stripped));
         
         setOperationResult(result);
         await loadStorageInfo();
@@ -716,7 +718,7 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
           <View style={styles.aboutRow}>
             <Text style={[styles.aboutLabel, { color: theme.textSecondary }]}>Version</Text>
-            <Text style={[styles.aboutValue, { color: theme.text }]}>0.3.0</Text>
+            <Text style={[styles.aboutValue, { color: theme.text }]}>{appJson.expo.version}</Text>
           </View>
           
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
