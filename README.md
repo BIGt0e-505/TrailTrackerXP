@@ -1,75 +1,110 @@
-# Garmin Watch Integration Package
+# TrailTrackerXP
 
-This package contains everything needed to add Garmin Venu 4 watch support to TrailTrackerXP.
+A fitness tracking app for walking, hiking, and mountain biking — built with React Native and Expo.
 
-## Contents
+## Features
+
+### 📍 GPS Tracking
+- Real-time route mapping with GPS
+- Background location tracking (continues when screen is locked)
+- Auto-save every 30 seconds so you never lose a route
+- Supports walking, hiking, and mountain biking activity types
+- Moving time calculation (excludes paused time)
+- Elevation gain tracking
+
+### 🗺️ Offline Maps
+- Cached map tiles for offline use
+- Route thumbnails generated from GPS coordinates
+- Mini-map previews on calendar entries
+
+### 📅 Activity Calendar
+- Calendar view of all activities
+- See distance, duration, and elevation at a glance
+- Tap any day to view activity details
+- Route playback on the map
+
+### 📊 Statistics & Gamification
+- Rolling 365-day stats with custom cutoff dates
+- Distance, duration, and elevation charts
+- XP-based levelling system
+- Achievement badges (walking, mountain biking, general, streaks)
+- Weekly challenges that update based on your progress
+- Current streak and best streak tracking
+- Distance comparisons ("you've walked the length of the UK!")
+
+### 📤 Import & Export
+- GPX file import (from Strava, Garmin, or any GPS device)
+- GPX export for sharing routes
+- Batch export of all activities
+- Strava CSV import support
+
+### 🎨 Theming
+- Light and dark modes
+- Textured gradient headers
+- Custom icon set (no external icon library dependency)
+
+### ⌚ Garmin Watch Companion
+- Standalone Garmin Venu 4 app with simulated data
+- Real-time phone sync (orange/green connection indicator)
+- Start/stop/pause tracking from your wrist
+- Activity type switching on watch
+- See `garmin_integration/` for setup guide
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | React Native + Expo |
+| Navigation | React Navigation (bottom tabs + native stack) |
+| Maps | react-native-maps + WebView tile caching |
+| Storage | AsyncStorage + FileSystem (JSON + GPX) |
+| Charts | Custom SVG (react-native-svg) |
+| Fonts | Inter (Google Fonts) |
+| Garmin | Connect IQ / Monkey C |
+
+## Project Structure
 
 ```
-garmin_integration/
-├── GARMIN_SETUP_GUIDE.md          # Full setup instructions
-├── TRACKINGSCREEN_CHANGES.md      # Code changes for TrackingScreen.js
-├── garmin/
-│   └── TrailTrackerCompanion/     # Complete watch app (ready to build)
-│       ├── manifest.xml
-│       ├── monkey.jungle
-│       ├── resources/
-│       └── source/
+TrailTrackerXP/
+├── App.js                    # Navigation setup, theming, fonts
+├── app.json                  # Expo config
+├── screens/
+│   ├── TrackingScreen.js     # GPS tracking + map view
+│   ├── CalendarScreen.js     # Activity calendar + history
+│   ├── StatsScreen.js        # Charts, achievements, challenges
+│   ├── ActivityDetailScreen.js # Route playback + details
+│   └── SettingsScreen.js     # Preferences, import/export, Garmin
 ├── utils/
-│   └── garminBridge.js            # JavaScript bridge (copy to utils/)
-└── android/
-    └── app/
-        └── src/main/java/com/trailtrackerxp/
-            ├── GarminBridgeModule.java    # Native module
-            └── GarminBridgePackage.java   # Package registration
+│   ├── storage.js            # Activity CRUD, distance calc, GPX export
+│   ├── fileStorage.js        # File-based storage for routes
+│   ├── gamification.js       # XP, levels, achievements, challenges
+│   ├── stravaImport.js       # GPX/CSV import
+│   └── theme.js              # Light/dark theme provider
+├── components/
+│   └── Icons.js              # Custom SVG icon set
+├── assets/
+│   ├── icon.png
+│   └── splash.png
+└── garmin_integration/       # Watch companion app
 ```
 
-## Quick Start
+## Getting Started
 
-### 1. Install Watch App
+```bash
+# Install dependencies
+npm install
 
-```powershell
-cd garmin/TrailTrackerCompanion
+# Start development server
+npx expo start
 
-# Build
-& "C:\Users\aoakley5\AppData\Roaming\Garmin\ConnectIQ\Sdks\connectiq-sdk-win-8.4.0-2025-12-03-5122605dc\bin\monkeyc.bat" -d venu441mm -f monkey.jungle -o bin\TrailTrackerCompanion.prg -y C:\Users\aoakley5\developer_key.der
-
-# Copy to watch via USB
-copy bin\TrailTrackerCompanion.prg E:\GARMIN\APPS\
+# Run on Android
+npx expo run:android
 ```
 
-### 2. Add Phone Communication (Optional - Phase 2)
+## Garmin Watch Setup
 
-See `GARMIN_SETUP_GUIDE.md` for full instructions on enabling two-way communication.
+See `garmin_integration/GARMIN_SETUP_GUIDE.md` for full instructions on building and installing the watch companion app.
 
-**Files to add:**
-- `utils/garminBridge.js` → copy to your `utils/` folder
-- `GarminBridgeModule.java` → copy to Android native folder
-- `GarminBridgePackage.java` → copy to Android native folder
+## License
 
-**Files to modify:**
-- `TrackingScreen.js` - see `TRACKINGSCREEN_CHANGES.md`
-- `android/app/build.gradle` - add Garmin SDK
-- `MainApplication.java` - register native module
-
-## Watch Controls
-
-| Control | Action |
-|---------|--------|
-| SELECT (middle button) | Start tracking / Show stop menu |
-| UP/DOWN | Change activity type (when stopped) |
-| BACK | Pause/Resume (when tracking) |
-| Tap screen | Same as SELECT |
-| Swipe up/down | Change activity type (when stopped) |
-
-## Stop Menu Options
-
-When you press SELECT while tracking:
-- **Resume** (green) - Continue tracking
-- **Save** (white) - Save activity
-- **Discard** (red) - Delete activity
-
-## Notes
-
-- The watch app works standalone with simulated data (orange connection dot)
-- With phone communication enabled, data syncs in real-time (green dot)
-- Watch always displays miles/feet regardless of phone settings
+Private project. All rights reserved.
