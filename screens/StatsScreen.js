@@ -470,7 +470,7 @@ export default function StatsScreen() {
     return (
       <View style={[styles.levelCard, { backgroundColor: theme.cardBg }]}>
         <View style={styles.levelHeader}>
-          <View style={styles.levelIconContainer}>
+          <View style={[styles.levelIconContainer, { backgroundColor: 'rgba(156, 39, 176, 0.08)' }]}>
             <Text style={styles.levelEmoji}>{level.icon}</Text>
           </View>
           <View style={styles.levelInfo}>
@@ -479,7 +479,7 @@ export default function StatsScreen() {
           </View>
         </View>
         
-        <View style={styles.xpDisplayLarge}>
+        <View style={[styles.xpDisplayLarge, { backgroundColor: 'rgba(156, 39, 176, 0.08)' }]}>
           <StarIcon size={32} color={theme.xp} />
           <Text style={[styles.xpValueLarge, { color: theme.xp }]}>{gamification.xp}</Text>
           <Text style={[styles.xpLabelLarge, { color: theme.xp }]}>XP</Text>
@@ -1004,11 +1004,11 @@ export default function StatsScreen() {
       
       <View style={styles.progressButtonContainer}>
         <View style={styles.progressButtonRow}>
-          <TouchableOpacity style={[styles.progressButton, styles.progressButtonHalf, { backgroundColor: '#1976D2' }]} onPress={() => setProgressType('walking')}>
+          <TouchableOpacity style={[styles.progressButton, styles.progressButtonHalf, { backgroundColor: theme.accent }]} onPress={() => setProgressType('walking')}>
             <WalkingIcon size={20} color="#fff" />
             <Text style={styles.progressButtonText}>Walking Progress</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.progressButton, styles.progressButtonHalf, { backgroundColor: '#D32F2F' }]} onPress={() => setProgressType('biking')}>
+          <TouchableOpacity style={[styles.progressButton, styles.progressButtonHalf, { backgroundColor: theme.accent }]} onPress={() => setProgressType('biking')}>
             <BikingIcon size={20} color="#fff" />
             <Text style={styles.progressButtonText}>Biking Progress</Text>
           </TouchableOpacity>
@@ -1078,12 +1078,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   levelCard: { margin: 16, marginBottom: 8, borderRadius: 16, padding: 16 },
   levelHeader: { flexDirection: 'row', alignItems: 'center' },
-  levelIconContainer: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(156, 39, 176, 0.1)', justifyContent: 'center', alignItems: 'center' },
+  levelIconContainer: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
   levelEmoji: { fontSize: 32 },
   levelInfo: { flex: 1, marginLeft: 12 },
   levelName: { fontSize: 18, fontFamily: 'Inter_700Bold' },
   levelNumber: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  xpDisplayLarge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 16, backgroundColor: 'rgba(156, 39, 176, 0.1)', borderRadius: 12 },
+  xpDisplayLarge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, paddingVertical: 16, borderRadius: 12 },
   xpValueLarge: { fontSize: 36, fontFamily: 'Inter_700Bold' },
   xpLabelLarge: { fontSize: 24, fontFamily: 'Inter_700Bold' },
   xpBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
@@ -1173,9 +1173,9 @@ const styles = StyleSheet.create({
   progressButtonHalf: { flex: 1 },
   progressButtonText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
   section: { paddingHorizontal: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 1, marginBottom: 8 },
+  sectionTitle: { fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 0.5, marginBottom: 8 },
   card: { borderRadius: 12, padding: 16 },
-  mainStat: { alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.2)' },
+  mainStat: { alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#2A2A2A' },
   mainStatValue: { fontSize: 32, fontFamily: 'Inter_700Bold' },
   mainStatLabel: { fontSize: 11, fontFamily: 'Inter_400Regular', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', justifyContent: 'center', padding: 48 },
   emptyStateText: { fontSize: 15, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 16 },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 10, paddingHorizontal: 16 },
-  pageTabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.2)' },
+  pageTabRow: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#2A2A2A' },
   pageTab: { flex: 1, paddingVertical: 8, alignItems: 'center' },
   pageTabText: { fontSize: 14, fontFamily: 'Inter_700Bold' },
   progressTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },

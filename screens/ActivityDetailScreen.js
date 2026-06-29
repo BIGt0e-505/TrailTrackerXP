@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(128,128,128,0.2)',
+    borderBottomColor: '#2A2A2A',
   },
   mainStatValue: {
     fontSize: 36,
