@@ -234,7 +234,7 @@ export default function SettingsScreen() {
       const result = await recoverFromFileStorage();
       
       if (result.success && result.activities.length > 0) {
-        // Save recovered activities to AsyncStorage — strip route data to prevent size limit corruption
+        // Save recovered activities to AsyncStorage â€” strip route data to prevent size limit corruption
         const AsyncStorage = require('@react-native-async-storage/async-storage').default;
         const stripped = result.activities.map(({ route, routeData, ...metadata }) => metadata);
         await AsyncStorage.setItem('@trail_tracker_activities', JSON.stringify(stripped));
@@ -556,7 +556,7 @@ export default function SettingsScreen() {
                 style={[styles.clearDateButton, { backgroundColor: theme.surface }]}
                 onPress={clearCutoffDate}
               >
-                <Text style={[styles.clearDateButtonText, { color: '#D32F2F' }]}>Clear</Text>
+                <Text style={[styles.clearDateButtonText, { color: theme.danger }]}>Clear</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -591,9 +591,9 @@ export default function SettingsScreen() {
               </Text>
             </View>
             {integrityInfo && integrityInfo.inCacheOnlyWithRoute > 0 && (
-              <View style={[styles.syncWarning, { backgroundColor: theme.warningLight || '#FFF3E0' }]}>
-                <WarningIcon size={16} color="#FF9800" />
-                <Text style={[styles.syncWarningText, { color: '#E65100' }]}>
+              <View style={[styles.syncWarning, { backgroundColor: 'rgba(255, 152, 0, 0.1)' }]}>
+                <WarningIcon size={16} color={theme.warning} />
+                <Text style={[styles.syncWarningText, { color: theme.warning }]}>
                   {integrityInfo.inCacheOnlyWithRoute} activities with GPS data not yet saved as GPX
                 </Text>
               </View>
@@ -733,7 +733,7 @@ export default function SettingsScreen() {
       {/* Info Card */}
       <View style={[styles.infoCard, { backgroundColor: theme.primaryLight }]}>
         <Text style={[styles.infoText, { color: theme.primary }]}>
-          TrailTracker automatically saves activities as GPX files. Use "Export GPX Files" to choose a folder — after that, new activities will be automatically exported there too.
+          TrailTracker automatically saves activities as GPX files. Use "Export GPX Files" to choose a folder â€” after that, new activities will be automatically exported there too.
         </Text>
       </View>
 
@@ -832,7 +832,7 @@ export default function SettingsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
-            <InfoIcon size={56} color="#2196F3" />
+            <InfoIcon size={56} color={theme.accent} />
             <Text style={[styles.modalTitle, { color: theme.text }]}>
               Storage Status
             </Text>
@@ -849,20 +849,20 @@ export default function SettingsScreen() {
                     Synchronized: {integrityInfo.synchronized || 0}
                   </Text>
                   {integrityInfo.inCacheOnly > 0 && (
-                    <Text style={[styles.modalStatRow, { color: '#FF9800' }]}>
-                      ⚠️ {integrityInfo.inCacheOnly} only in cache
+                    <Text style={[styles.modalStatRow, { color: theme.warning }]}>
+                      âš ï¸ {integrityInfo.inCacheOnly} only in cache
                     </Text>
                   )}
                   {integrityInfo.inFileOnly > 0 && (
-                    <Text style={[styles.modalStatRow, { color: '#4CAF50' }]}>
-                      ✓ {integrityInfo.inFileOnly} only in file storage
+                    <Text style={[styles.modalStatRow, { color: theme.success }]}>
+                      âœ“ {integrityInfo.inFileOnly} only in file storage
                     </Text>
                   )}
                 </>
               )}
             </View>
             <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: '#2196F3' }]}
+              style={[styles.modalButton, { backgroundColor: theme.accent }]}
               onPress={() => setShowExportModal(false)}
             >
               <Text style={styles.modalButtonText}>OK</Text>
@@ -893,9 +893,9 @@ export default function SettingsScreen() {
             ) : operationResult ? (
               <>
                 {operationResult.success ? (
-                  <CheckIcon size={56} color="#4CAF50" />
+                  <CheckIcon size={56} color={theme.success} />
                 ) : (
-                  <WarningIcon size={56} color="#FF9800" />
+                  <WarningIcon size={56} color={theme.warning} />
                 )}
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
                   {operationResult.success ? 'GPX Files Saved!' : 'Error'}
@@ -962,9 +962,9 @@ export default function SettingsScreen() {
             ) : operationResult ? (
               <>
                 {operationResult.success ? (
-                  <CheckIcon size={56} color="#4CAF50" />
+                  <CheckIcon size={56} color={theme.success} />
                 ) : (
-                  <WarningIcon size={56} color="#FF9800" />
+                  <WarningIcon size={56} color={theme.warning} />
                 )}
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
                   {operationResult.success ? 'Recovery Complete!' : 'Error'}
@@ -1034,9 +1034,9 @@ export default function SettingsScreen() {
             ) : operationResult ? (
               <>
                 {operationResult.success ? (
-                  <CheckIcon size={56} color="#4CAF50" />
+                  <CheckIcon size={56} color={theme.success} />
                 ) : (
-                  <WarningIcon size={56} color="#FF9800" />
+                  <WarningIcon size={56} color={theme.warning} />
                 )}
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
                   {operationResult.success ? 'Export Complete!' : 'Error'}
@@ -1089,7 +1089,7 @@ export default function SettingsScreen() {
                 >
                   <Text style={[styles.filePickerButtonText, { color: theme.primary }]}>
                     {selectedGPXFiles.length > 0 
-                      ? `✓ ${selectedGPXFiles.length} GPX files found`
+                      ? `âœ“ ${selectedGPXFiles.length} GPX files found`
                       : 'Select Activities Folder'}
                   </Text>
                 </TouchableOpacity>
@@ -1101,7 +1101,7 @@ export default function SettingsScreen() {
                 >
                   <Text style={[styles.filePickerButtonTextSmall, { color: theme.textSecondary }]}>
                     {csvMetadata 
-                      ? `✓ activities.csv (${csvMetadata.count} entries)`
+                      ? `âœ“ activities.csv (${csvMetadata.count} entries)`
                       : '+ Add activities.csv (optional)'}
                   </Text>
                 </TouchableOpacity>
@@ -1152,9 +1152,9 @@ export default function SettingsScreen() {
             ) : operationResult ? (
               <>
                 {operationResult.success ? (
-                  <CheckIcon size={56} color="#4CAF50" />
+                  <CheckIcon size={56} color={theme.success} />
                 ) : (
-                  <WarningIcon size={56} color="#FF9800" />
+                  <WarningIcon size={56} color={theme.warning} />
                 )}
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
                   {operationResult.success ? 'Import Complete!' : 'Import Error'}
@@ -1196,7 +1196,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     marginBottom: 8,
     marginLeft: 4,
   },
