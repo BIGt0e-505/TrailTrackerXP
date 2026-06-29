@@ -47,5 +47,10 @@ releases/
 # Garmin build output
 garmin/*/bin/
 
+# Local archived documentation snapshots
+# Kept on disk as temporary reference, not tracked going forwards.
+docs/archive/*.md
+!docs/archive/.gitkeep
+
 # Package lock (optional — keep if you prefer deterministic installs)
 # package-lock.json

@@ -16,7 +16,7 @@
 
 ## Archived Documentation
 
-Files in `docs/archive/` are kept for historical context but are not part of the current workflow.
+**`docs/archive/` is local-only and gitignored.** Archived markdown files are retained on disk as temporary reference material but are no longer tracked in version control. The active project documentation is the tracked docs in `docs/`, plus `README.md`, plus the Garmin companion README.
 
 | File | Original Location | Why Archived |
 |------|-------------------|--------------|
