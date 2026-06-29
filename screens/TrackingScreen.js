@@ -415,7 +415,7 @@ export default function TrackingScreen() {
       foregroundService: {
         notificationTitle: 'TrailTrackerXP Recording',
         notificationBody: 'GPS tracking is active',
-        notificationColor: '#4CAF50',
+        notificationColor: theme.accent,
         killServiceOnDestroy: false,
       },
     });
@@ -1370,7 +1370,7 @@ export default function TrackingScreen() {
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: '#2196F3' }]}
+              style={[styles.modalButton, { backgroundColor: theme.accent }]}
               onPress={saveTracking}
             >
               <StopIcon size={20} color="#fff" />
@@ -1399,7 +1399,7 @@ export default function TrackingScreen() {
             {successModalContent.icon === 'check' ? (
               <CheckIcon size={56} color={theme.primary} />
             ) : (
-              <CacheSuccessIcon size={56} color="#2196F3" />
+              <CacheSuccessIcon size={56} color={theme.accent} />
             )}
             <Text style={[styles.successModalTitle, { color: theme.text }]}>
               {successModalContent.title}
@@ -1534,8 +1534,8 @@ export default function TrackingScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
-            <View style={[styles.modalIconContainer, { backgroundColor: '#FFF3E0' }]}>
-              <RecenterIcon size={32} color="#FF9800" />
+            <View style={[styles.modalIconContainer, { backgroundColor: 'rgba(255, 152, 0, 0.1)' }]}>
+              <RecenterIcon size={32} color={theme.warning} />
             </View>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
               Recover Activity?
