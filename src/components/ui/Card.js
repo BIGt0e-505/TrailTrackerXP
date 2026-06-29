@@ -14,7 +14,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { CARD_RADIUS, CARD_PADDING } from '../../theme/spacing';
 
-export default function Card({ theme, children, style, padding = CARD_PADDING, radius = CARD_RADIUS, marginHorizontal, marginTop, marginBottom }) {
+export default function Card({ theme, children, style, padding = CARD_PADDING, radius = CARD_RADIUS, marginHorizontal, marginTop, marginBottom, bordered = false }) {
   return (
     <View
       style={[
@@ -26,6 +26,8 @@ export default function Card({ theme, children, style, padding = CARD_PADDING, r
           marginHorizontal,
           marginTop,
           marginBottom,
+          borderWidth: bordered ? StyleSheet.hairlineWidth : 0,
+          borderColor: bordered ? theme.border : 'transparent',
         },
         style,
       ]}

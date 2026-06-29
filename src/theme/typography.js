@@ -38,7 +38,7 @@ export const TEXT_STYLES = {
   sectionTitle: {
     fontSize: 11,
     fontFamily: FONT.bold,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   // Small stat label: uppercase, small, letter-spacing

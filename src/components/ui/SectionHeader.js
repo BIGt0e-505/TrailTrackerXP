@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 11,
     fontFamily: FONT.bold,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
 });

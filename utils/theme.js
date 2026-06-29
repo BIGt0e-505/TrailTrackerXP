@@ -1,57 +1,70 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COLORS } from '../src/theme/colors';
 
 const ThemeContext = createContext();
 
+/**
+ * TrailTrackerXP theme — TubePulse/ZeroVPN-style dark-only palette.
+ *
+ * Green is semantic only: GPS active, tracking active, success states.
+ * Blue/cyan (#4FC3F7) is the app accent / family identity.
+ *
+ * The `light` object is kept for backward compatibility (some screens
+ * may still reference `colors.light`) but now points to the same dark
+ * palette. The app is dark-only; `userInterfaceStyle: "dark"` in app.json.
+ */
 export const colors = {
-  light: {
-    background: '#FFFFFF',
-    surface: '#F5F5F5',
-    surfaceElevated: '#FFFFFF',
-    text: '#1A1A1A',
-    textSecondary: '#757575',
-    primary: '#2E7D32',
-    primaryLight: '#E8F5E9',
-    accent: '#1976D2',
-    danger: '#D32F2F',
-    border: '#E0E0E0',
-    cardBg: '#FFFFFF',
-    overlay: 'rgba(255,255,255,0.95)',
-    icon: '#424242',
-    iconActive: '#2E7D32',
-    pauseButton: '#FF9800',
-    gold: '#FFD700',
-    silver: '#C0C0C0',
-    bronze: '#CD7F32',
-    xp: '#9C27B0',
-  },
   dark: {
-    background: '#121212',
-    surface: '#1E1E1E',
-    surfaceElevated: '#2D2D2D',
-    text: '#FFFFFF',
-    textSecondary: '#B0B0B0',
-    primary: '#4CAF50',
-    primaryLight: '#1B3D1E',
-    accent: '#64B5F6',
-    danger: '#EF5350',
-    border: '#3D3D3D',
-    cardBg: '#1E1E1E',
-    overlay: 'rgba(30,30,30,0.95)',
-    icon: '#B0B0B0',
-    iconActive: '#4CAF50',
-    pauseButton: '#CC7A00',
-    gold: '#FFD700',
-    silver: '#C0C0C0',
-    bronze: '#CD7F32',
-    xp: '#CE93D8',
+    background: COLORS.bg,
+    surface: COLORS.surface,
+    surfaceElevated: COLORS.surfaceElevated,
+    text: COLORS.text,
+    textSecondary: COLORS.textSecondary,
+    primary: COLORS.primary,
+    primaryLight: COLORS.primaryLight,
+    accent: COLORS.accent,
+    danger: COLORS.danger,
+    border: COLORS.border,
+    cardBg: COLORS.cardBg,
+    overlay: COLORS.overlay,
+    icon: COLORS.icon,
+    iconActive: COLORS.iconActive,
+    pauseButton: COLORS.pauseButton,
+    gold: COLORS.gold,
+    silver: COLORS.silver,
+    bronze: COLORS.bronze,
+    xp: COLORS.xp,
+  },
+  // Dark-only: light theme mirrors dark to avoid breakage
+  // if any code still references colors.light.
+  light: {
+    background: COLORS.bg,
+    surface: COLORS.surface,
+    surfaceElevated: COLORS.surfaceElevated,
+    text: COLORS.text,
+    textSecondary: COLORS.textSecondary,
+    primary: COLORS.primary,
+    primaryLight: COLORS.primaryLight,
+    accent: COLORS.accent,
+    danger: COLORS.danger,
+    border: COLORS.border,
+    cardBg: COLORS.cardBg,
+    overlay: COLORS.overlay,
+    icon: COLORS.icon,
+    iconActive: COLORS.iconActive,
+    pauseButton: COLORS.pauseButton,
+    gold: COLORS.gold,
+    silver: COLORS.silver,
+    bronze: COLORS.bronze,
+    xp: COLORS.xp,
   },
 };
 
 const SETTINGS_KEY = '@trail_tracker_settings';
 
 const defaultSettings = {
-  appDarkMode: true,
+  appDarkMode: true,  // Always true — dark-only app
   mapDarkMode: false,
   distanceUnit: 'miles',
   username: '',
@@ -69,7 +82,10 @@ export function ThemeProvider({ children }) {
     try {
       const saved = await AsyncStorage.getItem(SETTINGS_KEY);
       if (saved !== null) {
-        setSettings({ ...defaultSettings, ...JSON.parse(saved) });
+        const parsed = JSON.parse(saved);
+        // Force dark mode on regardless of saved setting
+        parsed.appDarkMode = true;
+        setSettings({ ...defaultSettings, ...parsed });
       }
     } catch (e) {
       console.log('Error loading settings:', e);
@@ -86,7 +102,8 @@ export function ThemeProvider({ children }) {
   };
 
   const toggleAppDarkMode = async () => {
-    const newSettings = { ...settings, appDarkMode: !settings.appDarkMode };
+    // Dark-only: this toggle is a no-op now but kept for SettingsScreen compatibility
+    const newSettings = { ...settings, appDarkMode: true };
     setSettings(newSettings);
     await saveSettings(newSettings);
   };
@@ -116,11 +133,12 @@ export function ThemeProvider({ children }) {
     await saveSettings(newSettings);
   };
 
-  const theme = settings.appDarkMode ? colors.dark : colors.light;
+  // Always use dark theme
+  const theme = colors.dark;
 
   return (
-    <ThemeContext.Provider value={{ 
-      isDark: settings.appDarkMode, 
+    <ThemeContext.Provider value={{
+      isDark: true,  // Always true — dark-only
       isMapDark: settings.mapDarkMode,
       distanceUnit: settings.distanceUnit,
       username: settings.username,
@@ -129,8 +147,8 @@ export function ThemeProvider({ children }) {
       toggleDistanceUnit,
       setDistanceUnit,
       setUsername,
-      theme, 
-      isLoaded 
+      theme,
+      isLoaded
     }}>
       {children}
     </ThemeContext.Provider>
