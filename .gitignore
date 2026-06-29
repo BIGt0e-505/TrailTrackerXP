@@ -37,3 +37,15 @@ ios/
 # Logs
 logs/
 *.log
+
+# wget HSTS cache
+.wget-hsts
+
+# Release archives (keep source, not binaries)
+releases/
+
+# Garmin build output
+garmin/*/bin/
+
+# Package lock (optional — keep if you prefer deterministic installs)
+# package-lock.json
