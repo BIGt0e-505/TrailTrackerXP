@@ -39,7 +39,7 @@ import {
   parseActivitiesCSV,
   importSelectedFiles,
 } from '../utils/stravaImport';
-import { MoonIcon, SunIcon, MapIcon, ExportIcon } from '../components/Icons';
+import { MapIcon, ExportIcon } from '../components/Icons';
 
 // Icons for modals
 const TrashIcon = ({ size = 24, color = '#D32F2F' }) => (
@@ -99,10 +99,8 @@ const WarningIcon = ({ size = 24, color = '#FF9800' }) => (
 export default function SettingsScreen() {
   const { 
     theme, 
-    isDark, 
     isMapDark, 
     distanceUnit,
-    toggleAppDarkMode, 
     toggleMapDarkMode,
     toggleDistanceUnit 
   } = useTheme();
@@ -234,7 +232,7 @@ export default function SettingsScreen() {
       const result = await recoverFromFileStorage();
       
       if (result.success && result.activities.length > 0) {
-        // Save recovered activities to AsyncStorage â€” strip route data to prevent size limit corruption
+        // Save recovered activities to AsyncStorage Ã¢â‚¬â€ strip route data to prevent size limit corruption
         const AsyncStorage = require('@react-native-async-storage/async-storage').default;
         const stripped = result.activities.map(({ route, routeData, ...metadata }) => metadata);
         await AsyncStorage.setItem('@trail_tracker_activities', JSON.stringify(stripped));
@@ -407,36 +405,6 @@ export default function SettingsScreen() {
         </Text>
         
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
-          <TouchableOpacity 
-            style={styles.settingRow}
-            onPress={toggleAppDarkMode}
-            activeOpacity={0.7}
-          >
-            <View style={styles.settingLeft}>
-              {isDark ? (
-                <MoonIcon size={22} color={theme.icon} />
-              ) : (
-                <SunIcon size={22} color={theme.icon} />
-              )}
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>
-                  App Dark Mode
-                </Text>
-                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
-                  {isDark ? 'Dark theme enabled' : 'Light theme enabled'}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={isDark}
-              onValueChange={toggleAppDarkMode}
-              trackColor={{ false: theme.border, true: theme.primary }}
-              thumbColor="#fff"
-            />
-          </TouchableOpacity>
-
-          <View style={[styles.divider, { backgroundColor: theme.border }]} />
-
           <TouchableOpacity 
             style={styles.settingRow}
             onPress={toggleMapDarkMode}
@@ -733,7 +701,7 @@ export default function SettingsScreen() {
       {/* Info Card */}
       <View style={[styles.infoCard, { backgroundColor: theme.primaryLight }]}>
         <Text style={[styles.infoText, { color: theme.primary }]}>
-          TrailTracker automatically saves activities as GPX files. Use "Export GPX Files" to choose a folder â€” after that, new activities will be automatically exported there too.
+          TrailTracker automatically saves activities as GPX files. Use "Export GPX Files" to choose a folder Ã¢â‚¬â€ after that, new activities will be automatically exported there too.
         </Text>
       </View>
 
@@ -850,12 +818,12 @@ export default function SettingsScreen() {
                   </Text>
                   {integrityInfo.inCacheOnly > 0 && (
                     <Text style={[styles.modalStatRow, { color: theme.warning }]}>
-                      âš ï¸ {integrityInfo.inCacheOnly} only in cache
+                      Ã¢Å¡Â Ã¯Â¸Â {integrityInfo.inCacheOnly} only in cache
                     </Text>
                   )}
                   {integrityInfo.inFileOnly > 0 && (
                     <Text style={[styles.modalStatRow, { color: theme.success }]}>
-                      âœ“ {integrityInfo.inFileOnly} only in file storage
+                      Ã¢Å“â€œ {integrityInfo.inFileOnly} only in file storage
                     </Text>
                   )}
                 </>
@@ -1089,7 +1057,7 @@ export default function SettingsScreen() {
                 >
                   <Text style={[styles.filePickerButtonText, { color: theme.primary }]}>
                     {selectedGPXFiles.length > 0 
-                      ? `âœ“ ${selectedGPXFiles.length} GPX files found`
+                      ? `Ã¢Å“â€œ ${selectedGPXFiles.length} GPX files found`
                       : 'Select Activities Folder'}
                   </Text>
                 </TouchableOpacity>
@@ -1101,7 +1069,7 @@ export default function SettingsScreen() {
                 >
                   <Text style={[styles.filePickerButtonTextSmall, { color: theme.textSecondary }]}>
                     {csvMetadata 
-                      ? `âœ“ activities.csv (${csvMetadata.count} entries)`
+                      ? `Ã¢Å“â€œ activities.csv (${csvMetadata.count} entries)`
                       : '+ Add activities.csv (optional)'}
                   </Text>
                 </TouchableOpacity>
