@@ -47,6 +47,9 @@ releases/
 # Garmin build output
 garmin/*/bin/
 
+# Android icon pack source (mipmap densities for native builds)
+android-icons/
+
 # Local archived documentation snapshots
 # Kept on disk as temporary reference, not tracked going forwards.
 docs/archive/*.md
