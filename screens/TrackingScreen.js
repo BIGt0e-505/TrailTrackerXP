@@ -1613,6 +1613,8 @@ const createStyles = (theme) => StyleSheet.create({
     padding: 16,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.border,
   },
   activitySelector: {
     flexDirection: 'row',
@@ -1641,6 +1643,8 @@ const createStyles = (theme) => StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.border,
   },
   statLabel: {
     fontSize: 11,
@@ -1690,7 +1694,7 @@ const createStyles = (theme) => StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 24,
     alignItems: 'center',
   },
