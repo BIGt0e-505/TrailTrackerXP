@@ -203,13 +203,40 @@ if (-not (Test-Path $gradlewPath)) {
     Write-Host "  android/ already exists -- skipping prebuild"
 }
 
-# Copy notification icon into Android resources (Expo SDK 51 doesn't do this automatically)
-$notifIconSrc = Join-Path $REPO_DIR "assets\notification-icon.png"
-$drawableDir = Join-Path $ANDROID_DIR "app\src\main\res\drawable"
-if ((Test-Path $notifIconSrc) -and (Test-Path $drawableDir)) {
-    $notifIconDst = Join-Path $drawableDir "ic_notification.png"
-    Copy-Item $notifIconSrc $notifIconDst -Force
-    Write-Host "  notification icon copied to drawable  OK"
+# --- Icon resource patch: copy supplied icon pack into generated Android resources ---
+$ICON_SRC = Join-Path $REPO_DIR "assets\native-icons\android_icons"
+$RES_DIR = Join-Path $ANDROID_DIR "app\src\main\res"
+
+if ((Test-Path $ICON_SRC) -and (Test-Path $RES_DIR)) {
+    Write-Host "  Patching icon resources from assets/native-icons/..."
+
+    # Launcher icons -> mipmap folders
+    $densities = @('mdpi','hdpi','xhdpi','xxhdpi','xxxhdpi')
+    foreach ($density in $densities) {
+        $srcDir = Join-Path $ICON_SRC "mipmap-$density"
+        $dstDir = Join-Path $RES_DIR "mipmap-$density"
+        if (Test-Path $srcDir) {
+            New-Item -ItemType Directory -Force -Path $dstDir | Out-Null
+            # Launcher icon
+            $launcherSrc = Join-Path $srcDir "ic_launcher.png"
+            if (Test-Path $launcherSrc) {
+                Copy-Item $launcherSrc (Join-Path $dstDir "ic_launcher.png") -Force
+                # Same icon for round (no separate round icon in the pack)
+                Copy-Item $launcherSrc (Join-Path $dstDir "ic_launcher_round.png") -Force
+            }
+            # Notification icon (monochrome, for tray)
+            $notifSrc = Join-Path $srcDir "ic_notification.png"
+            if (Test-Path $notifSrc) {
+                # Copy to drawable for the foreground service small icon
+                $drawableDir = Join-Path $RES_DIR "drawable"
+                New-Item -ItemType Directory -Force -Path $drawableDir | Out-Null
+                Copy-Item $notifSrc (Join-Path $drawableDir "ic_notification.png") -Force
+            }
+        }
+    }
+    Write-Host "  Launcher + notification icons patched  OK"
+} else {
+    Write-Host "  Icon pack source not found at $ICON_SRC -- skipping icon patch" -ForegroundColor Yellow
 }
 
 # Patch expo-location's LocationTaskService to use the monochrome notification icon
@@ -218,13 +245,15 @@ $taskServicePath = Join-Path $REPO_DIR "node_modules\expo-location\android\src\m
 if (Test-Path $taskServicePath) {
     $tsContent = Get-Content $taskServicePath -Raw
     if ($tsContent -match 'setSmallIcon\(applicationInfo\.icon\)') {
-        $tsContent = $tsContent -replace 'setSmallIcon\(applicationInfo\.icon\)', 'setSmallIcon(R.drawable.ic_notification)'
-        # Add the R import if not present
-        if ($tsContent -notmatch 'import expo\.modules\.R') {
-            $tsContent = $tsContent -replace '(import android\.app\.Notification)', "import expo.modules.R`n`$1"
-        }
+        $tsContent = $tsContent -replace 'setSmallIcon\(applicationInfo\.icon\)', 'setSmallIcon(resources.getIdentifier("ic_notification", "drawable", packageName))'
         [System.IO.File]::WriteAllText($taskServicePath, $tsContent, [System.Text.UTF8Encoding]::new($false))
         Write-Host "  patched LocationTaskService for notification icon  OK"
+    } elseif ($tsContent -match 'setSmallIcon\(R\.drawable\.ic_notification\)') {
+        # Fix older patch that used R.drawable (doesn't compile)
+        $tsContent = $tsContent -replace 'setSmallIcon\(R\.drawable\.ic_notification\)', 'setSmallIcon(resources.getIdentifier("ic_notification", "drawable", packageName))'
+        $tsContent = $tsContent -replace 'import expo\.modules\.R\n', ''
+        [System.IO.File]::WriteAllText($taskServicePath, $tsContent, [System.Text.UTF8Encoding]::new($false))
+        Write-Host "  fixed LocationTaskService R.drawable -> resources.getIdentifier  OK"
     } else {
         Write-Host "  LocationTaskService already patched or pattern not found"
     }
