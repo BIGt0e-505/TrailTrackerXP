@@ -16,9 +16,9 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { useTheme } from '../utils/theme';
 import appJson from '../app.json';
-import { 
-  clearCachedTiles, 
-  getActivities, 
+import {
+  clearCachedTiles,
+  getActivities,
   exportCacheToFileStorage,
   recoverFromFileStorage,
   getStorageStats,
@@ -27,8 +27,8 @@ import {
   getAllGPXFilePaths,
   initFileStorage,
 } from '../utils/storage';
-import { 
-  loadGamification, 
+import {
+  loadGamification,
   recalculateGamification,
   getStatsCutoffDate,
   setStatsCutoffDate,
@@ -41,7 +41,7 @@ import {
 } from '../utils/stravaImport';
 import { MapIcon, ExportIcon, TrashIcon, CheckIcon, InfoIcon, SyncIcon, DownloadIcon, UploadIcon, WarningIcon } from '../components/Icons';
 
-// DatabaseIcon — SettingsScreen-specific (not duplicated elsewhere)
+// DatabaseIcon - SettingsScreen-specific (not duplicated elsewhere)
 const DatabaseIcon = ({ size = 24, color = '#666' }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M12 2C6.48 2 2 3.79 2 6v12c0 2.21 4.48 4 10 4s10-1.79 10-4V6c0-2.21-4.48-4-10-4z" stroke={color} strokeWidth="2" fill="none" />
@@ -50,12 +50,12 @@ const DatabaseIcon = ({ size = 24, color = '#666' }) => (
 );
 
 export default function SettingsScreen() {
-  const { 
-    theme, 
-    isMapDark, 
+  const {
+    theme,
+    isMapDark,
     distanceUnit,
     toggleMapDarkMode,
-    toggleDistanceUnit 
+    toggleDistanceUnit
   } = useTheme();
 
   const [showClearCacheModal, setShowClearCacheModal] = useState(false);
@@ -76,7 +76,7 @@ export default function SettingsScreen() {
   const [selectedGPXFiles, setSelectedGPXFiles] = useState([]);
   const [csvMetadata, setCsvMetadata] = useState(null);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0, file: '' });
-  
+
   // Stats cutoff date
   const [statsCutoffDate, setStatsCutoffDateState] = useState(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -86,12 +86,12 @@ export default function SettingsScreen() {
     loadStorageInfo();
     loadCutoffDate();
   }, []);
-  
+
   const loadCutoffDate = async () => {
     const cutoff = await getStatsCutoffDate();
     setStatsCutoffDateState(cutoff);
   };
-  
+
   const handleCutoffDateChange = async (event, selectedDate) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
@@ -100,11 +100,11 @@ export default function SettingsScreen() {
       dateStart.setHours(0, 0, 0, 0);
       setStatsCutoffDateState(dateStart);
       await setStatsCutoffDate(dateStart);
-      
+
       // Recalculate gamification with new cutoff
       const activities = await getActivities();
       await recalculateGamification(activities, dateStart);
-      
+
       setInfoModalContent({
         title: 'Cutoff Date Updated',
         message: `Stats and achievements will now only count activities from ${dateStart.toLocaleDateString()} onwards.`
@@ -112,15 +112,15 @@ export default function SettingsScreen() {
       setShowInfoModal(true);
     }
   };
-  
+
   const clearCutoffDate = async () => {
     setStatsCutoffDateState(null);
     await setStatsCutoffDate(null);
-    
+
     // Recalculate gamification without cutoff
     const activities = await getActivities();
     await recalculateGamification(activities, null);
-    
+
     setInfoModalContent({
       title: 'Cutoff Date Cleared',
       message: 'All activities will now count towards stats and achievements.'
@@ -159,7 +159,7 @@ export default function SettingsScreen() {
     setShowMigrateModal(true);
     setIsProcessing(true);
     setOperationResult(null);
-    
+
     try {
       const activities = await getActivities();
       const gamification = await loadGamification();
@@ -180,22 +180,22 @@ export default function SettingsScreen() {
   const confirmRecover = async () => {
     setIsProcessing(true);
     setOperationResult(null);
-    
+
     try {
       const result = await recoverFromFileStorage();
-      
+
       if (result.success && result.activities.length > 0) {
-        // Save recovered activities to AsyncStorage Ã¢â‚¬â€ strip route data to prevent size limit corruption
+        // Save recovered activities to AsyncStorage  strip route data to prevent size limit corruption
         const AsyncStorage = require('@react-native-async-storage/async-storage').default;
         const stripped = result.activities.map(({ route, routeData, ...metadata }) => metadata);
         await AsyncStorage.setItem('@trail_tracker_activities', JSON.stringify(stripped));
-        
+
         setOperationResult(result);
         await loadStorageInfo();
       } else {
-        setOperationResult({ 
-          success: false, 
-          error: result.error || 'No activities found in file storage' 
+        setOperationResult({
+          success: false,
+          error: result.error || 'No activities found in file storage'
         });
       }
     } catch (error) {
@@ -214,69 +214,69 @@ export default function SettingsScreen() {
   const confirmExportGPX = async () => {
     setIsProcessing(true);
     setOperationResult(null);
-    
+
     try {
       // First ensure all current data is in file storage as GPX
       const activities = await getActivities();
       const gamification = await loadGamification();
       await exportCacheToFileStorage(activities, gamification);
-      
+
       // Get all GPX file paths
       const gpxPaths = await getAllGPXFilePaths();
-      
+
       if (gpxPaths.length === 0) {
-        setOperationResult({ 
-          success: false, 
-          error: 'No GPX files to export. Activities without GPS data cannot be exported.' 
+        setOperationResult({
+          success: false,
+          error: 'No GPX files to export. Activities without GPS data cannot be exported.'
         });
         return;
       }
-      
+
       // Request directory access permission using Storage Access Framework
       const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-      
+
       if (!permissions.granted) {
-        setOperationResult({ 
-          success: false, 
-          error: 'Permission denied. Please select a folder to save GPX files.' 
+        setOperationResult({
+          success: false,
+          error: 'Permission denied. Please select a folder to save GPX files.'
         });
         return;
       }
-      
+
       const destinationUri = permissions.directoryUri;
-      
+
       // Save this directory URI so future activities auto-export here
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       await AsyncStorage.setItem('@trail_tracker_auto_export_dir', destinationUri);
       let exportedCount = 0;
       let failedCount = 0;
-      
+
       // Copy each GPX file to the selected directory
       for (const gpxPath of gpxPaths) {
         try {
           // Extract filename from path
           const fileName = gpxPath.split('/').pop();
-          
+
           // Read the GPX file content
           const content = await FileSystem.readAsStringAsync(gpxPath);
-          
+
           // Create file in the selected directory using SAF
           const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
             destinationUri,
             fileName,
             'application/gpx+xml'
           );
-          
+
           // Write content to the new file
           await FileSystem.writeAsStringAsync(newFileUri, content);
-          
+
           exportedCount++;
         } catch (err) {
           console.error(`Error exporting ${gpxPath}:`, err);
           failedCount++;
         }
       }
-      
+
       setOperationResult({
         success: exportedCount > 0,
         count: exportedCount,
@@ -329,7 +329,7 @@ export default function SettingsScreen() {
     setIsProcessing(true);
     setOperationResult(null);
     setImportProgress({ current: 0, total: selectedGPXFiles.length, file: '' });
-    
+
     try {
       const metadata = csvMetadata?.data || {};
       const result = await importSelectedFiles(
@@ -339,7 +339,7 @@ export default function SettingsScreen() {
           setImportProgress({ current, total, file });
         }
       );
-      
+
       setOperationResult(result);
       await loadStorageInfo();
     } catch (error) {
@@ -356,9 +356,9 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           APPEARANCE
         </Text>
-        
+
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingRow}
             onPress={toggleMapDarkMode}
             activeOpacity={0.7}
@@ -389,7 +389,7 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           UNITS
         </Text>
-        
+
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
@@ -445,7 +445,7 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           STATS & ACHIEVEMENTS
         </Text>
-        
+
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
@@ -459,19 +459,19 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
-          
+
           <View style={styles.cutoffDateContainer}>
             <TouchableOpacity
               style={[styles.datePickerButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
               onPress={() => setShowDatePicker(true)}
             >
               <Text style={[styles.datePickerButtonText, { color: theme.text }]}>
-                {statsCutoffDate 
+                {statsCutoffDate
                   ? statsCutoffDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
                   : 'No cutoff (all activities)'}
               </Text>
             </TouchableOpacity>
-            
+
             {statsCutoffDate && (
               <TouchableOpacity
                 style={[styles.clearDateButton, { backgroundColor: theme.surface }]}
@@ -481,7 +481,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             )}
           </View>
-          
+
           {showDatePicker && (
             <DateTimePicker
               value={statsCutoffDate || new Date()}
@@ -499,7 +499,7 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           DATA STORAGE
         </Text>
-        
+
         {/* Storage Info Card */}
         {storageStats && (
           <View style={[styles.storageInfoCard, { backgroundColor: theme.cardBg }]}>
@@ -521,9 +521,9 @@ export default function SettingsScreen() {
             )}
           </View>
         )}
-        
+
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingRow}
             onPress={handleRecoverFromFile}
             activeOpacity={0.7}
@@ -543,7 +543,7 @@ export default function SettingsScreen() {
 
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingRow}
             onPress={handleExportGPX}
             activeOpacity={0.7}
@@ -563,7 +563,7 @@ export default function SettingsScreen() {
 
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingRow}
             onPress={handleStravaImport}
             activeOpacity={0.7}
@@ -588,9 +588,9 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           CACHE
         </Text>
-        
+
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingRow}
             onPress={handleClearCache}
             activeOpacity={0.7}
@@ -610,7 +610,7 @@ export default function SettingsScreen() {
 
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingRow}
             onPress={handleExportData}
             activeOpacity={0.7}
@@ -635,15 +635,15 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           ABOUT
         </Text>
-        
+
         <View style={[styles.card, { backgroundColor: theme.cardBg }]}>
           <View style={styles.aboutRow}>
             <Text style={[styles.aboutLabel, { color: theme.textSecondary }]}>Version</Text>
             <Text style={[styles.aboutValue, { color: theme.text }]}>{appJson.expo.version}</Text>
           </View>
-          
+
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          
+
           <View style={styles.aboutRow}>
             <Text style={[styles.aboutLabel, { color: theme.textSecondary }]}>Map Data</Text>
             <Text style={[styles.aboutValue, { color: theme.text }]}>OpenStreetMap</Text>
@@ -654,7 +654,7 @@ export default function SettingsScreen() {
       {/* Info Card */}
       <View style={[styles.infoCard, { backgroundColor: theme.primaryLight }]}>
         <Text style={[styles.infoText, { color: theme.primary }]}>
-          TrailTracker automatically saves activities as GPX files. Use "Export GPX Files" to choose a folder Ã¢â‚¬â€ after that, new activities will be automatically exported there too.
+          TrailTracker automatically saves activities as GPX files. Use "Export GPX Files" to choose a folder  after that, new activities will be automatically exported there too.
         </Text>
       </View>
 
@@ -771,12 +771,12 @@ export default function SettingsScreen() {
                   </Text>
                   {integrityInfo.inCacheOnly > 0 && (
                     <Text style={[styles.modalStatRow, { color: theme.warning }]}>
-                      Ã¢Å¡Â Ã¯Â¸Â {integrityInfo.inCacheOnly} only in cache
+                      {integrityInfo.inCacheOnly} only in cache
                     </Text>
                   )}
                   {integrityInfo.inFileOnly > 0 && (
                     <Text style={[styles.modalStatRow, { color: theme.success }]}>
-                      Ã¢Å“â€œ {integrityInfo.inFileOnly} only in file storage
+                      {integrityInfo.inFileOnly} only in file storage
                     </Text>
                   )}
                 </>
@@ -822,7 +822,7 @@ export default function SettingsScreen() {
                   {operationResult.success ? 'GPX Files Saved!' : 'Error'}
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-                  {operationResult.success 
+                  {operationResult.success
                     ? `Saved ${operationResult.exportedCount} activities as GPX.\n${operationResult.skippedCount} already existed.${operationResult.noRouteCount > 0 ? `\n${operationResult.noRouteCount} had no GPS data.` : ''}\nTotal GPX files: ${operationResult.totalInFile}`
                     : operationResult.error
                   }
@@ -891,7 +891,7 @@ export default function SettingsScreen() {
                   {operationResult.success ? 'Recovery Complete!' : 'Error'}
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-                  {operationResult.success 
+                  {operationResult.success
                     ? `Recovered ${operationResult.count} activities from GPX files.`
                     : operationResult.error
                   }
@@ -963,7 +963,7 @@ export default function SettingsScreen() {
                   {operationResult.success ? 'Export Complete!' : 'Error'}
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-                  {operationResult.success 
+                  {operationResult.success
                     ? `Exported ${operationResult.count} GPX file${operationResult.count !== 1 ? 's' : ''} to selected folder.${operationResult.failed > 0 ? `\n${operationResult.failed} file${operationResult.failed !== 1 ? 's' : ''} failed.` : ''}`
                     : operationResult.error
                   }
@@ -998,39 +998,39 @@ export default function SettingsScreen() {
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
                   Import from Strava
                 </Text>
-                
+
                 <Text style={[styles.modalMessage, { color: theme.textSecondary, marginBottom: 16 }]}>
                   Select the folder containing your Strava GPX files
                 </Text>
-                
+
                 {/* Select GPX Files Button */}
                 <TouchableOpacity
                   style={[styles.filePickerButton, { borderColor: theme.primary }]}
                   onPress={handlePickGPXFiles}
                 >
                   <Text style={[styles.filePickerButtonText, { color: theme.primary }]}>
-                    {selectedGPXFiles.length > 0 
-                      ? `Ã¢Å“â€œ ${selectedGPXFiles.length} GPX files found`
+                    {selectedGPXFiles.length > 0
+                      ? `${selectedGPXFiles.length} GPX files found`
                       : 'Select Activities Folder'}
                   </Text>
                 </TouchableOpacity>
-                
+
                 {/* Optional: Select CSV for metadata */}
                 <TouchableOpacity
                   style={[styles.filePickerButtonSmall, { borderColor: theme.border }]}
                   onPress={handlePickCSV}
                 >
                   <Text style={[styles.filePickerButtonTextSmall, { color: theme.textSecondary }]}>
-                    {csvMetadata 
-                      ? `Ã¢Å“â€œ activities.csv (${csvMetadata.count} entries)`
+                    {csvMetadata
+                      ? `activities.csv (${csvMetadata.count} entries)`
                       : '+ Add activities.csv (optional)'}
                   </Text>
                 </TouchableOpacity>
-                
+
                 <Text style={[styles.modalHint, { color: theme.textSecondary }]}>
                   The CSV file adds activity names, types, and stats
                 </Text>
-                
+
                 {selectedGPXFiles.length > 0 && (
                   <TouchableOpacity
                     style={[styles.modalButton, { backgroundColor: theme.primary, marginTop: 16 }]}
@@ -1041,7 +1041,7 @@ export default function SettingsScreen() {
                     </Text>
                   </TouchableOpacity>
                 )}
-                
+
                 <TouchableOpacity
                   style={[styles.modalCancelButton, { backgroundColor: theme.surface }]}
                   onPress={() => {
@@ -1081,7 +1081,7 @@ export default function SettingsScreen() {
                   {operationResult.success ? 'Import Complete!' : 'Import Error'}
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
-                  {operationResult.success 
+                  {operationResult.success
                     ? `Imported: ${operationResult.imported}\nFailed: ${operationResult.failed}`
                     : operationResult.error
                   }

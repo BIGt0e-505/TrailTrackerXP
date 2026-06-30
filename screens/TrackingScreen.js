@@ -889,18 +889,18 @@ export default function TrackingScreen() {
     .leaflet-control-zoom-out {
       border-radius: 0 0 12px 12px !important;
     }
-    /* Light mode - use primary green color like recenter button */
+    /* Light mode - use accent blue like the rest of the app */
     .leaflet-control-zoom a {
       background-color: #ffffff !important;
-      color: #2E7D32 !important;
+      color: #4FC3F7 !important;
     }
     .leaflet-control-zoom a:hover {
       background-color: #f5f5f5 !important;
     }
     /* App dark mode zoom controls */
     .app-dark-mode .leaflet-control-zoom a {
-      background-color: #1E1E1E !important;
-      color: #4CAF50 !important;
+      background-color: #1A1A1A !important;
+      color: #4FC3F7 !important;
     }
     .app-dark-mode .leaflet-control-zoom a:hover {
       background-color: #2d2d2d !important;

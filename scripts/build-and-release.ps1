@@ -203,6 +203,33 @@ if (-not (Test-Path $gradlewPath)) {
     Write-Host "  android/ already exists -- skipping prebuild"
 }
 
+# Copy notification icon into Android resources (Expo SDK 51 doesn't do this automatically)
+$notifIconSrc = Join-Path $REPO_DIR "assets\notification-icon.png"
+$drawableDir = Join-Path $ANDROID_DIR "app\src\main\res\drawable"
+if ((Test-Path $notifIconSrc) -and (Test-Path $drawableDir)) {
+    $notifIconDst = Join-Path $drawableDir "ic_notification.png"
+    Copy-Item $notifIconSrc $notifIconDst -Force
+    Write-Host "  notification icon copied to drawable  OK"
+}
+
+# Patch expo-location's LocationTaskService to use the monochrome notification icon
+# instead of the full-colour launcher icon (fixes notification tray showing coloured icon)
+$taskServicePath = Join-Path $REPO_DIR "node_modules\expo-location\android\src\main\java\expo\modules\location\services\LocationTaskService.kt"
+if (Test-Path $taskServicePath) {
+    $tsContent = Get-Content $taskServicePath -Raw
+    if ($tsContent -match 'setSmallIcon\(applicationInfo\.icon\)') {
+        $tsContent = $tsContent -replace 'setSmallIcon\(applicationInfo\.icon\)', 'setSmallIcon(R.drawable.ic_notification)'
+        # Add the R import if not present
+        if ($tsContent -notmatch 'import expo\.modules\.R') {
+            $tsContent = $tsContent -replace '(import android\.app\.Notification)', "import expo.modules.R`n`$1"
+        }
+        [System.IO.File]::WriteAllText($taskServicePath, $tsContent, [System.Text.UTF8Encoding]::new($false))
+        Write-Host "  patched LocationTaskService for notification icon  OK"
+    } else {
+        Write-Host "  LocationTaskService already patched or pattern not found"
+    }
+}
+
 # --- Step 3: Gradle build ---
 Write-Host ""
 Write-Host "[3/5] Building APK with Gradle ($BuildType)..."
