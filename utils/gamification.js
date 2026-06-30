@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GAMIFICATION_KEY = '@trail_tracker_gamification';
+const SELECTED_CHALLENGE_KEY = '@trail_tracker_selected_challenge';
+const CHALLENGE_REWARDS_KEY = '@trail_tracker_challenge_rewards';
 export const STATS_CUTOFF_DATE_KEY = '@trail_tracker_stats_cutoff_date';
 
 // Helper to get cutoff date
@@ -965,6 +967,173 @@ export const updateChallengeProgress = (challenges, activities, currentStreak) =
   });
 };
 
+// ─── Selectable Challenges ──────────────────────────────────────
+
+// Bonus XP by difficulty (target magnitude)
+const getBonusXpForChallenge = (template, target) => {
+  const maxTarget = Math.max(...template.targets);
+  const ratio = target / maxTarget;
+  if (ratio >= 0.8) return 250;
+  if (ratio >= 0.5) return 100;
+  return 50;
+};
+
+// Get all available challenge templates (for selection UI)
+export const getChallengeTemplates = () => {
+  return CHALLENGE_TEMPLATES.map(template => ({
+    templateId: template.id,
+    type: template.type,
+    period: template.period,
+    targets: template.targets,
+    unit: template.unit,
+    description: template.description,
+  }));
+};
+
+// Select a challenge — sets baseline and selectedAt
+export const selectChallenge = async (templateId, target) => {
+  const template = CHALLENGE_TEMPLATES.find(t => t.id === templateId);
+  if (!template) throw new Error('Unknown challenge template: ' + templateId);
+  
+  if (!target || !template.targets.includes(target)) {
+    target = template.targets[Math.floor(Math.random() * template.targets.length)];
+  }
+  
+  const bonusXp = getBonusXpForChallenge(template, target);
+  const description = template.description.replace('{target}', target);
+  
+  const selectedChallenge = {
+    templateId: template.id,
+    description,
+    type: template.type,
+    period: template.period,
+    target,
+    unit: template.unit,
+    bonusXp,
+    selectedAt: new Date().toISOString(),
+    baseline: { distance: 0, duration: 0, elevation: 0, activityCount: 0 },
+    completedAt: null,
+    bonusXpAwarded: false,
+  };
+  
+  await AsyncStorage.setItem(SELECTED_CHALLENGE_KEY, JSON.stringify(selectedChallenge));
+  return selectedChallenge;
+};
+
+// Get the currently selected challenge (or null)
+export const getSelectedChallenge = async () => {
+  try {
+    const data = await AsyncStorage.getItem(SELECTED_CHALLENGE_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    console.log('Error loading selected challenge:', e);
+    return null;
+  }
+};
+
+// Abandon the current selected challenge
+export const abandonSelectedChallenge = async () => {
+  await AsyncStorage.removeItem(SELECTED_CHALLENGE_KEY);
+};
+
+// Calculate progress for a selected challenge
+// Only counts activities with timestamp >= selectedAt
+export const getSelectedChallengeProgress = (selectedChallenge, activities, currentStreak) => {
+  if (!selectedChallenge) return null;
+  
+  const selectedAt = new Date(selectedChallenge.selectedAt);
+  
+  // Filter activities since selection point
+  const relevantActivities = activities.filter(a => {
+    const activityDate = new Date(a.date || a.timestamp || 0);
+    return activityDate >= selectedAt;
+  });
+  
+  let progress = 0;
+  
+  switch (selectedChallenge.type) {
+    case 'distance':
+      progress = relevantActivities.reduce((sum, a) => sum + (a.distance || 0), 0);
+      break;
+    case 'count':
+      progress = relevantActivities.length;
+      break;
+    case 'streak':
+      progress = currentStreak || 0;
+      break;
+    case 'single_distance':
+      progress = relevantActivities.length > 0
+        ? Math.max(...relevantActivities.map(a => a.distance || 0))
+        : 0;
+      break;
+    case 'duration':
+      progress = relevantActivities.length > 0
+        ? Math.max(...relevantActivities.map(a => (a.duration || 0) / 60))
+        : 0;
+      break;
+  }
+  
+  const completed = progress >= selectedChallenge.target;
+  return {
+    ...selectedChallenge,
+    progress,
+    completed,
+  };
+};
+
+// Get challenge reward ledger
+export const getChallengeRewards = async () => {
+  try {
+    const data = await AsyncStorage.getItem(CHALLENGE_REWARDS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.log('Error loading challenge rewards:', e);
+    return [];
+  }
+};
+
+// Award bonus XP for completing a selected challenge
+// Returns the updated gamification state and whether the award was made
+export const awardSelectedChallengeBonus = async (gamification, selectedChallenge) => {
+  if (!selectedChallenge || selectedChallenge.bonusXpAwarded) {
+    return { gamification, awarded: false };
+  }
+  
+  // Check if already in reward ledger
+  const rewards = await getChallengeRewards();
+  const alreadyAwarded = rewards.some(
+    r => r.challengeId === selectedChallenge.templateId &&
+         r.selectedAt === selectedChallenge.selectedAt
+  );
+  if (alreadyAwarded) {
+    return { gamification, awarded: false };
+  }
+  
+  // Award bonus XP
+  gamification.xp += selectedChallenge.bonusXp;
+  
+  // Add to reward ledger
+  const reward = {
+    challengeId: selectedChallenge.templateId,
+    selectedAt: selectedChallenge.selectedAt,
+    awardedAt: new Date().toISOString(),
+    xp: selectedChallenge.bonusXp,
+    source: 'selected_challenge',
+  };
+  rewards.push(reward);
+  await AsyncStorage.setItem(CHALLENGE_REWARDS_KEY, JSON.stringify(rewards));
+  
+  // Mark as awarded in selected challenge
+  const updated = {
+    ...selectedChallenge,
+    completedAt: new Date().toISOString(),
+    bonusXpAwarded: true,
+  };
+  await AsyncStorage.setItem(SELECTED_CHALLENGE_KEY, JSON.stringify(updated));
+  
+  return { gamification, awarded: true, bonusXp: selectedChallenge.bonusXp, updatedChallenge: updated };
+};
+
 // Process a new activity - update all gamification
 export const processActivity = async (activity, allActivities) => {
   const gamification = await loadGamification();
@@ -1074,6 +1243,20 @@ export const processActivity = async (activity, allActivities) => {
     const newChallenges = generateChallenges(gamification.stats);
     gamification.challenges = [...gamification.challenges, ...newChallenges];
     gamification.lastChallengeGeneration = now.toISOString();
+  }
+  
+  // Check selected challenge for completion and award bonus XP
+  const selectedChallenge = await getSelectedChallenge();
+  if (selectedChallenge && !selectedChallenge.bonusXpAwarded) {
+    const progressData = getSelectedChallengeProgress(selectedChallenge, allActivities, gamification.stats.currentStreak);
+    if (progressData.completed) {
+      const awardResult = await awardSelectedChallengeBonus(gamification, selectedChallenge);
+      if (awardResult.awarded) {
+        gamification = awardResult.gamification;
+        results.xpEarned += awardResult.bonusXp;
+        results.selectedChallengeCompleted = awardResult.updatedChallenge;
+      }
+    }
   }
   
   // Save and return
