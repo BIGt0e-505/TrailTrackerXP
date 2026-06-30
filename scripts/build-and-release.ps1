@@ -5,19 +5,20 @@
 # No WSL, no EAS cloud, no gh CLI required.
 #
 # Usage:
-#   .\scripts\build-and-release.ps1                # debug build (default)
-#   .\scripts\build-and-release.ps1 -DebugBuild          # explicit debug build
-#   .\scripts\build-and-release.ps1 -ReleaseBuild        # release build (signed)
-#   .\scripts\build-and-release.ps1 -Clean          # nuke gradle cache first
-#   .\scripts\build-and-release.ps1 -Version 1.1.0  # bump version before build
+#   .\scripts\build-and-release.ps1                  # preview build (default, standalone, no Metro)
+#   .\scripts\build-and-release.ps1 -PreviewBuild    # explicit preview build
+#   .\scripts\build-and-release.ps1 -DebugBuild      # dev debug build (requires Metro)
+#   .\scripts\build-and-release.ps1 -ReleaseBuild    # release build (signed, minified)
+#   .\scripts\build-and-release.ps1 -Clean           # nuke gradle cache + android/ first
+#   .\scripts\build-and-release.ps1 -Version 1.1.0   # bump version before build
 #
-# What it does (in order):
-#   1. Optionally bump version in app.json
-#   2. npm install
-#   3. npx expo prebuild (generates android/ if missing)
-#   4. Gradle assembleDebug (default) or assembleRelease
-#   5. (Release only) Sign APK with apksigner
-#   6. Copy APK to releases/
+# Build modes:
+#   -PreviewBuild (default): assembleRelease with debug signing. JS bundled into APK.
+#     Standalone — no Metro needed. Use this for phone QA.
+#   -DebugBuild: assembleDebug. JS loaded from Metro at runtime.
+#     Requires Metro running. Use for live development.
+#   -ReleaseBuild: assembleRelease with proper release signing + minification.
+#     Use only when cutting a public release.
 #
 # Requirements (all on this Windows host):
 #   - JDK 21 at C:\Program Files\Java\jdk-21
@@ -30,6 +31,8 @@ param(
     [string]$Version = "",
 
     [switch]$DebugBuild,
+
+    [switch]$PreviewBuild,
 
     [switch]$ReleaseBuild,
 
@@ -48,8 +51,8 @@ $JDK_PATH = "C:\Program Files\Java\jdk-21"
 $ANDROID_SDK = "D:\dev\android-sdk"
 $UTF8_NO_BOM = [System.Text.UTF8Encoding]::new($false)
 
-# Default to debug if neither switch is set
-if (-not $ReleaseBuild) { $DebugBuild = $true }
+# Default to preview if no build mode is specified
+if (-not $DebugBuild -and -not $ReleaseBuild) { $PreviewBuild = $true }
 
 function Write-File-NoBom([string]$Path, [string]$Content) {
     [System.IO.File]::WriteAllText($Path, $Content, $UTF8_NO_BOM)
@@ -75,17 +78,27 @@ if ($Version) {
     Write-Host "  Version bumped to $Version" -ForegroundColor Green
 }
 
-# --- Determine build type and output ---
-if ($ReleaseBuild) {
+# --- Determine build type, gradle task, APK path, and output name ---
+if ($DebugBuild) {
+    $BuildMode = "dev-debug"
+    $BuildType = "debug"
+    $GradleTask = "assembleDebug"
+    $ApkSubPath = Join-Path "android" (Join-Path "app" (Join-Path "build" (Join-Path "outputs" (Join-Path "apk" (Join-Path "debug" "app-debug.apk")))))
+    $ApkName = "$APP_NAME-v$CurrentVersion-dev-debug.apk"
+} elseif ($ReleaseBuild) {
+    $BuildMode = "release"
     $BuildType = "release"
     $GradleTask = "assembleRelease"
     $ApkSubPath = Join-Path "android" (Join-Path "app" (Join-Path "build" (Join-Path "outputs" (Join-Path "apk" (Join-Path "release" "app-release.apk")))))
     $ApkName = "$APP_NAME-v$CurrentVersion.apk"
 } else {
-    $BuildType = "debug"
-    $GradleTask = "assembleDebug"
-    $ApkSubPath = Join-Path "android" (Join-Path "app" (Join-Path "build" (Join-Path "outputs" (Join-Path "apk" (Join-Path "debug" "app-debug.apk")))))
-    $ApkName = "$APP_NAME-v$CurrentVersion-debug.apk"
+    # Preview build: uses assembleRelease with debug signing (already configured by Expo prebuild)
+    # This bundles JS into the APK but signs with the debug keystore — standalone, no Metro needed
+    $BuildMode = "preview"
+    $BuildType = "release"
+    $GradleTask = "assembleRelease"
+    $ApkSubPath = Join-Path "android" (Join-Path "app" (Join-Path "build" (Join-Path "outputs" (Join-Path "apk" (Join-Path "release" "app-release.apk")))))
+    $ApkName = "$APP_NAME-v$CurrentVersion-preview.apk"
 }
 
 $ApkPath = Join-Path $REPO_DIR $ApkSubPath
@@ -98,7 +111,7 @@ if ($LASTEXITCODE -ne 0) { $Branch = "unknown" }
 # --- Banner ---
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "  $APP_NAME - Local $BuildType build" -ForegroundColor Cyan
+Write-Host "  $APP_NAME - Local $BuildMode build" -ForegroundColor Cyan
 Write-Host "  Version: $CurrentVersion" -ForegroundColor Cyan
 Write-Host "  Branch:  $Branch" -ForegroundColor Cyan
 Write-Host "  JDK:     $JDK_PATH" -ForegroundColor Cyan
@@ -204,11 +217,12 @@ if ($gradleExit -ne 0) {
 }
 Write-Host "  BUILD SUCCESSFUL  OK"
 
-# --- Step 4: Sign APK (release only) ---
+# --- Step 4: Sign APK (release mode only; preview uses debug signing from build.gradle) ---
 if ($ReleaseBuild) {
     Write-Host ""
     Write-Host "[4/5] Signing APK..."
 
+    $apksigner = Get-ChildItem (Join-Path $ANDROID_SDK "build-tools") -Recurse -Filter "apksigner.bat" -ErrorAction SilentlyContinue | Select-Object -First 1
     $keystorePath = Join-Path $ANDROID_DIR "app\debug.keystore"
     if (-not (Test-Path $keystorePath)) {
         Write-Host "  debug.keystore not found -- generating one..."
@@ -232,9 +246,12 @@ if ($ReleaseBuild) {
         exit 1
     }
     Write-Host "  Signed (v2/v3)  OK"
+} elseif ($PreviewBuild) {
+    Write-Host ""
+    Write-Host "[4/5] Preview build -- signed with debug keystore (configured in build.gradle)"
 } else {
     Write-Host ""
-    Write-Host "[4/5] Debug build -- skipping signing"
+    Write-Host "[4/5] Dev debug build -- no signing needed"
 }
 
 # --- Step 5: Copy APK to releases/ ---
@@ -251,5 +268,10 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "  Build complete!" -ForegroundColor Cyan
 Write-Host ("  APK: {0}" -f $OutputPath) -ForegroundColor Green
 Write-Host ("  Size: {0:N1} MB" -f $apkSize) -ForegroundColor Cyan
-Write-Host "  Type: $BuildType" -ForegroundColor Cyan
+Write-Host "  Mode: $BuildMode" -ForegroundColor Cyan
+if ($PreviewBuild) {
+    Write-Host "  Standalone: YES (no Metro required)" -ForegroundColor Green
+} elseif ($DebugBuild) {
+    Write-Host "  Standalone: NO (requires Metro running)" -ForegroundColor Yellow
+}
 Write-Host "==========================================" -ForegroundColor Cyan
