@@ -282,7 +282,12 @@ if (Test-Path $taskServicePath) {
 Write-Host ""
 Write-Host "[3/5] Building APK with Gradle ($BuildType)..."
 Set-Location $ANDROID_DIR
-& .\gradlew.bat $GradleTask --no-daemon 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
+if ($ReleaseBuild) {
+    # Enable ProGuard/minification for release builds
+    & .\gradlew.bat $GradleTask '--no-daemon' '-Pandroid.enableProguardInReleaseBuilds=true' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
+} else {
+    & .\gradlew.bat $GradleTask '--no-daemon' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
+}
 $gradleExit = $LASTEXITCODE
 Set-Location $REPO_DIR
 
@@ -292,35 +297,48 @@ if ($gradleExit -ne 0) {
 }
 Write-Host "  BUILD SUCCESSFUL  OK"
 
-# --- Step 4: Sign APK (release mode only; preview uses debug signing from build.gradle) ---
+# --- Step 3b: Patch build.gradle for release signing (before gradle build) ---
+if ($ReleaseBuild) {
+    # Copy release keystore into android/app/ (survives clean because it lives in repo root)
+    $releaseKeystoreSrc = Join-Path $REPO_DIR "release.keystore"
+    $releaseKeystoreDst = Join-Path $ANDROID_DIR "app\release.keystore"
+    if (-not (Test-Path $releaseKeystoreSrc)) {
+        Write-Error "release.keystore not found at $releaseKeystoreSrc. Cannot build release without signing key."
+        exit 1
+    }
+    Copy-Item $releaseKeystoreSrc $releaseKeystoreDst -Force
+    Write-Host "  Copied release.keystore into android/app/  OK"
+
+    $buildGradlePath = Join-Path $ANDROID_DIR "app\build.gradle"
+    if (Test-Path $buildGradlePath) {
+        $gradleContent = Get-Content $buildGradlePath -Raw
+        # Check if release signingConfig already exists with our keystore
+        if ($gradleContent -match 'release\.keystore') {
+            Write-Host "  build.gradle already patched for release signing  OK"
+        } else {
+            # Add release signing config after the debug block
+            $releaseSigningBlock = "`n        release {`n            storeFile file('release.keystore')`n            storePassword 'REMOVED_LEAKED_PASSWORD'`n            keyAlias 'trailtracker'`n            keyPassword 'REMOVED_LEAKED_PASSWORD'`n        }`n"
+            $gradleContent = $gradleContent -replace '(signingConfigs\s*\{\s*debug\s*\{[^}]*}\s*)', "`$1$releaseSigningBlock"
+            # Replace 'signingConfig signingConfigs.debug' in release buildType
+            $gradleContent = $gradleContent -replace 'signingConfig signingConfigs\.debug', 'signingConfig signingConfigs.release'
+            [System.IO.File]::WriteAllText($buildGradlePath, $gradleContent, [System.Text.UTF8Encoding]::new($false))
+            Write-Host "  Patched build.gradle for release signing  OK"
+        }
+    }
+}
+
+# --- Step 4: Verify signing (release mode builds signed APK during gradle build) ---
 if ($ReleaseBuild) {
     Write-Host ""
-    Write-Host "[4/5] Signing APK..."
+    Write-Host "[4/5] Verifying APK signing..."
 
     $apksigner = Get-ChildItem (Join-Path $ANDROID_SDK "build-tools") -Recurse -Filter "apksigner.bat" -ErrorAction SilentlyContinue | Select-Object -First 1
-    $keystorePath = Join-Path $ANDROID_DIR "app\debug.keystore"
-    if (-not (Test-Path $keystorePath)) {
-        Write-Host "  debug.keystore not found -- generating one..."
-        & keytool -genkeypair -v -storetype PKCS12 -keystore $keystorePath -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "keytool failed to generate debug.keystore"
-            exit 1
-        }
-        Write-Host "  debug.keystore generated  OK"
-    }
-
-    & $apksigner.FullName sign --ks $keystorePath --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android $ApkPath *>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "apksigner failed (exit $LASTEXITCODE)"
-        exit 1
-    }
-
     $verifyOutput = (& $apksigner.FullName verify --verbose $ApkPath 2>&1) -join "`n"
     if (-not $verifyOutput.Contains("Verifies")) {
-        Write-Error "Signature verification failed"
+        Write-Error "Signature verification failed. Output: $verifyOutput"
         exit 1
     }
-    Write-Host "  Signed (v2/v3)  OK"
+    Write-Host "  Signed (v2/v3) with release keystore  OK"
 } elseif ($PreviewBuild) {
     Write-Host ""
     Write-Host "[4/5] Preview build -- signed with debug keystore (configured in build.gradle)"
@@ -329,7 +347,6 @@ if ($ReleaseBuild) {
     Write-Host "[4/5] Dev debug build -- no signing needed"
 }
 
-# --- Step 5: Copy APK to releases/ ---
 Write-Host ""
 Write-Host "[5/5] Copying APK to releases/..."
 New-Item -ItemType Directory -Force -Path $RELEASES_DIR | Out-Null

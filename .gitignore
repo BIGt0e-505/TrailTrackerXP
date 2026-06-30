@@ -57,3 +57,7 @@ docs/archive/*.md
 
 # Package lock (optional — keep if you prefer deterministic installs)
 # package-lock.json
+
+# Release signing keystore
+release.keystore
+android/app/release.keystore
