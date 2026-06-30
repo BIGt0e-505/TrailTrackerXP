@@ -210,30 +210,36 @@ $RES_DIR = Join-Path $ANDROID_DIR "app\src\main\res"
 if ((Test-Path $ICON_SRC) -and (Test-Path $RES_DIR)) {
     Write-Host "  Patching icon resources from assets/native-icons/..."
 
-    # Launcher icons -> mipmap folders
+    # Launcher icons -> mipmap folders (all densities)
     $densities = @('mdpi','hdpi','xhdpi','xxhdpi','xxxhdpi')
     foreach ($density in $densities) {
         $srcDir = Join-Path $ICON_SRC "mipmap-$density"
         $dstDir = Join-Path $RES_DIR "mipmap-$density"
         if (Test-Path $srcDir) {
             New-Item -ItemType Directory -Force -Path $dstDir | Out-Null
-            # Launcher icon
+            # Launcher icon (and round variant -- same source, no separate round in pack)
             $launcherSrc = Join-Path $srcDir "ic_launcher.png"
             if (Test-Path $launcherSrc) {
                 Copy-Item $launcherSrc (Join-Path $dstDir "ic_launcher.png") -Force
-                # Same icon for round (no separate round icon in the pack)
                 Copy-Item $launcherSrc (Join-Path $dstDir "ic_launcher_round.png") -Force
             }
-            # Notification icon (monochrome, for tray)
+            # Notification icon -> drawable-<density> folders
             $notifSrc = Join-Path $srcDir "ic_notification.png"
             if (Test-Path $notifSrc) {
-                # Copy to drawable for the foreground service small icon
-                $drawableDir = Join-Path $RES_DIR "drawable"
-                New-Item -ItemType Directory -Force -Path $drawableDir | Out-Null
-                Copy-Item $notifSrc (Join-Path $drawableDir "ic_notification.png") -Force
+                $drawableDstDir = Join-Path $RES_DIR "drawable-$density"
+                New-Item -ItemType Directory -Force -Path $drawableDstDir | Out-Null
+                Copy-Item $notifSrc (Join-Path $drawableDstDir "ic_notification.png") -Force
             }
         }
     }
+
+    # Remove generated adaptive icon XML so Android falls back to density PNGs
+    # (Expo generates these referencing its own foreground artwork which causes the overflow)
+    $anydpiDir = Join-Path $RES_DIR "mipmap-anydpi-v26"
+    Remove-Item (Join-Path $anydpiDir "ic_launcher.xml") -Force -ErrorAction SilentlyContinue
+    Remove-Item (Join-Path $anydpiDir "ic_launcher_round.xml") -Force -ErrorAction SilentlyContinue
+    Write-Host "  Removed adaptive icon XML (using density PNGs instead)  OK"
+
     Write-Host "  Launcher + notification icons patched  OK"
 } else {
     Write-Host "  Icon pack source not found at $ICON_SRC -- skipping icon patch" -ForegroundColor Yellow
@@ -244,16 +250,29 @@ if ((Test-Path $ICON_SRC) -and (Test-Path $RES_DIR)) {
 $taskServicePath = Join-Path $REPO_DIR "node_modules\expo-location\android\src\main\java\expo\modules\location\services\LocationTaskService.kt"
 if (Test-Path $taskServicePath) {
     $tsContent = Get-Content $taskServicePath -Raw
+    $patched = $false
     if ($tsContent -match 'setSmallIcon\(applicationInfo\.icon\)') {
-        $tsContent = $tsContent -replace 'setSmallIcon\(applicationInfo\.icon\)', 'setSmallIcon(resources.getIdentifier("ic_notification", "drawable", packageName))'
+        $tsContent = $tsContent -replace 'setSmallIcon\(applicationInfo\.icon\)', 'setSmallIcon(android.R.drawable.ic_notification)'
+        $patched = $true
+    }
+    if ($tsContent -match 'setSmallIcon\(resources\.getIdentifier\("ic_notification"') {
+        # Keep existing resources.getIdentifier patch
+        $patched = $true
+    }
+    if ($tsContent -match 'setSmallIcon\(R\.drawable\.ic_notification\)') {
+        # Keep R.drawable version if present (works if R class has the resource)
+        $patched = $true
+    }
+    if (-not $patched) {
+        # Fallback: use resources.getIdentifier (no import needed)
+        $tsContent = $tsContent -replace 'setSmallIcon\([^)]+\)', 'setSmallIcon(resources.getIdentifier("ic_notification", "drawable", packageName))'
+        $patched = $true
+    }
+    if ($patched) {
+        # Also disable setColorized(true) so the notification row isn't force-tinted
+        $tsContent = $tsContent -replace '\.setColorized\(true\)', '.setColorized(false)'
         [System.IO.File]::WriteAllText($taskServicePath, $tsContent, [System.Text.UTF8Encoding]::new($false))
         Write-Host "  patched LocationTaskService for notification icon  OK"
-    } elseif ($tsContent -match 'setSmallIcon\(R\.drawable\.ic_notification\)') {
-        # Fix older patch that used R.drawable (doesn't compile)
-        $tsContent = $tsContent -replace 'setSmallIcon\(R\.drawable\.ic_notification\)', 'setSmallIcon(resources.getIdentifier("ic_notification", "drawable", packageName))'
-        $tsContent = $tsContent -replace 'import expo\.modules\.R\n', ''
-        [System.IO.File]::WriteAllText($taskServicePath, $tsContent, [System.Text.UTF8Encoding]::new($false))
-        Write-Host "  fixed LocationTaskService R.drawable -> resources.getIdentifier  OK"
     } else {
         Write-Host "  LocationTaskService already patched or pattern not found"
     }
