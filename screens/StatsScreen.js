@@ -13,12 +13,12 @@ import Svg, { Path, Circle, Text as SvgText, Line } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../utils/theme';
 import { getActivities, formatDistance, formatDuration } from '../utils/storage';
-import { 
-  loadGamification, 
-  ACHIEVEMENTS, 
-  LEVELS, 
-  getLevelForXP, 
-  getXPProgress, 
+import {
+  loadGamification,
+  ACHIEVEMENTS,
+  LEVELS,
+  getLevelForXP,
+  getXPProgress,
   getDistanceComparison,
   generateChallenges,
   updateChallengeProgress,
@@ -26,7 +26,13 @@ import {
   saveGamification,
   getStatsCutoffDate,
   filterActivitiesByCutoff,
+  getChallengeTemplates,
+  selectChallenge,
+  getSelectedChallenge,
+  abandonSelectedChallenge,
+  getSelectedChallengeProgress,
 } from '../utils/gamification';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WalkingIcon, BikingIcon, ChevronRightIcon, TrackIcon } from '../components/Icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -87,6 +93,9 @@ export default function StatsScreen() {
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   const [selectedAchievement, setSelectedAchievement] = useState(null);
   const [cutoffDate, setCutoffDate] = useState(null);
+  const [selectedChallenge, setSelectedChallenge] = useState(null);
+  const [showChallengePicker, setShowChallengePicker] = useState(false);
+  const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
   
   const [progressSettings, setProgressSettings] = useState({
     walking: { daily: 10, weekly: 10, monthly: 10 },
@@ -203,6 +212,15 @@ export default function StatsScreen() {
     }
     
     setGamification(gamificationData);
+    
+    // Load selected challenge and update its progress
+    const selChallenge = await getSelectedChallenge();
+    if (selChallenge) {
+      const withProgress = getSelectedChallengeProgress(selChallenge, activitiesData, gamificationData.stats.currentStreak);
+      setSelectedChallenge(withProgress);
+    } else {
+      setSelectedChallenge(null);
+    }
   };
 
   const getFilteredActivities = () => {
@@ -587,6 +605,176 @@ export default function StatsScreen() {
           <ChevronRightIcon size={18} color={theme.primary} />
         </TouchableOpacity>
       </View>
+    );
+  };
+
+  // Selected Challenge Card
+  const renderSelectedChallengeCard = () => {
+    if (!selectedChallenge) {
+      // No selected challenge — show "Choose Challenge" button
+      return (
+        <View style={[styles.challengesCard, { backgroundColor: theme.cardBg }]}>
+          <View style={styles.challengesHeader}>
+            <MaterialCommunityIcons name="target" size={20} color={theme.accent} />
+            <Text style={[styles.challengesTitle, { color: theme.text }]}>Selected Challenge</Text>
+          </View>
+          <Text style={[styles.challengeDesc, { color: theme.textSecondary, marginBottom: 12 }]}>No challenge selected. Pick one for bonus XP!</Text>
+          <TouchableOpacity style={[styles.viewAllButton, { backgroundColor: theme.accent }]} onPress={() => setShowChallengePicker(true)}>
+            <MaterialCommunityIcons name="plus" size={18} color="#fff" />
+            <Text style={[styles.viewAllText, { color: '#fff' }]}>Choose Challenge</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    
+    const progressPct = Math.min((selectedChallenge.progress || 0) / selectedChallenge.target, 1) * 100;
+    
+    return (
+      <View style={[styles.challengesCard, { backgroundColor: theme.cardBg, borderLeftColor: theme.accent, borderLeftWidth: 3 }]}>
+        <View style={styles.challengesHeader}>
+          <MaterialCommunityIcons name="target" size={20} color={theme.accent} />
+          <Text style={[styles.challengesTitle, { color: theme.text }]}>Selected Challenge</Text>
+          {selectedChallenge.completed ? (
+            <MaterialCommunityIcons name="check-circle" size={20} color={theme.success || '#4CAF50'} />
+          ) : (
+            <TouchableOpacity onPress={() => setShowAbandonConfirm(true)}>
+              <MaterialCommunityIcons name="close" size={20} color={theme.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        <View style={[styles.challenge, { backgroundColor: selectedChallenge.completed ? theme.primaryLight : theme.surface }]}>
+          <Text style={[styles.challengeDesc, { color: selectedChallenge.completed ? theme.primary : theme.text }]}>
+            {selectedChallenge.completed ? '✓ ' : ''}{selectedChallenge.description}
+          </Text>
+          {!selectedChallenge.completed && (
+            <>
+              <Text style={[styles.challengeProgress, { color: theme.textSecondary }]}>
+                {typeof selectedChallenge.progress === 'number' ? selectedChallenge.progress.toFixed(1) : '0'} / {selectedChallenge.target} {selectedChallenge.unit}
+              </Text>
+              <View style={[styles.challengeBar, { backgroundColor: theme.border }]}>
+                <View style={[styles.challengeBarFill, { backgroundColor: theme.accent, width: `${progressPct}%` }]} />
+              </View>
+            </>
+          )}
+          {selectedChallenge.completed && (
+            <Text style={[styles.challengeProgress, { color: theme.primary }]}>+{selectedChallenge.bonusXp} XP earned!</Text>
+          )}
+        </View>
+        
+        {!selectedChallenge.completed && (
+          <Text style={[{ color: theme.textSecondary, fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 4 }]}>
+            Progress counts from selection point. Bonus: +{selectedChallenge.bonusXp} XP
+          </Text>
+        )}
+        
+        {selectedChallenge.completed && (
+          <TouchableOpacity style={[styles.viewAllButton, { backgroundColor: theme.accent }]} onPress={() => setShowChallengePicker(true)}>
+            <MaterialCommunityIcons name="plus" size={18} color="#fff" />
+            <Text style={[styles.viewAllText, { color: '#fff' }]}>Choose Another Challenge</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  // Challenge Picker Modal
+  const renderChallengePicker = () => {
+    const templates = getChallengeTemplates();
+    
+    return (
+      <Modal visible={showChallengePicker} transparent={true} animationType="slide" onRequestClose={() => setShowChallengePicker(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Choose a Challenge</Text>
+              <TouchableOpacity onPress={() => setShowChallengePicker(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={[{ color: theme.textSecondary, fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 12 }]}>
+              Progress starts now — not retroactive. Complete it for bonus XP!
+            </Text>
+            
+            <ScrollView style={{ maxHeight: 400 }}>
+              {templates.map(template => {
+                const maxTarget = Math.max(...template.targets);
+                return template.targets.map(target => {
+                  const ratio = target / maxTarget;
+                  const bonusXp = ratio >= 0.8 ? 250 : ratio >= 0.5 ? 100 : 50;
+                  const description = template.description.replace('{target}', target);
+                  const isActive = selectedChallenge && 
+                    selectedChallenge.templateId === template.id && 
+                    selectedChallenge.target === target && !selectedChallenge.completed;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={`${template.templateId}_${target}`}
+                      style={[styles.challenge, { backgroundColor: isActive ? theme.primaryLight : theme.surface, opacity: isActive ? 0.6 : 1 }]}
+                      disabled={isActive}
+                      onPress={async () => {
+                        if (selectedChallenge && !selectedChallenge.completed) {
+                          setShowChallengePicker(false);
+                          setShowAbandonConfirm(true);
+                          return;
+                        }
+                        await selectChallenge(template.templateId, target);
+                        setShowChallengePicker(false);
+                        loadData();
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.challengeDesc, { color: theme.text }]}>{description}</Text>
+                          <Text style={[{ color: theme.textSecondary, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 }]}>
+                            +{bonusXp} XP bonus
+                          </Text>
+                        </View>
+                        {isActive ? (
+                          <MaterialCommunityIcons name="check" size={20} color={theme.primary} />
+                        ) : (
+                          <MaterialCommunityIcons name="chevron-right" size={20} color={theme.textSecondary} />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                });
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  // Abandon Challenge Confirmation Modal
+  const renderAbandonConfirm = () => {
+    return (
+      <Modal visible={showAbandonConfirm} transparent={true} animationType="fade" onRequestClose={() => setShowAbandonConfirm(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg, padding: 24 }]}>
+            <MaterialCommunityIcons name="alert-outline" size={40} color={theme.warning || '#FF9800'} style={{ alignSelf: 'center', marginBottom: 12 }} />
+            <Text style={[{ color: theme.text, fontSize: 18, fontFamily: 'Inter_700Bold', textAlign: 'center', marginBottom: 8 }]}>Abandon Challenge?</Text>
+            <Text style={[{ color: theme.textSecondary, fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', marginBottom: 20 }]}>
+              Your current progress will be lost.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity style={[{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: theme.surface }]} onPress={() => setShowAbandonConfirm(false)}>
+                <Text style={[{ color: theme.text, textAlign: 'center', fontFamily: 'Inter_600SemiBold' }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: theme.danger || '#EF5350' }]} onPress={async () => {
+                await abandonSelectedChallenge();
+                setShowAbandonConfirm(false);
+                setSelectedChallenge(null);
+                setShowChallengePicker(true);
+              }}>
+                <Text style={[{ color: '#fff', textAlign: 'center', fontFamily: 'Inter_600SemiBold' }]}>Abandon</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     );
   };
 
@@ -1000,6 +1188,7 @@ export default function StatsScreen() {
       {renderLevelCard()}
       {renderDistanceCard()}
       {renderChallengesCard()}
+      {renderSelectedChallengeCard()}
       {renderAchievementsCard()}
       
       <View style={styles.progressButtonContainer}>
@@ -1073,6 +1262,8 @@ export default function StatsScreen() {
       )}
       <View style={{ height: 30 }} />
       {renderAchievementModal()}
+      {renderChallengePicker()}
+      {renderAbandonConfirm()}
     </ScrollView>
   );
 }
@@ -1158,6 +1349,9 @@ const styles = StyleSheet.create({
   achievementCheck: { fontSize: 20, fontFamily: 'Inter_700Bold' },
   achievementLockSmall: { fontSize: 16 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', maxWidth: 400, borderRadius: 20, padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  modalTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
   achievementModalContent: { width: '100%', maxWidth: 300, borderRadius: 24, padding: 24, alignItems: 'center' },
   achievementModalIcon: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   achievementModalEmoji: { fontSize: 56 },
