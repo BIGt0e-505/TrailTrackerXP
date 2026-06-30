@@ -37,3 +37,27 @@ ios/
 # Logs
 logs/
 *.log
+
+# wget HSTS cache
+.wget-hsts
+
+# Release archives (keep source, not binaries)
+releases/
+
+# Garmin build output
+garmin/*/bin/
+
+# Android icon pack source (mipmap densities for native builds)
+android-icons/
+
+# Local archived documentation snapshots
+# Kept on disk as temporary reference, not tracked going forwards.
+docs/archive/*.md
+!docs/archive/.gitkeep
+
+# Package lock (optional — keep if you prefer deterministic installs)
+# package-lock.json
+
+# Release signing keystore
+release.keystore
+android/app/release.keystore

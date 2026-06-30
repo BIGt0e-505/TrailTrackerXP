@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   },
   calendar: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(128,128,128,0.2)',
+    borderBottomColor: '#2A2A2A',
   },
   activitiesList: {
     flex: 1,

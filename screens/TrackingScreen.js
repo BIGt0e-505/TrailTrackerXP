@@ -29,7 +29,7 @@ import {
   calculateElevationGain,
   autoExportActivityGPX,
 } from '../utils/storage';
-import { WalkingIcon, BikingIcon, PlayIcon, StopIcon, MapIcon, DownloadIcon } from '../components/Icons';
+import { WalkingIcon, BikingIcon, PlayIcon, StopIcon, MapIcon, DownloadIcon, RecenterIcon, PauseIcon, CheckIcon, CacheSuccessIcon, TrashIcon } from '../components/Icons';
 import Svg, { Path, Circle } from 'react-native-svg';
 
 const LOCATION_TASK_NAME = 'background-location-task';
@@ -105,42 +105,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     }
   }
 });
-
-// Custom icons
-const RecenterIcon = ({ size = 24, color = '#424242' }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="12" r="3" fill={color} />
-    <Path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    <Circle cx="12" cy="12" r="8" stroke={color} strokeWidth="2" fill="none" />
-  </Svg>
-);
-
-const PauseIcon = ({ size = 24, color = '#424242' }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M6 4h4v16H6V4zM14 4h4v16h-4V4z" fill={color} />
-  </Svg>
-);
-
-const CheckIcon = ({ size = 24, color = '#4CAF50' }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" fill="none" />
-    <Path d="M8 12l3 3 5-6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
-const CacheSuccessIcon = ({ size = 24, color = '#2196F3' }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    <Path d="M12 3v12M7 10l5 5 5-5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
-const TrashIcon = ({ size = 24, color = '#D32F2F' }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M10 11v6M14 11v6" stroke={color} strokeWidth="2" strokeLinecap="round" />
-  </Svg>
-);
 
 export default function TrackingScreen() {
   const { theme, isDark, isMapDark, distanceUnit, setUsername } = useTheme();
@@ -451,7 +415,7 @@ export default function TrackingScreen() {
       foregroundService: {
         notificationTitle: 'TrailTrackerXP Recording',
         notificationBody: 'GPS tracking is active',
-        notificationColor: '#4CAF50',
+        notificationColor: theme.accent,
         killServiceOnDestroy: false,
       },
     });
@@ -925,18 +889,18 @@ export default function TrackingScreen() {
     .leaflet-control-zoom-out {
       border-radius: 0 0 12px 12px !important;
     }
-    /* Light mode - use primary green color like recenter button */
+    /* Light mode - use accent blue like the rest of the app */
     .leaflet-control-zoom a {
       background-color: #ffffff !important;
-      color: #2E7D32 !important;
+      color: #4FC3F7 !important;
     }
     .leaflet-control-zoom a:hover {
       background-color: #f5f5f5 !important;
     }
     /* App dark mode zoom controls */
     .app-dark-mode .leaflet-control-zoom a {
-      background-color: #1E1E1E !important;
-      color: #4CAF50 !important;
+      background-color: #1A1A1A !important;
+      color: #4FC3F7 !important;
     }
     .app-dark-mode .leaflet-control-zoom a:hover {
       background-color: #2d2d2d !important;
@@ -1406,7 +1370,7 @@ export default function TrackingScreen() {
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: '#2196F3' }]}
+              style={[styles.modalButton, { backgroundColor: theme.accent }]}
               onPress={saveTracking}
             >
               <StopIcon size={20} color="#fff" />
@@ -1435,7 +1399,7 @@ export default function TrackingScreen() {
             {successModalContent.icon === 'check' ? (
               <CheckIcon size={56} color={theme.primary} />
             ) : (
-              <CacheSuccessIcon size={56} color="#2196F3" />
+              <CacheSuccessIcon size={56} color={theme.accent} />
             )}
             <Text style={[styles.successModalTitle, { color: theme.text }]}>
               {successModalContent.title}
@@ -1570,8 +1534,8 @@ export default function TrackingScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
-            <View style={[styles.modalIconContainer, { backgroundColor: '#FFF3E0' }]}>
-              <RecenterIcon size={32} color="#FF9800" />
+            <View style={[styles.modalIconContainer, { backgroundColor: 'rgba(255, 152, 0, 0.1)' }]}>
+              <RecenterIcon size={32} color={theme.warning} />
             </View>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
               Recover Activity?
@@ -1649,6 +1613,8 @@ const createStyles = (theme) => StyleSheet.create({
     padding: 16,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.border,
   },
   activitySelector: {
     flexDirection: 'row',
@@ -1677,6 +1643,8 @@ const createStyles = (theme) => StyleSheet.create({
     padding: 10,
     borderRadius: 10,
     alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.border,
   },
   statLabel: {
     fontSize: 11,
@@ -1726,7 +1694,7 @@ const createStyles = (theme) => StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 24,
     alignItems: 'center',
   },

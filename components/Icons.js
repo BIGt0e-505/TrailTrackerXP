@@ -145,3 +145,66 @@ export const SpeedIcon = ({ size = 24, color = '#424242' }) => (
     <Path d="M12 6V12L16 14" stroke={color} strokeWidth="2" strokeLinecap="round" />
   </Svg>
 );
+
+// Checkmark in circle — success confirmation
+export const CheckIcon = ({ size = 24, color = '#4CAF50' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" fill="none" />
+    <Path d="M8 12l3 3 5-6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+// Recenter / locate icon — GPS positioning
+export const RecenterIcon = ({ size = 24, color = '#424242' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="3" fill={color} />
+    <Path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    <Circle cx="12" cy="12" r="8" stroke={color} strokeWidth="2" fill="none" />
+  </Svg>
+);
+
+// Pause icon — tracking pause
+export const PauseIcon = ({ size = 24, color = '#424242' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M6 4h4v16H6V4zM14 4h4v16h-4V4z" fill={color} />
+  </Svg>
+);
+
+// Cache success icon — download/cache confirmation
+export const CacheSuccessIcon = ({ size = 24, color = '#2196F3' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    <Path d="M12 3v12M7 10l5 5 5-5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+// Warning triangle — caution/error indicator
+export const WarningIcon = ({ size = 24, color = '#FF9800' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 2L1 21h22L12 2z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <Path d="M12 9v4M12 17h.01" stroke={color} strokeWidth="2" strokeLinecap="round" />
+  </Svg>
+);
+
+// Info icon — information indicator
+export const InfoIcon = ({ size = 24, color = '#2196F3' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" fill="none" />
+    <Path d="M12 16v-4M12 8h.01" stroke={color} strokeWidth="2" strokeLinecap="round" />
+  </Svg>
+);
+
+// Sync icon — data recovery/sync
+export const SyncIcon = ({ size = 24, color = '#666' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M23 4v6h-6M1 20v-6h6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+// Upload icon — file import
+export const UploadIcon = ({ size = 24, color = '#666' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
