@@ -1,61 +1,61 @@
 {
-  "expo": {
-    "name": "TrailTrackerXP",
-    "slug": "trail-tracker-xp",
-    "version": "1.1.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0D1117"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "android": {
-      "package": "com.trailtrackerxp.app",
-      "versionCode": 2,
-      "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION",
-        "WAKE_LOCK",
-        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
-        "POST_NOTIFICATIONS",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_BACKGROUND_LOCATION",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_LOCATION"
-      ],
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0D1117"
-      },
-      "notification": {
-        "icon": "./assets/notification-icon.png",
-        "color": "#4FC3F7"
-      }
-    },
-    "plugins": [
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow TrailTrackerXP to track your location in the background during activities.",
-          "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true
-        }
-      ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "217b2834-f61e-4dbb-ad78-aa2571d2497a"
-      }
-    },
-    "owner": "bigt0e"
-  }
+    "expo":  {
+                 "name":  "TrailTrackerXP",
+                 "slug":  "trail-tracker-xp",
+                 "version":  "1.1.1",
+                 "orientation":  "portrait",
+                 "icon":  "./assets/icon.png",
+                 "userInterfaceStyle":  "dark",
+                 "splash":  {
+                                "image":  "./assets/splash.png",
+                                "resizeMode":  "contain",
+                                "backgroundColor":  "#0D0D0D"
+                            },
+                 "assetBundlePatterns":  [
+                                             "**/*"
+                                         ],
+                 "android":  {
+                                 "package":  "com.trailtrackerxp.app",
+                                 "versionCode":  3,
+                                 "permissions":  [
+                                                     "ACCESS_COARSE_LOCATION",
+                                                     "ACCESS_FINE_LOCATION",
+                                                     "ACCESS_BACKGROUND_LOCATION",
+                                                     "FOREGROUND_SERVICE",
+                                                     "FOREGROUND_SERVICE_LOCATION",
+                                                     "WAKE_LOCK",
+                                                     "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+                                                     "POST_NOTIFICATIONS",
+                                                     "android.permission.ACCESS_COARSE_LOCATION",
+                                                     "android.permission.ACCESS_FINE_LOCATION",
+                                                     "android.permission.ACCESS_BACKGROUND_LOCATION",
+                                                     "android.permission.FOREGROUND_SERVICE",
+                                                     "android.permission.FOREGROUND_SERVICE_LOCATION"
+                                                 ],
+                                 "adaptiveIcon":  {
+                                                      "foregroundImage":  "./assets/adaptive-icon.png",
+                                                      "backgroundColor":  "#0D0D0D"
+                                                  },
+                                 "notification":  {
+                                                      "icon":  "./assets/notification-icon.png",
+                                                      "color":  "#4FC3F7"
+                                                  }
+                             },
+                 "plugins":  [
+                                 [
+                                     "expo-location",
+                                     {
+                                         "locationAlwaysAndWhenInUsePermission":  "Allow TrailTrackerXP to track your location in the background during activities.",
+                                         "isAndroidBackgroundLocationEnabled":  true,
+                                         "isAndroidForegroundServiceEnabled":  true
+                                     }
+                                 ]
+                             ],
+                 "extra":  {
+                               "eas":  {
+                                           "projectId":  "217b2834-f61e-4dbb-ad78-aa2571d2497a"
+                                       }
+                           },
+                 "owner":  "bigt0e"
+             }
 }

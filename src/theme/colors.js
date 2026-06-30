@@ -50,4 +50,4 @@ export const COLORS = {
 };
 
 // Splash/icon background (slightly navy for icon contrast)
-export const SPLASH_BG = '#0D1117';
+export const SPLASH_BG = '#0D0D0D';
