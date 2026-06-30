@@ -553,9 +553,17 @@ export default function TrackingScreen() {
 
     setIsTracking(false);
     setIsPaused(false);
+    setRouteCoordinates([]);
+    setDistance(0);
+    setDuration(0);
     setCurrentSpeed(0);
     backgroundRouteData = [];
     backgroundStartTime = null;
+
+    // Clear the route from the map WebView so it's ready for the next activity
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(`clearRoute(); true;`);
+    }
   };
 
   const discardTracking = () => {

@@ -1048,7 +1048,10 @@ export default function StatsScreen() {
 
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>RECENT ACTIVITIES</Text>
-            {filtered.slice(-5).reverse().map(activity => (
+            {[...filtered].sort((a, b) => {
+              const getDate = (act) => new Date(act.date || act.timestamp || act.startTime || act.startDate || 0).getTime();
+              return getDate(b) - getDate(a);
+            }).slice(0, 5).map(activity => (
               <TouchableOpacity key={activity.id} style={[styles.recentActivity, { backgroundColor: theme.cardBg }]} onPress={() => navigation.navigate('ActivityDetail', { activityId: activity.id })}>
                 <View style={styles.recentActivityLeft}>
                   <View style={[styles.recentIcon, { backgroundColor: theme.primaryLight }]}>
