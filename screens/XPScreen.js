@@ -93,21 +93,19 @@ export default function XPScreen() {
   const [selectedAchievement, setSelectedAchievement] = useState(null);
   const [cutoffDate, setCutoffDate] = useState(null);
 
-  // Helper to render achievement icons via MaterialCommunityIcons
-  // Handles stacked icons (e.g. multiple flames for streak achievements)
+  // Helper to render achievement icons - handles stacked flames for streak achievements
   const renderAchievementIcon = (iconName, fontSize, isUnlocked = true) => {
     const opacity = isUnlocked ? 1 : 0.3;
-    const color = isUnlocked ? theme.accent : theme.textSecondary;
     if (Array.isArray(iconName)) {
       return (
         <View style={{ flexDirection: 'row' }}>
           {iconName.map((name, i) => (
-            <MaterialCommunityIcons key={i} name={name} size={fontSize} color={color} style={{ marginRight: i < iconName.length - 1 ? -8 : 0, opacity }} />
+            <MaterialCommunityIcons key={i} name={name} size={fontSize} color={isUnlocked ? theme.accent : theme.textSecondary} style={{ marginRight: i < iconName.length - 1 ? -8 : 0, opacity }} />
           ))}
         </View>
       );
     }
-    return <MaterialCommunityIcons name={iconName} size={fontSize} color={color} style={{ opacity }} />;
+    return <MaterialCommunityIcons name={iconName} size={fontSize} color={isUnlocked ? theme.accent : theme.textSecondary} style={{ opacity }} />;
   };
 
   const getTotalDistance = () => {
@@ -270,7 +268,7 @@ export default function XPScreen() {
         {comparison.nextLandmark && (
           <View style={styles.nextLandmark}>
             <Text style={[styles.nextLandmarkLabel, { color: theme.textSecondary }]}>Next milestone:</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <MaterialCommunityIcons name={comparison.nextLandmark.icon} size={20} color={theme.textSecondary} />
               <Text style={[styles.nextLandmarkName, { color: theme.text }]}>
                 {comparison.nextLandmark.name}
@@ -315,8 +313,8 @@ export default function XPScreen() {
         ))}
         {completedChallenges.slice(0, 2).map(challenge => (
           <View key={challenge.id} style={[styles.challenge, { backgroundColor: theme.primaryLight }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <MaterialCommunityIcons name="check-circle-outline" size={20} color={theme.primary} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <MaterialCommunityIcons name="check-circle-outline" size={16} color={theme.primary} />
               <Text style={[styles.challengeDesc, { color: theme.primary }]}>{challenge.description}</Text>
             </View>
           </View>
@@ -361,12 +359,9 @@ export default function XPScreen() {
           )}
         </View>
         <View style={[styles.challenge, { backgroundColor: selectedChallenge.completed ? theme.primaryLight : theme.surface }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {selectedChallenge.completed && <MaterialCommunityIcons name="check-circle-outline" size={20} color={theme.primary} />}
-            <Text style={[styles.challengeDesc, { color: selectedChallenge.completed ? theme.primary : theme.text }]}>
-              {selectedChallenge.description}
-            </Text>
-          </View>
+          <Text style={[styles.challengeDesc, { color: selectedChallenge.completed ? theme.primary : theme.text }]}>
+            {selectedChallenge.completed ? '* ' : ''}{selectedChallenge.description}
+          </Text>
           {!selectedChallenge.completed && (
             <>
               <Text style={[styles.challengeProgress, { color: theme.textSecondary }]}>
@@ -401,7 +396,7 @@ export default function XPScreen() {
     // Get offerable challenges, filtered to exclude in-flight and already-achieved
     const autoChallenges = gamification?.challenges?.filter(c => !c.expired && !c.completed) || [];
     const offerable = getOfferableChallenges(activities, selectedChallenge, autoChallenges, gamification?.stats?.currentStreak || 0);
-
+    
     if (offerable.length === 0) {
       return (
         <Modal visible={showChallengePicker} transparent={true} animationType="slide" onRequestClose={() => setShowChallengePicker(false)}>
@@ -421,7 +416,7 @@ export default function XPScreen() {
         </Modal>
       );
     }
-
+    
     return (
       <Modal visible={showChallengePicker} transparent={true} animationType="slide" onRequestClose={() => setShowChallengePicker(false)}>
         <View style={styles.modalOverlay}>
@@ -442,7 +437,7 @@ export default function XPScreen() {
                   selectedChallenge.target === challengeDef.target && !selectedChallenge.completed;
                 return (
                   <TouchableOpacity
-                    key={`${challengeDef.templateId}_${challengeDef.target}`}
+                    key={"${challengeDef.templateId}_"}
                     style={[styles.challenge, { backgroundColor: isActive ? theme.primaryLight : theme.surface, opacity: isActive ? 0.6 : 1 }]}
                     disabled={isActive}
                     onPress={async () => {
@@ -518,10 +513,8 @@ const renderAbandonConfirm = () => {
       <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.achievementsViewHeader}>
           <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.surface }]} onPress={() => setActiveTab('overview')}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <MaterialCommunityIcons name="arrow-left" size={18} color={theme.primary} />
-              <Text style={[styles.backButtonText, { color: theme.primary }]}>Back</Text>
-            </View>
+            <MaterialCommunityIcons name="arrow-left" size={16} color={theme.primary} />
+            <Text style={[styles.backButtonText, { color: theme.primary }]}>Back</Text>
           </TouchableOpacity>
           <Text style={[styles.achievementsViewTitle, { color: theme.text }]}>Challenges</Text>
           <View style={styles.backButton} />
@@ -553,7 +546,7 @@ const renderAbandonConfirm = () => {
             {completedChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg, borderLeftColor: theme.primary, borderLeftWidth: 4 }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.primaryLight }]}>
-                  <MaterialCommunityIcons name="check-circle-outline" size={32} color={theme.primary} />
+                  <MaterialCommunityIcons name="check" size={32} color={theme.primary} />
                 </View>
                 <View style={styles.challengeRowInfo}>
                   <Text style={[styles.challengeRowDesc, { color: theme.primary }]}>{challenge.description}</Text>
@@ -590,7 +583,7 @@ const renderAbandonConfirm = () => {
             {expiredChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg, opacity: 0.6 }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.surface }]}>
-                  <MaterialCommunityIcons name="clock-alert-outline" size={32} color={theme.textSecondary} />
+                  <MaterialCommunityIcons name="clock-outline" size={32} color={theme.textSecondary} />
                 </View>
                 <View style={styles.challengeRowInfo}>
                   <Text style={[styles.challengeRowDesc, { color: theme.textSecondary }]}>{challenge.description}</Text>
@@ -629,7 +622,7 @@ const renderAbandonConfirm = () => {
                 style={[styles.achievementItem, { backgroundColor: theme.surface }, !isUnlocked && styles.achievementLocked]}
                 onPress={() => { setSelectedAchievement(achievement); setShowAchievementModal(true); }}
               >
-                {renderAchievementIcon(achievement.icon, 28, isUnlocked)}
+                {renderAchievementIcon(achievement.icon, 48, isUnlocked)}
                 {!isUnlocked && <View style={styles.achievementLockOverlay}><MaterialCommunityIcons name="lock-outline" size={16} color={theme.textSecondary} /></View>}
               </TouchableOpacity>
             );
@@ -651,10 +644,8 @@ const renderAbandonConfirm = () => {
       <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.achievementsViewHeader}>
           <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.surface }]} onPress={() => setActiveTab('overview')}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <MaterialCommunityIcons name="arrow-left" size={18} color={theme.primary} />
-              <Text style={[styles.backButtonText, { color: theme.primary }]}>Back</Text>
-            </View>
+            <MaterialCommunityIcons name="arrow-left" size={16} color={theme.primary} />
+            <Text style={[styles.backButtonText, { color: theme.primary }]}>Back</Text>
           </TouchableOpacity>
           <Text style={[styles.achievementsViewTitle, { color: theme.text }]}>Achievements</Text>
           <View style={styles.backButton} />
@@ -674,7 +665,7 @@ const renderAbandonConfirm = () => {
                     onPress={() => { setSelectedAchievement(achievement); setShowAchievementModal(true); }}
                   >
                     <View style={[styles.achievementRowIcon, { backgroundColor: isUnlocked ? theme.primaryLight : theme.surface }]}>
-                      {renderAchievementIcon(achievement.icon, 28, isUnlocked)}
+                      {renderAchievementIcon(achievement.icon, 40, isUnlocked)}
                     </View>
                     <View style={styles.achievementRowInfo}>
                       <Text style={[styles.achievementRowName, { color: isUnlocked ? theme.text : theme.textSecondary }]}>{achievement.name}</Text>
@@ -702,7 +693,7 @@ const renderAbandonConfirm = () => {
           {selectedAchievement && (
             <>
               <View style={[styles.achievementModalIcon, { backgroundColor: theme.primaryLight }]}>
-                {renderAchievementIcon(selectedAchievement.icon, 48, true)}
+                {renderAchievementIcon(selectedAchievement.icon, 56, true)}
               </View>
               <Text style={[styles.achievementModalName, { color: theme.text }]}>{selectedAchievement.name}</Text>
               <Text style={[styles.achievementModalDesc, { color: theme.textSecondary }]}>{selectedAchievement.description}</Text>
@@ -768,7 +759,7 @@ const styles = StyleSheet.create({
   landmarkName: { fontSize: 16, fontFamily: 'Inter_700Bold' },
   nextLandmark: { marginTop: 4 },
   nextLandmarkLabel: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  nextLandmarkName: { fontSize: 14, fontFamily: 'Inter_700Bold' },
+  nextLandmarkName: { fontSize: 14, fontFamily: 'Inter_700Bold', marginTop: 4, marginBottom: 8 },
   landmarkProgress: { height: 8, borderRadius: 4, overflow: 'hidden' },
   landmarkProgressFill: { height: '100%', borderRadius: 4 },
   landmarkProgressText: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 4 },
@@ -806,7 +797,7 @@ const styles = StyleSheet.create({
   achievementRowDesc: { fontSize: 13, fontFamily: 'Inter_400Regular' },
   achievementsViewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   achievementsViewTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
-  backButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, minWidth: 60 },
+  backButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, minWidth: 60, flexDirection: 'row', alignItems: 'center', gap: 4 },
   backButtonText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', maxWidth: 400, borderRadius: 20, padding: 20 },
