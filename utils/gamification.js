@@ -54,6 +54,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete your first activity',
     icon: 'flag-outline',
     category: 'general',
+    tier: 'bronze',
     check: (stats) => stats.totalActivities >= 1,
   },
   ten_activities: {
@@ -62,6 +63,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 10 activities',
     icon: 'calendar-check',
     category: 'general',
+    tier: 'bronze',
     check: (stats) => stats.totalActivities >= 10,
   },
   twentyfive_activities: {
@@ -70,6 +72,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 25 activities',
     icon: 'star-outline',
     category: 'general',
+    tier: 'silver',
     check: (stats) => stats.totalActivities >= 25,
   },
   fifty_activities: {
@@ -78,6 +81,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 50 activities',
     icon: 'star-outline',
     category: 'general',
+    tier: 'gold',
     check: (stats) => stats.totalActivities >= 50,
   },
   hundred_activities: {
@@ -86,6 +90,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 100 activities',
     icon: 'trophy-outline',
     category: 'general',
+    tier: 'gold',
     check: (stats) => stats.totalActivities >= 100,
   },
   both_types: {
@@ -94,6 +99,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete both a walk and a bike ride',
     icon: 'compass-outline',
     category: 'general',
+    tier: 'bronze',
     check: (stats) => stats.walkingActivities >= 1 && stats.bikingActivities >= 1,
   },
   early_bird: {
@@ -102,6 +108,7 @@ export const ACHIEVEMENTS = {
     description: 'Start an activity before 7am',
     icon: 'weather-sunny',
     category: 'general',
+    tier: 'silver',
     check: (stats, activity) => {
       if (!activity) return false;
       const hour = new Date(activity.timestamp).getHours();
@@ -114,6 +121,7 @@ export const ACHIEVEMENTS = {
     description: 'Start an activity after 9pm',
     icon: 'weather-night',
     category: 'general',
+    tier: 'silver',
     check: (stats, activity) => {
       if (!activity) return false;
       const hour = new Date(activity.timestamp).getHours();
@@ -126,6 +134,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete an activity lasting over 1 hour',
     icon: 'clock-outline',
     category: 'general',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.duration >= 3600,
   },
   two_hour: {
@@ -134,6 +143,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete an activity lasting over 2 hours',
     icon: 'clock-outline',
     category: 'general',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.duration >= 7200,
   },
   weekend_warrior: {
@@ -142,6 +152,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete activities on both Saturday and Sunday',
     icon: 'calendar-weekend',
     category: 'general',
+    tier: 'silver',
     check: (stats) => stats.hasWeekendPair,
   },
   
@@ -152,6 +163,7 @@ export const ACHIEVEMENTS = {
     description: 'Activity 3 days in a row',
     icon: 'fire',
     category: 'streak',
+    tier: 'bronze',
     check: (stats) => stats.currentStreak >= 3,
   },
   seven_day_streak: {
@@ -160,6 +172,7 @@ export const ACHIEVEMENTS = {
     description: 'Activity 7 days in a row',
     icon: ['fire', 'fire'],
     category: 'streak',
+    tier: 'silver',
     check: (stats) => stats.currentStreak >= 7,
   },
   fourteen_day_streak: {
@@ -168,6 +181,7 @@ export const ACHIEVEMENTS = {
     description: 'Activity 14 days in a row',
     icon: 'arm-flex',
     category: 'streak',
+    tier: 'silver',
     check: (stats) => stats.currentStreak >= 14,
   },
   thirty_day_streak: {
@@ -176,6 +190,7 @@ export const ACHIEVEMENTS = {
     description: 'Activity 30 days in a row',
     icon: ['fire', 'fire', 'fire'],
     category: 'streak',
+    tier: 'gold',
     check: (stats) => stats.currentStreak >= 30,
   },
   
@@ -187,6 +202,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk your first kilometre',
     icon: 'shoe-print',
     category: 'walking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 1,
   },
   walk_3km: {
@@ -195,6 +211,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 3km in one activity',
     icon: 'walk',
     category: 'walking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 3,
   },
   walk_5km: {
@@ -203,6 +220,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 5km in one activity',
     icon: 'run',
     category: 'walking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 5,
   },
   walk_10km: {
@@ -211,6 +229,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 10km in one activity',
     icon: 'hiking',
     category: 'walking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 10,
   },
   walk_half_marathon: {
@@ -219,6 +238,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 21km in one activity',
     icon: 'medal-outline',
     category: 'walking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 21,
   },
   walk_marathon: {
@@ -227,6 +247,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 42km in one activity',
     icon: 'trophy-outline',
     category: 'walking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 42,
   },
   
@@ -237,6 +258,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 10km total',
     icon: 'shoe-print',
     category: 'walking',
+    tier: 'bronze',
     check: (stats) => stats.walkingDistance >= 10,
   },
   walk_total_50km: {
@@ -245,6 +267,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 50km total',
     icon: 'map-marker-distance',
     category: 'walking',
+    tier: 'bronze',
     check: (stats) => stats.walkingDistance >= 50,
   },
   walk_total_100km: {
@@ -253,6 +276,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 100km total',
     icon: 'map-marker-distance',
     category: 'walking',
+    tier: 'silver',
     check: (stats) => stats.walkingDistance >= 100,
   },
   walk_total_250km: {
@@ -261,6 +285,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 250km total',
     icon: 'compass-outline',
     category: 'walking',
+    tier: 'silver',
     check: (stats) => stats.walkingDistance >= 250,
   },
   walk_total_500km: {
@@ -269,6 +294,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 500km total',
     icon: 'star-outline',
     category: 'walking',
+    tier: 'gold',
     check: (stats) => stats.walkingDistance >= 500,
   },
   walk_total_1000km: {
@@ -277,6 +303,7 @@ export const ACHIEVEMENTS = {
     description: 'Walk 1000km total',
     icon: 'crown',
     category: 'walking',
+    tier: 'gold',
     check: (stats) => stats.walkingDistance >= 1000,
   },
   
@@ -288,6 +315,7 @@ export const ACHIEVEMENTS = {
     icon: 'trophy',
     category: 'walking',
     isMajor: true,
+    tier: 'gold',
     // 1000 miles = 1609.34 km
     check: (stats) => (stats.walkingDistanceLast365Days || 0) >= 1609.34,
   },
@@ -299,6 +327,7 @@ export const ACHIEVEMENTS = {
     description: 'Climb 50m elevation on a walk',
     icon: 'elevation-rise',
     category: 'walking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'walking' && (activity.elevationGain || 0) >= 50,
   },
   walk_climb_100m: {
@@ -307,6 +336,7 @@ export const ACHIEVEMENTS = {
     description: 'Climb 100m elevation on a walk',
     icon: 'mountains',
     category: 'walking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'walking' && (activity.elevationGain || 0) >= 100,
   },
   walk_climb_250m: {
@@ -315,6 +345,7 @@ export const ACHIEVEMENTS = {
     description: 'Climb 250m elevation on a walk',
     icon: 'mountains',
     category: 'walking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'walking' && (activity.elevationGain || 0) >= 250,
   },
   walk_total_elevation_500m: {
@@ -323,6 +354,7 @@ export const ACHIEVEMENTS = {
     description: 'Gain 500m total elevation walking',
     icon: 'elevation-rise',
     category: 'walking',
+    tier: 'silver',
     check: (stats) => stats.walkingElevation >= 500,
   },
   walk_total_elevation_2000m: {
@@ -331,6 +363,7 @@ export const ACHIEVEMENTS = {
     description: 'Gain 2000m total elevation walking',
     icon: 'mountains',
     category: 'walking',
+    tier: 'gold',
     check: (stats) => stats.walkingElevation >= 2000,
   },
   
@@ -341,6 +374,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 5 walks',
     icon: 'walk',
     category: 'walking',
+    tier: 'bronze',
     check: (stats) => stats.walkingActivities >= 5,
   },
   walk_20_activities: {
@@ -349,6 +383,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 20 walks',
     icon: 'walk',
     category: 'walking',
+    tier: 'silver',
     check: (stats) => stats.walkingActivities >= 20,
   },
   walk_50_activities: {
@@ -357,6 +392,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 50 walks',
     icon: 'medal-outline',
     category: 'walking',
+    tier: 'gold',
     check: (stats) => stats.walkingActivities >= 50,
   },
   
@@ -368,6 +404,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride your first kilometre',
     icon: 'bike',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 1,
   },
   mtb_3km: {
@@ -376,6 +413,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 3km in one activity',
     icon: 'sign-direction',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 3,
   },
   mtb_5km: {
@@ -384,6 +422,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 5km in one activity',
     icon: 'bike',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 5,
   },
   mtb_10km: {
@@ -392,6 +431,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 10km in one activity',
     icon: 'fire',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 10,
   },
   mtb_20km: {
@@ -400,6 +440,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 20km in one activity',
     icon: 'arm-flex',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 20,
   },
   mtb_30km: {
@@ -408,6 +449,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 30km in one activity',
     icon: 'trophy-outline',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 30,
   },
   
@@ -418,6 +460,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 10km total',
     icon: 'target',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingDistance >= 10,
   },
   mtb_total_50km: {
@@ -426,6 +469,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 50km total',
     icon: 'map-marker-distance',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingDistance >= 50,
   },
   mtb_total_100km: {
@@ -434,6 +478,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 100km total',
     icon: 'map-marker-distance',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingDistance >= 100,
   },
   mtb_total_250km: {
@@ -442,6 +487,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 250km total',
     icon: 'compass-outline',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingDistance >= 250,
   },
   mtb_total_500km: {
@@ -450,6 +496,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 500km total',
     icon: 'star-outline',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingDistance >= 500,
   },
   mtb_total_1000km: {
@@ -458,6 +505,7 @@ export const ACHIEVEMENTS = {
     description: 'Ride 1000km total',
     icon: 'crown',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingDistance >= 1000,
   },
   
@@ -468,6 +516,7 @@ export const ACHIEVEMENTS = {
     description: 'Climb 25m elevation on a ride',
     icon: 'elevation-rise',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 25,
   },
   mtb_climb_50m: {
@@ -476,6 +525,7 @@ export const ACHIEVEMENTS = {
     description: 'Climb 50m elevation on a ride',
     icon: 'arrow-up-bold',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 50,
   },
   mtb_climb_100m: {
@@ -484,6 +534,7 @@ export const ACHIEVEMENTS = {
     description: 'Climb 100m elevation on a ride',
     icon: 'elevation-rise',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 100,
   },
   mtb_climb_200m: {
@@ -492,6 +543,7 @@ export const ACHIEVEMENTS = {
     description: 'Climb 200m elevation on a ride',
     icon: 'mountains',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 200,
   },
   mtb_climb_500m: {
@@ -500,6 +552,7 @@ export const ACHIEVEMENTS = {
     description: 'Climb 500m elevation on a ride',
     icon: 'mountains',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 500,
   },
   
@@ -510,6 +563,7 @@ export const ACHIEVEMENTS = {
     description: 'Descend 5m elevation loss on a ride',
     icon: 'arrow-down-bold',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 5,
   },
   mtb_drop_10m: {
@@ -518,6 +572,7 @@ export const ACHIEVEMENTS = {
     description: 'Descend 10m elevation loss on a ride',
     icon: 'bomb',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 10,
   },
   mtb_drop_25m: {
@@ -526,6 +581,7 @@ export const ACHIEVEMENTS = {
     description: 'Descend 25m elevation loss on a ride',
     icon: 'speedometer',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 25,
   },
   mtb_drop_50m: {
@@ -534,6 +590,7 @@ export const ACHIEVEMENTS = {
     description: 'Descend 50m elevation loss on a ride',
     icon: 'emoticon-devil-outline',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 50,
   },
   mtb_drop_100m: {
@@ -542,6 +599,7 @@ export const ACHIEVEMENTS = {
     description: 'Descend 100m elevation loss on a ride',
     icon: 'crown',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 100,
   },
   mtb_drop_200m: {
@@ -550,6 +608,7 @@ export const ACHIEVEMENTS = {
     description: 'Descend 200m elevation loss on a ride',
     icon: 'feather',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 200,
   },
   
@@ -560,6 +619,7 @@ export const ACHIEVEMENTS = {
     description: 'Gain 250m total elevation biking',
     icon: 'arm-flex',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingElevation >= 250,
   },
   mtb_total_climb_1000m: {
@@ -568,6 +628,7 @@ export const ACHIEVEMENTS = {
     description: 'Gain 1000m total elevation biking',
     icon: 'target',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingElevation >= 1000,
   },
   mtb_total_climb_5000m: {
@@ -576,6 +637,7 @@ export const ACHIEVEMENTS = {
     description: 'Gain 5000m total elevation biking',
     icon: 'mountains',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingElevation >= 5000,
   },
   
@@ -586,6 +648,7 @@ export const ACHIEVEMENTS = {
     description: 'Descend 250m total on bike',
     icon: 'arrow-down-bold',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingDescent >= 250,
   },
   mtb_total_descent_1000m: {
@@ -594,6 +657,7 @@ export const ACHIEVEMENTS = {
     description: 'Descend 1000m total on bike',
     icon: 'target',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingDescent >= 1000,
   },
   mtb_total_descent_5000m: {
@@ -602,6 +666,7 @@ export const ACHIEVEMENTS = {
     description: 'Descend 5000m total on bike',
     icon: 'speedometer',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingDescent >= 5000,
   },
   
@@ -612,6 +677,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 5 rides',
     icon: 'bike',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingActivities >= 5,
   },
   mtb_20_activities: {
@@ -620,6 +686,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 20 rides',
     icon: 'bike',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingActivities >= 20,
   },
   mtb_50_activities: {
@@ -628,6 +695,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 50 rides',
     icon: 'medal-outline',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingActivities >= 50,
   },
   mtb_100_activities: {
@@ -636,6 +704,7 @@ export const ACHIEVEMENTS = {
     description: 'Complete 100 rides',
     icon: 'medal-outline',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingActivities >= 100,
   },
 };

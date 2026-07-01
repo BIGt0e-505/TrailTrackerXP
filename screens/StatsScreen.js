@@ -388,7 +388,9 @@ export default function StatsScreen() {
     const settings = progressSettings[progressType];
     const handleScroll = (event) => {
       const page = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-      setProgressActivePage(page);
+      if (page !== progressActivePage) {
+        setProgressActivePage(page);
+      }
     };
 
     return (
@@ -425,7 +427,7 @@ export default function StatsScreen() {
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleScroll}
+          onScroll={handleScroll}
           style={{ flex: 1 }}
           scrollEventThrottle={16}
         >

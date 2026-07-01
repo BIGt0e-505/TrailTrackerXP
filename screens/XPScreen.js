@@ -80,6 +80,12 @@ const TargetIcon = ({ size = 24, color = '#2196F3' }) => (
 
 const PROGRESS_SETTINGS_KEY = '@trail_tracker_progress_settings';
 
+const TIER_COLORS = {
+  bronze: '#B87333',
+  silver: '#BFC7D5',
+  gold: '#F5C542',
+};
+
 export default function XPScreen() {
   const { theme, distanceUnit } = useTheme();
   const navigation = useNavigation();
@@ -94,18 +100,20 @@ export default function XPScreen() {
   const [cutoffDate, setCutoffDate] = useState(null);
 
   // Helper to render achievement icons - handles stacked flames for streak achievements
-  const renderAchievementIcon = (iconName, fontSize, isUnlocked = true) => {
+  const renderAchievementIcon = (iconName, fontSize, isUnlocked = true, tier = null) => {
+    const tierColor = tier ? TIER_COLORS[tier] : theme.accent;
+    const color = isUnlocked ? tierColor : theme.textSecondary;
     const opacity = isUnlocked ? 1 : 0.3;
     if (Array.isArray(iconName)) {
       return (
         <View style={{ flexDirection: 'row' }}>
           {iconName.map((name, i) => (
-            <MaterialCommunityIcons key={i} name={name} size={fontSize} color={isUnlocked ? theme.accent : theme.textSecondary} style={{ marginRight: i < iconName.length - 1 ? -8 : 0, opacity }} />
+            <MaterialCommunityIcons key={i} name={name} size={fontSize} color={color} style={{ marginRight: i < iconName.length - 1 ? -8 : 0, opacity }} />
           ))}
         </View>
       );
     }
-    return <MaterialCommunityIcons name={iconName} size={fontSize} color={isUnlocked ? theme.accent : theme.textSecondary} style={{ opacity }} />;
+    return <MaterialCommunityIcons name={iconName} size={fontSize} color={color} style={{ opacity }} />;
   };
 
   const getTotalDistance = () => {
@@ -622,7 +630,7 @@ const renderAbandonConfirm = () => {
                 style={[styles.achievementItem, { backgroundColor: theme.surface }, !isUnlocked && styles.achievementLocked]}
                 onPress={() => { setSelectedAchievement(achievement); setShowAchievementModal(true); }}
               >
-                {renderAchievementIcon(achievement.icon, 48, isUnlocked)}
+                {renderAchievementIcon(achievement.icon, 48, isUnlocked, achievement.tier)}
                 {!isUnlocked && <View style={styles.achievementLockOverlay}><MaterialCommunityIcons name="lock-outline" size={16} color={theme.textSecondary} /></View>}
               </TouchableOpacity>
             );
@@ -665,7 +673,7 @@ const renderAbandonConfirm = () => {
                     onPress={() => { setSelectedAchievement(achievement); setShowAchievementModal(true); }}
                   >
                     <View style={[styles.achievementRowIcon, { backgroundColor: isUnlocked ? theme.primaryLight : theme.surface }]}>
-                      {renderAchievementIcon(achievement.icon, 40, isUnlocked)}
+                      {renderAchievementIcon(achievement.icon, 40, isUnlocked, achievement.tier)}
                     </View>
                     <View style={styles.achievementRowInfo}>
                       <Text style={[styles.achievementRowName, { color: isUnlocked ? theme.text : theme.textSecondary }]}>{achievement.name}</Text>
@@ -693,7 +701,7 @@ const renderAbandonConfirm = () => {
           {selectedAchievement && (
             <>
               <View style={[styles.achievementModalIcon, { backgroundColor: theme.primaryLight }]}>
-                {renderAchievementIcon(selectedAchievement.icon, 56, true)}
+                {renderAchievementIcon(selectedAchievement.icon, 56, true, selectedAchievement.tier)}
               </View>
               <Text style={[styles.achievementModalName, { color: theme.text }]}>{selectedAchievement.name}</Text>
               <Text style={[styles.achievementModalDesc, { color: theme.textSecondary }]}>{selectedAchievement.description}</Text>
