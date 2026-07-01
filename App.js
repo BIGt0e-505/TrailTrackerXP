@@ -17,6 +17,7 @@ import { initFileStorage } from './utils/storage';
 import TrackingScreen from './screens/TrackingScreen';
 import CalendarScreen from './screens/CalendarScreen';
 import StatsScreen from './screens/StatsScreen';
+import XPScreen from './screens/XPScreen';
 import ActivityDetailScreen from './screens/ActivityDetailScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import { TrackIcon, CalendarIcon, StatsIcon, SettingsIcon } from './components/Icons';
@@ -121,6 +122,20 @@ function TabNavigator() {
         component={CalendarScreen}
         options={{
           tabBarIcon: ({ color }) => <CalendarIcon size={24} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="XP"
+        component={XPScreen}
+        options={{
+          tabBarIcon: () => null,
+          tabBarLabel: 'XP',
+          tabBarLabelStyle: {
+            fontFamily: 'Inter_700Bold',
+            fontSize: 16,
+            marginTop: 0,
+            paddingBottom: 6,
+          },
         }}
       />
       <Tab.Screen
