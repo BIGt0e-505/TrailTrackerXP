@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Abstract monochrome icons
 export const TrackIcon = ({ size = 24, color = '#424242' }) => (
@@ -34,23 +35,14 @@ export const StatsIcon = ({ size = 24, color = '#424242' }) => (
   </Svg>
 );
 
-export const WalkingIcon = ({ size = 24, color = '#424242' }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="12" cy="4" r="2.5" stroke={color} strokeWidth="2" />
-    <Path d="M10 9L8 15L10 15L11 22" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M14 9L16 15L14 15L13 22" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Line x1="9" y1="9" x2="15" y2="9" stroke={color} strokeWidth="2" strokeLinecap="round" />
-  </Svg>
+// Walking icon — uses MaterialCommunityIcons 'walk' to match achievement icons
+export const WalkingIcon = ({ size = 24, color = '#424242', style }) => (
+  <MaterialCommunityIcons name="walk" size={size} color={color} style={style} />
 );
 
-export const BikingIcon = ({ size = 24, color = '#424242' }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx="5" cy="17" r="3" stroke={color} strokeWidth="2" />
-    <Circle cx="19" cy="17" r="3" stroke={color} strokeWidth="2" />
-    <Path d="M5 17L9 9L15 9L19 17" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <Circle cx="12" cy="6" r="2" stroke={color} strokeWidth="2" />
-    <Line x1="12" y1="9" x2="12" y2="12" stroke={color} strokeWidth="2" strokeLinecap="round" />
-  </Svg>
+// Biking icon — uses MaterialCommunityIcons 'bike' to match achievement icons
+export const BikingIcon = ({ size = 24, color = '#424242', style }) => (
+  <MaterialCommunityIcons name="bike" size={size} color={color} style={style} />
 );
 
 export const MapIcon = ({ size = 24, color = '#424242' }) => (
@@ -208,3 +200,10 @@ export const UploadIcon = ({ size = 24, color = '#666' }) => (
     <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
+
+// Activity type icon — convenience helper that switches on activity type
+export const ActivityTypeIcon = ({ type, size = 24, color = '#424242', style }) => {
+  if (type === 'walking') return <WalkingIcon size={size} color={color} style={style} />;
+  if (type === 'biking') return <BikingIcon size={size} color={color} style={style} />;
+  return <MaterialCommunityIcons name="help-circle-outline" size={size} color={color} style={style} />;
+};
