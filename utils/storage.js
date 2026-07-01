@@ -51,8 +51,11 @@ const stripRouteForCache = (activity) => {
 };
 
 export const saveActivity = async (activity) => {
+  // --- Phase 1: Critical persistence (GPX file + AsyncStorage cache) ---
+  // If this succeeds, the activity is saved regardless of what happens later.
+  let newActivity;
   try {
-    const newActivity = {
+    newActivity = {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
       ...activity,
@@ -60,24 +63,37 @@ export const saveActivity = async (activity) => {
 
     // Save full activity (with route) to GPX file first -- this is the source of truth
     await saveActivityToFile(newActivity);
+    console.log('[save] Activity persisted to file:', newActivity.id);
 
     // Cache only metadata in AsyncStorage (no route data -- prevents size limit corruption)
     const existingActivities = await getActivities();
     const updatedActivities = [...existingActivities, stripRouteForCache(newActivity)];
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updatedActivities));
+    console.log('[save] Activity cached to AsyncStorage:', newActivity.id);
+  } catch (error) {
+    console.error('[save] CRITICAL: Activity persistence failed:', error);
+    throw error; // This is a real save failure
+  }
 
-    // Process gamification (XP, achievements, challenges)
-    const gamificationResults = await processActivity(newActivity, updatedActivities);
+  // --- Phase 2: Post-save processing (gamification, challenges) ---
+  // Failures here must NOT claim the activity failed to save.
+  let gamificationResults = null;
+  let gamificationError = null;
+  try {
+    const updatedActivities = await getActivities();
+    gamificationResults = await processActivity(newActivity, updatedActivities);
+    console.log('[save] Gamification processed for:', newActivity.id);
 
     // Also save gamification to file storage
     const gamificationData = await loadGamification();
     await saveGamificationToFile(gamificationData);
-
-    return { activity: newActivity, gamification: gamificationResults };
+    console.log('[save] Gamification persisted for:', newActivity.id);
   } catch (error) {
-    console.error('Error saving activity:', error);
-    throw error;
+    console.error('[save] Post-save gamification processing failed (activity already saved):', error);
+    gamificationError = error.message || String(error);
   }
+
+  return { activity: newActivity, gamification: gamificationResults, gamificationError };
 };
 
 // Update an existing activity (e.g., change type)

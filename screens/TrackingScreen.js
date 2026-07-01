@@ -512,7 +512,8 @@ export default function TrackingScreen() {
 
       try {
         const result = await saveActivity(activity);
-        const { gamification, activity: savedActivity } = result;
+        const { gamification, activity: savedActivity, gamificationError } = result;
+        console.log('[saveTracking] Activity saved:', savedActivity.id, 'gamificationError:', gamificationError);
         
         // Auto-export GPX to external storage (Downloads or user-chosen folder)
         // This runs in background - don't await so it doesn't delay the UI
@@ -522,6 +523,11 @@ export default function TrackingScreen() {
         
         // Build success message with gamification info
         let message = `${activityType === 'walking' ? 'Walk' : 'Ride'}: ${formatDistance(finalDistance, distanceUnit)} in ${formatDuration(duration)}`;
+        
+        if (gamificationError) {
+          // Activity saved but gamification/challenge processing had an issue
+          message += `\n\n⚠ XP/challenge updates may need refreshing`;
+        }
         
         if (gamification) {
           message += `\n\n+${gamification.xpEarned} XP`;
@@ -541,12 +547,16 @@ export default function TrackingScreen() {
         }
         
         setSuccessModalContent({
-          title: gamification?.newLevel ? 'Level Up!' : (gamification?.newAchievements?.length > 0 ? 'Achievement Unlocked!' : 'Activity Saved'),
+          title: gamificationError
+            ? 'Activity Saved'
+            : (gamification?.newLevel ? 'Level Up!' : (gamification?.newAchievements?.length > 0 ? 'Achievement Unlocked!' : 'Activity Saved')),
           message: message,
           icon: 'check'
         });
         setShowSuccessModal(true);
       } catch (error) {
+        // Only reaches here if critical persistence (file/AsyncStorage) failed
+        console.error('[saveTracking] Activity save FAILED:', error);
         Alert.alert('Error', 'Failed to save activity');
       }
     }
