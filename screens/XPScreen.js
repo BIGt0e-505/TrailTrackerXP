@@ -27,6 +27,7 @@ import {
   getStatsCutoffDate,
   filterActivitiesByCutoff,
   getChallengeTemplates,
+  getOfferableChallenges,
   selectChallenge,
   getSelectedChallenge,
   abandonSelectedChallenge,
@@ -77,7 +78,7 @@ const TargetIcon = ({ size = 24, color = '#2196F3' }) => (
   </Svg>
 );
 
-const PROGRESS_SETTINGS_KEY = '@trail…ings';
+const PROGRESS_SETTINGS_KEY = '@trailâ€¦ings';
 
 export default function XPScreen() {
   const { theme, distanceUnit } = useTheme();
@@ -130,6 +131,9 @@ export default function XPScreen() {
 
     let gamificationData = await loadGamification();
 
+    // Load selected challenge early so we can filter challenge generation
+    const selChallenge = await getSelectedChallenge();
+
     if (activitiesData.length > 0) {
       gamificationData.stats.currentStreak = calculateStreak(activitiesData);
 
@@ -143,7 +147,7 @@ export default function XPScreen() {
         gamificationData.challenges.filter(c => !c.completed && !c.expired).length === 0;
 
       if (needsNewChallenges) {
-        const newChallenges = generateChallenges(gamificationData.stats);
+        const newChallenges = generateChallenges(gamificationData.stats, activitiesData, selChallenge, gamificationData.challenges);
         gamificationData.challenges = [
           ...gamificationData.challenges.filter(c => !c.expired && (c.completed || !c.rewarded)),
           ...newChallenges
@@ -162,8 +166,7 @@ export default function XPScreen() {
 
     setGamification(gamificationData);
 
-    // Load selected challenge and update its progress
-    const selChallenge = await getSelectedChallenge();
+    // Update selected challenge progress
     if (selChallenge) {
       const withProgress = getSelectedChallengeProgress(selChallenge, activitiesData, gamificationData.stats.currentStreak);
       setSelectedChallenge(withProgress);
@@ -172,7 +175,7 @@ export default function XPScreen() {
     }
   };
 
-  // ─── Level Card ────────────────────────────────────────────────
+  // â”€â”€â”€ Level Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderLevelCard = () => {
     if (!gamification) return null;
     const level = getLevelForXP(gamification.xp);
@@ -241,13 +244,13 @@ export default function XPScreen() {
     );
   };
 
-  // ─── Distance/Landmark Card ─────────────────────────────────────
+  // â”€â”€â”€ Distance/Landmark Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderDistanceCard = () => {
     const totalKm = getTotalDistance();
     const comparison = getDistanceComparison(totalKm);
     return (
       <View style={[styles.distanceCard, { backgroundColor: theme.cardBg }]}>
-        <Text style={[styles.distanceTitle, { color: theme.text }]}>🌍 Journey Progress</Text>
+        <Text style={[styles.distanceTitle, { color: theme.text }]}>ðŸŒ Journey Progress</Text>
         <View style={styles.distanceMain}>
           <Text style={[styles.distanceValue, { color: theme.primary }]}>{formatDistance(totalKm, distanceUnit)}</Text>
           <Text style={[styles.distanceSubtext, { color: theme.textSecondary }]}>total distance</Text>
@@ -259,7 +262,7 @@ export default function XPScreen() {
               <Text style={[styles.landmarkLabel, { color: theme.textSecondary }]}>You've travelled</Text>
               <Text style={[styles.landmarkName, { color: theme.text }]}>{comparison.passedLandmark.name}</Text>
             </View>
-            <Text style={[styles.landmarkCheck, { color: theme.primary }]}>✓</Text>
+            <Text style={[styles.landmarkCheck, { color: theme.primary }]}>âœ“</Text>
           </View>
         )}
         {comparison.nextLandmark && (
@@ -280,7 +283,7 @@ export default function XPScreen() {
     );
   };
 
-  // ─── Challenges Card (random/auto) ────────────────────────────
+  // â”€â”€â”€ Challenges Card (random/auto) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderChallengesCard = () => {
     if (!gamification?.challenges) return null;
     const activeChallenges = gamification.challenges.filter(c => !c.expired && !c.completed);
@@ -307,7 +310,7 @@ export default function XPScreen() {
         ))}
         {completedChallenges.slice(0, 2).map(challenge => (
           <View key={challenge.id} style={[styles.challenge, { backgroundColor: theme.primaryLight }]}>
-            <Text style={[styles.challengeDesc, { color: theme.primary }]}>✓ {challenge.description}</Text>
+            <Text style={[styles.challengeDesc, { color: theme.primary }]}>âœ“ {challenge.description}</Text>
           </View>
         ))}
         <TouchableOpacity style={[styles.viewAllButton, { backgroundColor: theme.surface }]} onPress={() => setActiveTab('challenges')}>
@@ -318,7 +321,7 @@ export default function XPScreen() {
     );
   };
 
-  // ─── Selected Challenge Card ──────────────────────────────────
+  // â”€â”€â”€ Selected Challenge Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderSelectedChallengeCard = () => {
     if (!selectedChallenge) {
       return (
@@ -351,7 +354,7 @@ export default function XPScreen() {
         </View>
         <View style={[styles.challenge, { backgroundColor: selectedChallenge.completed ? theme.primaryLight : theme.surface }]}>
           <Text style={[styles.challengeDesc, { color: selectedChallenge.completed ? theme.primary : theme.text }]}>
-            {selectedChallenge.completed ? '✓ ' : ''}{selectedChallenge.description}
+            {selectedChallenge.completed ? 'âœ“ ' : ''}{selectedChallenge.description}
           </Text>
           {!selectedChallenge.completed && (
             <>
@@ -382,9 +385,32 @@ export default function XPScreen() {
     );
   };
 
-  // ─── Challenge Picker Modal ───────────────────────────────────
+  // â”€â”€â”€ Challenge Picker Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderChallengePicker = () => {
-    const templates = getChallengeTemplates();
+    // Get offerable challenges, filtered to exclude in-flight and already-achieved
+    const autoChallenges = gamification?.challenges?.filter(c => !c.expired && !c.completed) || [];
+    const offerable = getOfferableChallenges(activities, selectedChallenge, autoChallenges, gamification?.stats?.currentStreak || 0);
+    
+    if (offerable.length === 0) {
+      return (
+        <Modal visible={showChallengePicker} transparent={true} animationType="slide" onRequestClose={() => setShowChallengePicker(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: theme.cardBg, padding: 24 }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>Choose a Challenge</Text>
+                <TouchableOpacity onPress={() => setShowChallengePicker(false)}>
+                  <MaterialCommunityIcons name="close" size={24} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <Text style={[{ color: theme.textSecondary, fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', padding: 20 }]}>
+                No challenges available right now. All active challenges are in progress or already completed!
+              </Text>
+            </View>
+          </View>
+        </Modal>
+      );
+    }
+    
     return (
       <Modal visible={showChallengePicker} transparent={true} animationType="slide" onRequestClose={() => setShowChallengePicker(false)}>
         <View style={styles.modalOverlay}>
@@ -396,50 +422,44 @@ export default function XPScreen() {
               </TouchableOpacity>
             </View>
             <Text style={[{ color: theme.textSecondary, fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 12 }]}>
-              Progress starts now — not retroactive. Complete it for bonus XP!
+              Progress starts now, not retroactive. Complete it for bonus XP!
             </Text>
             <ScrollView style={{ maxHeight: 400 }}>
-              {templates.map(template => {
-                const maxTarget = Math.max(...template.targets);
-                return template.targets.map(target => {
-                  const ratio = target / maxTarget;
-                  const bonusXp = ratio >= 0.8 ? 250 : ratio >= 0.5 ? 100 : 50;
-                  const description = template.description.replace('{target}', target);
-                  const isActive = selectedChallenge &&
-                    selectedChallenge.templateId === template.id &&
-                    selectedChallenge.target === target && !selectedChallenge.completed;
-                  return (
-                    <TouchableOpacity
-                      key={`${template.templateId}_${target}`}
-                      style={[styles.challenge, { backgroundColor: isActive ? theme.primaryLight : theme.surface, opacity: isActive ? 0.6 : 1 }]}
-                      disabled={isActive}
-                      onPress={async () => {
-                        if (selectedChallenge && !selectedChallenge.completed) {
-                          setShowChallengePicker(false);
-                          setShowAbandonConfirm(true);
-                          return;
-                        }
-                        await selectChallenge(template.templateId, target);
+              {offerable.map(challengeDef => {
+                const isActive = selectedChallenge &&
+                  selectedChallenge.templateId === challengeDef.templateId &&
+                  selectedChallenge.target === challengeDef.target && !selectedChallenge.completed;
+                return (
+                  <TouchableOpacity
+                    key={"${challengeDef.templateId}_"}
+                    style={[styles.challenge, { backgroundColor: isActive ? theme.primaryLight : theme.surface, opacity: isActive ? 0.6 : 1 }]}
+                    disabled={isActive}
+                    onPress={async () => {
+                      if (selectedChallenge && !selectedChallenge.completed) {
                         setShowChallengePicker(false);
-                        loadData();
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.challengeDesc, { color: theme.text }]}>{description}</Text>
-                          <Text style={[{ color: theme.textSecondary, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 }]}>
-                            +{bonusXp} XP bonus
-                          </Text>
-                        </View>
-                        {isActive ? (
-                          <MaterialCommunityIcons name="check" size={20} color={theme.primary} />
-                        ) : (
-                          <MaterialCommunityIcons name="chevron-right" size={20} color={theme.textSecondary} />
-                        )}
+                        setShowAbandonConfirm(true);
+                        return;
+                      }
+                      await selectChallenge(challengeDef.templateId, challengeDef.target);
+                      setShowChallengePicker(false);
+                      loadData();
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.challengeDesc, { color: theme.text }]}>{challengeDef.description}</Text>
+                        <Text style={[{ color: theme.textSecondary, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 }]}>
+                          +{challengeDef.bonusXp} XP bonus
+                        </Text>
                       </View>
-                    </TouchableOpacity>
-                  );
-                });
+                      {isActive ? (
+                        <MaterialCommunityIcons name="check" size={20} color={theme.primary} />
+                      ) : (
+                        <MaterialCommunityIcons name="chevron-right" size={20} color={theme.textSecondary} />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
               })}
             </ScrollView>
           </View>
@@ -447,9 +467,7 @@ export default function XPScreen() {
       </Modal>
     );
   };
-
-  // ─── Abandon Confirm Modal ────────────────────────────────────
-  const renderAbandonConfirm = () => {
+const renderAbandonConfirm = () => {
     return (
       <Modal visible={showAbandonConfirm} transparent={true} animationType="fade" onRequestClose={() => setShowAbandonConfirm(false)}>
         <View style={styles.modalOverlay}>
@@ -478,7 +496,7 @@ export default function XPScreen() {
     );
   };
 
-  // ─── Full Challenges View ─────────────────────────────────────
+  // â”€â”€â”€ Full Challenges View â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderChallengesView = () => {
     if (!gamification?.challenges) return null;
     const inProgressChallenges = gamification.challenges.filter(c => !c.expired && !c.completed && (c.progress || 0) > 0);
@@ -489,14 +507,14 @@ export default function XPScreen() {
       <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.achievementsViewHeader}>
           <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.surface }]} onPress={() => setActiveTab('overview')}>
-            <Text style={[styles.backButtonText, { color: theme.primary }]}>← Back</Text>
+            <Text style={[styles.backButtonText, { color: theme.primary }]}>â† Back</Text>
           </TouchableOpacity>
           <Text style={[styles.achievementsViewTitle, { color: theme.text }]}>Challenges</Text>
           <View style={styles.backButton} />
         </View>
         {inProgressChallenges.length > 0 && (
           <View style={styles.achievementCategory}>
-            <Text style={[styles.categoryTitle, { color: theme.text }]}>🎯 In Progress</Text>
+            <Text style={[styles.categoryTitle, { color: theme.text }]}>ðŸŽ¯ In Progress</Text>
             {inProgressChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.surface }]}>
@@ -517,11 +535,11 @@ export default function XPScreen() {
         )}
         {completedChallenges.length > 0 && (
           <View style={styles.achievementCategory}>
-            <Text style={[styles.categoryTitle, { color: theme.text }]}>✅ Completed</Text>
+            <Text style={[styles.categoryTitle, { color: theme.text }]}>âœ… Completed</Text>
             {completedChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg, borderLeftColor: theme.primary, borderLeftWidth: 4 }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.primaryLight }]}>
-                  <Text style={styles.challengeCheckEmoji}>✓</Text>
+                  <Text style={styles.challengeCheckEmoji}>âœ“</Text>
                 </View>
                 <View style={styles.challengeRowInfo}>
                   <Text style={[styles.challengeRowDesc, { color: theme.primary }]}>{challenge.description}</Text>
@@ -533,7 +551,7 @@ export default function XPScreen() {
         )}
         {availableChallenges.length > 0 && (
           <View style={styles.achievementCategory}>
-            <Text style={[styles.categoryTitle, { color: theme.text }]}>📋 Available</Text>
+            <Text style={[styles.categoryTitle, { color: theme.text }]}>ðŸ“‹ Available</Text>
             {availableChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.surface }]}>
@@ -554,11 +572,11 @@ export default function XPScreen() {
         )}
         {expiredChallenges.length > 0 && (
           <View style={styles.achievementCategory}>
-            <Text style={[styles.categoryTitle, { color: theme.text }]}>⏰ Expired</Text>
+            <Text style={[styles.categoryTitle, { color: theme.text }]}>â° Expired</Text>
             {expiredChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg, opacity: 0.6 }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.surface }]}>
-                  <Text style={styles.challengeCheckEmoji}>⏰</Text>
+                  <Text style={styles.challengeCheckEmoji}>â°</Text>
                 </View>
                 <View style={styles.challengeRowInfo}>
                   <Text style={[styles.challengeRowDesc, { color: theme.textSecondary }]}>{challenge.description}</Text>
@@ -575,7 +593,7 @@ export default function XPScreen() {
     );
   };
 
-  // ─── Achievements Card ────────────────────────────────────────
+  // â”€â”€â”€ Achievements Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderAchievementsCard = () => {
     if (!gamification) return null;
     const achievementList = Object.values(ACHIEVEMENTS);
@@ -598,7 +616,7 @@ export default function XPScreen() {
                 onPress={() => { setSelectedAchievement(achievement); setShowAchievementModal(true); }}
               >
                 {renderAchievementIcon(achievement.icon, 48, isUnlocked)}
-                {!isUnlocked && <View style={styles.achievementLockOverlay}><Text style={styles.lockIcon}>🔒</Text></View>}
+                {!isUnlocked && <View style={styles.achievementLockOverlay}><Text style={styles.lockIcon}>ðŸ”’</Text></View>}
               </TouchableOpacity>
             );
           })}
@@ -611,15 +629,15 @@ export default function XPScreen() {
     );
   };
 
-  // ─── Full Achievements View ───────────────────────────────────
+  // â”€â”€â”€ Full Achievements View â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderAchievementsView = () => {
     if (!gamification) return null;
-    const categories = { general: '🌟 General', streak: '🔥 Streaks', walking: '🚶 Walking', biking: '🚵 Mountain Biking' };
+    const categories = { general: 'ðŸŒŸ General', streak: 'ðŸ”¥ Streaks', walking: 'ðŸš¶ Walking', biking: 'ðŸšµ Mountain Biking' };
     return (
       <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.achievementsViewHeader}>
           <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.surface }]} onPress={() => setActiveTab('overview')}>
-            <Text style={[styles.backButtonText, { color: theme.primary }]}>← Back</Text>
+            <Text style={[styles.backButtonText, { color: theme.primary }]}>â† Back</Text>
           </TouchableOpacity>
           <Text style={[styles.achievementsViewTitle, { color: theme.text }]}>Achievements</Text>
           <View style={styles.backButton} />
@@ -645,7 +663,7 @@ export default function XPScreen() {
                       <Text style={[styles.achievementRowName, { color: isUnlocked ? theme.text : theme.textSecondary }]}>{achievement.name}</Text>
                       <Text style={[styles.achievementRowDesc, { color: theme.textSecondary }]}>{achievement.description}</Text>
                     </View>
-                    {isUnlocked ? <Text style={[styles.achievementCheck, { color: theme.primary }]}>✓</Text> : <Text style={styles.achievementLockSmall}>🔒</Text>}
+                    {isUnlocked ? <Text style={[styles.achievementCheck, { color: theme.primary }]}>âœ“</Text> : <Text style={styles.achievementLockSmall}>ðŸ”’</Text>}
                   </TouchableOpacity>
                 );
               })}
@@ -657,7 +675,7 @@ export default function XPScreen() {
     );
   };
 
-  // ─── Achievement Modal ────────────────────────────────────────
+  // â”€â”€â”€ Achievement Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderAchievementModal = () => (
     <Modal visible={showAchievementModal} transparent animationType="fade" onRequestClose={() => setShowAchievementModal(false)}>
       <View style={styles.modalOverlay}>
@@ -671,7 +689,7 @@ export default function XPScreen() {
               <Text style={[styles.achievementModalDesc, { color: theme.textSecondary }]}>{selectedAchievement.description}</Text>
               <View style={[styles.achievementModalBadge, { backgroundColor: theme.primary }]}>
                 <Text style={[styles.achievementModalBadgeText, { color: '#fff' }]}>
-                  {gamification.unlockedAchievements.includes(selectedAchievement.id) ? '✓ Unlocked' : '🔒 Locked'}
+                  {gamification.unlockedAchievements.includes(selectedAchievement.id) ? 'âœ“ Unlocked' : 'ðŸ”’ Locked'}
                 </Text>
               </View>
               <TouchableOpacity style={[styles.achievementModalClose, { backgroundColor: theme.surface }]} onPress={() => setShowAchievementModal(false)}>
@@ -684,7 +702,7 @@ export default function XPScreen() {
     </Modal>
   );
 
-  // ─── Main Render ───────────────────────────────────────────────
+  // â”€â”€â”€ Main Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (activeTab === 'achievements') return renderAchievementsView();
   if (activeTab === 'challenges') return renderChallengesView();
 

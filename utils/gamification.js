@@ -52,7 +52,7 @@ export const ACHIEVEMENTS = {
     id: 'first_activity',
     name: 'Getting Started',
     description: 'Complete your first activity',
-    icon: '🌟',
+    icon: 'ðŸŒŸ',
     category: 'general',
     check: (stats) => stats.totalActivities >= 1,
   },
@@ -60,7 +60,7 @@ export const ACHIEVEMENTS = {
     id: 'ten_activities',
     name: 'Regular',
     description: 'Complete 10 activities',
-    icon: '🔟',
+    icon: 'ðŸ”Ÿ',
     category: 'general',
     check: (stats) => stats.totalActivities >= 10,
   },
@@ -68,7 +68,7 @@ export const ACHIEVEMENTS = {
     id: 'twentyfive_activities',
     name: 'Committed',
     description: 'Complete 25 activities',
-    icon: '✨',
+    icon: 'âœ¨',
     category: 'general',
     check: (stats) => stats.totalActivities >= 25,
   },
@@ -76,7 +76,7 @@ export const ACHIEVEMENTS = {
     id: 'fifty_activities',
     name: 'Dedicated',
     description: 'Complete 50 activities',
-    icon: '⭐',
+    icon: 'â­',
     category: 'general',
     check: (stats) => stats.totalActivities >= 50,
   },
@@ -84,7 +84,7 @@ export const ACHIEVEMENTS = {
     id: 'hundred_activities',
     name: 'Centurion',
     description: 'Complete 100 activities',
-    icon: '💫',
+    icon: 'ðŸ’«',
     category: 'general',
     check: (stats) => stats.totalActivities >= 100,
   },
@@ -92,7 +92,7 @@ export const ACHIEVEMENTS = {
     id: 'both_types',
     name: 'All-Rounder',
     description: 'Complete both a walk and a bike ride',
-    icon: '🎭',
+    icon: 'ðŸŽ­',
     category: 'general',
     check: (stats) => stats.walkingActivities >= 1 && stats.bikingActivities >= 1,
   },
@@ -100,7 +100,7 @@ export const ACHIEVEMENTS = {
     id: 'early_bird',
     name: 'Early Bird',
     description: 'Start an activity before 7am',
-    icon: '🌅',
+    icon: 'ðŸŒ…',
     category: 'general',
     check: (stats, activity) => {
       if (!activity) return false;
@@ -112,7 +112,7 @@ export const ACHIEVEMENTS = {
     id: 'night_owl',
     name: 'Night Owl',
     description: 'Start an activity after 9pm',
-    icon: '🦉',
+    icon: 'ðŸ¦‰',
     category: 'general',
     check: (stats, activity) => {
       if (!activity) return false;
@@ -124,7 +124,7 @@ export const ACHIEVEMENTS = {
     id: 'hour_long',
     name: 'Hour Power',
     description: 'Complete an activity lasting over 1 hour',
-    icon: '⏱️',
+    icon: 'â±ï¸',
     category: 'general',
     check: (stats, activity) => activity && activity.duration >= 3600,
   },
@@ -132,7 +132,7 @@ export const ACHIEVEMENTS = {
     id: 'two_hour',
     name: 'Endurance',
     description: 'Complete an activity lasting over 2 hours',
-    icon: '⏳',
+    icon: 'â³',
     category: 'general',
     check: (stats, activity) => activity && activity.duration >= 7200,
   },
@@ -140,7 +140,7 @@ export const ACHIEVEMENTS = {
     id: 'weekend_warrior',
     name: 'Weekend Warrior',
     description: 'Complete activities on both Saturday and Sunday',
-    icon: '🎉',
+    icon: 'ðŸŽ‰',
     category: 'general',
     check: (stats) => stats.hasWeekendPair,
   },
@@ -150,7 +150,7 @@ export const ACHIEVEMENTS = {
     id: 'three_day_streak',
     name: 'Hat Trick',
     description: 'Activity 3 days in a row',
-    icon: '🔥',
+    icon: 'ðŸ”¥',
     category: 'streak',
     check: (stats) => stats.currentStreak >= 3,
   },
@@ -158,7 +158,7 @@ export const ACHIEVEMENTS = {
     id: 'seven_day_streak',
     name: 'Week Warrior',
     description: 'Activity 7 days in a row',
-    icon: '🔥🔥',
+    icon: 'ðŸ”¥ðŸ”¥',
     category: 'streak',
     check: (stats) => stats.currentStreak >= 7,
   },
@@ -166,7 +166,7 @@ export const ACHIEVEMENTS = {
     id: 'fourteen_day_streak',
     name: 'Fortnight Force',
     description: 'Activity 14 days in a row',
-    icon: '💪',
+    icon: 'ðŸ’ª',
     category: 'streak',
     check: (stats) => stats.currentStreak >= 14,
   },
@@ -174,7 +174,7 @@ export const ACHIEVEMENTS = {
     id: 'thirty_day_streak',
     name: 'Unstoppable',
     description: 'Activity 30 days in a row',
-    icon: '🔥🔥🔥',
+    icon: 'ðŸ”¥ðŸ”¥ðŸ”¥',
     category: 'streak',
     check: (stats) => stats.currentStreak >= 30,
   },
@@ -185,7 +185,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_first_km',
     name: 'First Steps',
     description: 'Walk your first kilometre',
-    icon: '👟',
+    icon: 'ðŸ‘Ÿ',
     category: 'walking',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 1,
   },
@@ -193,7 +193,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_3km',
     name: 'Morning Stroll',
     description: 'Walk 3km in one activity',
-    icon: '🚶',
+    icon: 'ðŸš¶',
     category: 'walking',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 3,
   },
@@ -201,7 +201,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_5km',
     name: 'Park Runner',
     description: 'Walk 5km in one activity',
-    icon: '🏃',
+    icon: 'ðŸƒ',
     category: 'walking',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 5,
   },
@@ -209,7 +209,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_10km',
     name: 'Rambler',
     description: 'Walk 10km in one activity',
-    icon: '🥾',
+    icon: 'ðŸ¥¾',
     category: 'walking',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 10,
   },
@@ -217,7 +217,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_half_marathon',
     name: 'Half Marathon Walker',
     description: 'Walk 21km in one activity',
-    icon: '🏅',
+    icon: 'ðŸ…',
     category: 'walking',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 21,
   },
@@ -225,7 +225,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_marathon',
     name: 'Marathon Walker',
     description: 'Walk 42km in one activity',
-    icon: '🏆',
+    icon: 'ðŸ†',
     category: 'walking',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 42,
   },
@@ -235,7 +235,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_total_10km',
     name: 'Walking Novice',
     description: 'Walk 10km total',
-    icon: '👣',
+    icon: 'ðŸ‘£',
     category: 'walking',
     check: (stats) => stats.walkingDistance >= 10,
   },
@@ -243,7 +243,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_total_50km',
     name: 'Trail Finder',
     description: 'Walk 50km total',
-    icon: '🗺️',
+    icon: 'ðŸ—ºï¸',
     category: 'walking',
     check: (stats) => stats.walkingDistance >= 50,
   },
@@ -251,7 +251,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_total_100km',
     name: 'Walking Century',
     description: 'Walk 100km total',
-    icon: '💯',
+    icon: 'ðŸ’¯',
     category: 'walking',
     check: (stats) => stats.walkingDistance >= 100,
   },
@@ -259,7 +259,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_total_250km',
     name: 'Path Pioneer',
     description: 'Walk 250km total',
-    icon: '🧭',
+    icon: 'ðŸ§­',
     category: 'walking',
     check: (stats) => stats.walkingDistance >= 250,
   },
@@ -267,7 +267,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_total_500km',
     name: 'Walking Legend',
     description: 'Walk 500km total',
-    icon: '🌟',
+    icon: 'ðŸŒŸ',
     category: 'walking',
     check: (stats) => stats.walkingDistance >= 500,
   },
@@ -275,7 +275,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_total_1000km',
     name: 'Thousand Mile Walker',
     description: 'Walk 1000km total',
-    icon: '👑',
+    icon: 'ðŸ‘‘',
     category: 'walking',
     check: (stats) => stats.walkingDistance >= 1000,
   },
@@ -283,9 +283,9 @@ export const ACHIEVEMENTS = {
   // MAJOR ACHIEVEMENT - Rolling 365-day distance
   walk_1000_miles_365_days: {
     id: 'walk_1000_miles_365_days',
-    name: '🏆 1000 Mile Year',
+    name: 'ðŸ† 1000 Mile Year',
     description: 'Walk 1000 miles (1609km) within a 365-day period',
-    icon: '🏆',
+    icon: 'ðŸ†',
     category: 'walking',
     isMajor: true,
     // 1000 miles = 1609.34 km
@@ -297,7 +297,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_climb_50m',
     name: 'Hill Walker',
     description: 'Climb 50m elevation on a walk',
-    icon: '⛰️',
+    icon: 'â›°ï¸',
     category: 'walking',
     check: (stats, activity) => activity && activity.type === 'walking' && (activity.elevationGain || 0) >= 50,
   },
@@ -305,7 +305,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_climb_100m',
     name: 'Peak Seeker',
     description: 'Climb 100m elevation on a walk',
-    icon: '🏔️',
+    icon: 'ðŸ”ï¸',
     category: 'walking',
     check: (stats, activity) => activity && activity.type === 'walking' && (activity.elevationGain || 0) >= 100,
   },
@@ -313,7 +313,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_climb_250m',
     name: 'Mountain Hiker',
     description: 'Climb 250m elevation on a walk',
-    icon: '🗻',
+    icon: 'ðŸ—»',
     category: 'walking',
     check: (stats, activity) => activity && activity.type === 'walking' && (activity.elevationGain || 0) >= 250,
   },
@@ -321,7 +321,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_total_elevation_500m',
     name: 'Upward Bound',
     description: 'Gain 500m total elevation walking',
-    icon: '📈',
+    icon: 'ðŸ“ˆ',
     category: 'walking',
     check: (stats) => stats.walkingElevation >= 500,
   },
@@ -329,7 +329,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_total_elevation_2000m',
     name: 'Summit Collector',
     description: 'Gain 2000m total elevation walking',
-    icon: '🏔️',
+    icon: 'ðŸ”ï¸',
     category: 'walking',
     check: (stats) => stats.walkingElevation >= 2000,
   },
@@ -339,7 +339,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_5_activities',
     name: 'Regular Walker',
     description: 'Complete 5 walks',
-    icon: '🚶‍♂️',
+    icon: 'ðŸš¶â€â™‚ï¸',
     category: 'walking',
     check: (stats) => stats.walkingActivities >= 5,
   },
@@ -347,7 +347,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_20_activities',
     name: 'Walking Habit',
     description: 'Complete 20 walks',
-    icon: '🚶‍♀️',
+    icon: 'ðŸš¶â€â™€ï¸',
     category: 'walking',
     check: (stats) => stats.walkingActivities >= 20,
   },
@@ -355,7 +355,7 @@ export const ACHIEVEMENTS = {
     id: 'walk_50_activities',
     name: 'Walking Enthusiast',
     description: 'Complete 50 walks',
-    icon: '🥇',
+    icon: 'ðŸ¥‡',
     category: 'walking',
     check: (stats) => stats.walkingActivities >= 50,
   },
@@ -366,7 +366,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_first_km',
     name: 'First Pedal',
     description: 'Ride your first kilometre',
-    icon: '🚲',
+    icon: 'ðŸš²',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 1,
   },
@@ -374,7 +374,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_3km',
     name: 'Trail Taster',
     description: 'Ride 3km in one activity',
-    icon: '🌲',
+    icon: 'ðŸŒ²',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 3,
   },
@@ -382,7 +382,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_5km',
     name: 'Trail Rider',
     description: 'Ride 5km in one activity',
-    icon: '🚵',
+    icon: 'ðŸšµ',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 5,
   },
@@ -390,7 +390,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_10km',
     name: 'Trail Blazer',
     description: 'Ride 10km in one activity',
-    icon: '🔥',
+    icon: 'ðŸ”¥',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 10,
   },
@@ -398,7 +398,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_20km',
     name: 'Enduro Rider',
     description: 'Ride 20km in one activity',
-    icon: '💪',
+    icon: 'ðŸ’ª',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 20,
   },
@@ -406,7 +406,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_30km',
     name: 'Epic Ride',
     description: 'Ride 30km in one activity',
-    icon: '🏆',
+    icon: 'ðŸ†',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 30,
   },
@@ -416,7 +416,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_10km',
     name: 'Bike Beginner',
     description: 'Ride 10km total',
-    icon: '🎯',
+    icon: 'ðŸŽ¯',
     category: 'biking',
     check: (stats) => stats.bikingDistance >= 10,
   },
@@ -424,7 +424,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_50km',
     name: 'Trail Explorer',
     description: 'Ride 50km total',
-    icon: '🗺️',
+    icon: 'ðŸ—ºï¸',
     category: 'biking',
     check: (stats) => stats.bikingDistance >= 50,
   },
@@ -432,7 +432,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_100km',
     name: 'MTB Century',
     description: 'Ride 100km total',
-    icon: '💯',
+    icon: 'ðŸ’¯',
     category: 'biking',
     check: (stats) => stats.bikingDistance >= 100,
   },
@@ -440,7 +440,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_250km',
     name: 'Trail Master',
     description: 'Ride 250km total',
-    icon: '🧭',
+    icon: 'ðŸ§­',
     category: 'biking',
     check: (stats) => stats.bikingDistance >= 250,
   },
@@ -448,7 +448,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_500km',
     name: 'MTB Legend',
     description: 'Ride 500km total',
-    icon: '🌟',
+    icon: 'ðŸŒŸ',
     category: 'biking',
     check: (stats) => stats.bikingDistance >= 500,
   },
@@ -456,7 +456,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_1000km',
     name: 'Thousand Mile Rider',
     description: 'Ride 1000km total',
-    icon: '👑',
+    icon: 'ðŸ‘‘',
     category: 'biking',
     check: (stats) => stats.bikingDistance >= 1000,
   },
@@ -466,7 +466,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_climb_25m',
     name: 'Hill Finder',
     description: 'Climb 25m elevation on a ride',
-    icon: '📈',
+    icon: 'ðŸ“ˆ',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 25,
   },
@@ -474,7 +474,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_climb_50m',
     name: 'Climb Time',
     description: 'Climb 50m elevation on a ride',
-    icon: '⬆️',
+    icon: 'â¬†ï¸',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 50,
   },
@@ -482,7 +482,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_climb_100m',
     name: 'Hill Crusher',
     description: 'Climb 100m elevation on a ride',
-    icon: '⛰️',
+    icon: 'â›°ï¸',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 100,
   },
@@ -490,7 +490,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_climb_200m',
     name: 'Mountain Biker',
     description: 'Climb 200m elevation on a ride',
-    icon: '🏔️',
+    icon: 'ðŸ”ï¸',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 200,
   },
@@ -498,7 +498,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_climb_500m',
     name: 'Alpine Assault',
     description: 'Climb 500m elevation on a ride',
-    icon: '🗻',
+    icon: 'ðŸ—»',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 500,
   },
@@ -508,7 +508,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_drop_5m',
     name: 'First Drop',
     description: 'Descend 5m elevation loss on a ride',
-    icon: '⬇️',
+    icon: 'â¬‡ï¸',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 5,
   },
@@ -516,7 +516,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_drop_10m',
     name: 'Bombhole Hunter',
     description: 'Descend 10m elevation loss on a ride',
-    icon: '💣',
+    icon: 'ðŸ’£',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 10,
   },
@@ -524,7 +524,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_drop_25m',
     name: 'Gravity Rider',
     description: 'Descend 25m elevation loss on a ride',
-    icon: '🎢',
+    icon: 'ðŸŽ¢',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 25,
   },
@@ -532,7 +532,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_drop_50m',
     name: 'Downhill Demon',
     description: 'Descend 50m elevation loss on a ride',
-    icon: '👹',
+    icon: 'ðŸ‘¹',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 50,
   },
@@ -540,7 +540,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_drop_100m',
     name: 'Descent King',
     description: 'Descend 100m elevation loss on a ride',
-    icon: '👑',
+    icon: 'ðŸ‘‘',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 100,
   },
@@ -548,7 +548,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_drop_200m',
     name: 'Freefall Master',
     description: 'Descend 200m elevation loss on a ride',
-    icon: '🦅',
+    icon: 'ðŸ¦…',
     category: 'biking',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 200,
   },
@@ -558,7 +558,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_climb_250m',
     name: 'Climbing Legs',
     description: 'Gain 250m total elevation biking',
-    icon: '🦵',
+    icon: 'ðŸ¦µ',
     category: 'biking',
     check: (stats) => stats.bikingElevation >= 250,
   },
@@ -566,7 +566,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_climb_1000m',
     name: 'Elevation Hunter',
     description: 'Gain 1000m total elevation biking',
-    icon: '🎿',
+    icon: 'ðŸŽ¿',
     category: 'biking',
     check: (stats) => stats.bikingElevation >= 1000,
   },
@@ -574,7 +574,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_climb_5000m',
     name: 'Everest Equivalent',
     description: 'Gain 5000m total elevation biking',
-    icon: '🏔️',
+    icon: 'ðŸ”ï¸',
     category: 'biking',
     check: (stats) => stats.bikingElevation >= 5000,
   },
@@ -584,7 +584,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_descent_250m',
     name: 'Descent Lover',
     description: 'Descend 250m total on bike',
-    icon: '📉',
+    icon: 'ðŸ“‰',
     category: 'biking',
     check: (stats) => stats.bikingDescent >= 250,
   },
@@ -592,7 +592,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_descent_1000m',
     name: 'Drop Zone',
     description: 'Descend 1000m total on bike',
-    icon: '🎯',
+    icon: 'ðŸŽ¯',
     category: 'biking',
     check: (stats) => stats.bikingDescent >= 1000,
   },
@@ -600,7 +600,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_descent_5000m',
     name: 'Gravity Addict',
     description: 'Descend 5000m total on bike',
-    icon: '🌋',
+    icon: 'ðŸŒ‹',
     category: 'biking',
     check: (stats) => stats.bikingDescent >= 5000,
   },
@@ -610,7 +610,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_5_activities',
     name: 'Regular Rider',
     description: 'Complete 5 rides',
-    icon: '🚴',
+    icon: 'ðŸš´',
     category: 'biking',
     check: (stats) => stats.bikingActivities >= 5,
   },
@@ -618,7 +618,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_20_activities',
     name: 'Riding Habit',
     description: 'Complete 20 rides',
-    icon: '🚴‍♂️',
+    icon: 'ðŸš´â€â™‚ï¸',
     category: 'biking',
     check: (stats) => stats.bikingActivities >= 20,
   },
@@ -626,7 +626,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_50_activities',
     name: 'MTB Enthusiast',
     description: 'Complete 50 rides',
-    icon: '🥇',
+    icon: 'ðŸ¥‡',
     category: 'biking',
     check: (stats) => stats.bikingActivities >= 50,
   },
@@ -634,7 +634,7 @@ export const ACHIEVEMENTS = {
     id: 'mtb_100_activities',
     name: 'Trail Veteran',
     description: 'Complete 100 rides',
-    icon: '🏅',
+    icon: 'ðŸ…',
     category: 'biking',
     check: (stats) => stats.bikingActivities >= 100,
   },
@@ -642,34 +642,34 @@ export const ACHIEVEMENTS = {
 
 // Level definitions
 export const LEVELS = [
-  { level: 1, name: 'Trail Beginner', xpRequired: 0, icon: '🌱' },
-  { level: 2, name: 'Trail Walker', xpRequired: 100, icon: '🚶' },
-  { level: 3, name: 'Trail Trekker', xpRequired: 250, icon: '🥾' },
-  { level: 4, name: 'Trail Runner', xpRequired: 500, icon: '🏃' },
-  { level: 5, name: 'Trail Blazer', xpRequired: 1000, icon: '🔥' },
-  { level: 6, name: 'Trail Master', xpRequired: 2000, icon: '⭐' },
-  { level: 7, name: 'Trail Champion', xpRequired: 3500, icon: '🏆' },
-  { level: 8, name: 'Trail Legend', xpRequired: 5000, icon: '👑' },
-  { level: 9, name: 'Trail Hero', xpRequired: 7500, icon: '🦸' },
-  { level: 10, name: 'Trail God', xpRequired: 10000, icon: '⚡' },
+  { level: 1, name: 'Trail Beginner', xpRequired: 0, icon: 'ðŸŒ±' },
+  { level: 2, name: 'Trail Walker', xpRequired: 100, icon: 'ðŸš¶' },
+  { level: 3, name: 'Trail Trekker', xpRequired: 250, icon: 'ðŸ¥¾' },
+  { level: 4, name: 'Trail Runner', xpRequired: 500, icon: 'ðŸƒ' },
+  { level: 5, name: 'Trail Blazer', xpRequired: 1000, icon: 'ðŸ”¥' },
+  { level: 6, name: 'Trail Master', xpRequired: 2000, icon: 'â­' },
+  { level: 7, name: 'Trail Champion', xpRequired: 3500, icon: 'ðŸ†' },
+  { level: 8, name: 'Trail Legend', xpRequired: 5000, icon: 'ðŸ‘‘' },
+  { level: 9, name: 'Trail Hero', xpRequired: 7500, icon: 'ðŸ¦¸' },
+  { level: 10, name: 'Trail God', xpRequired: 10000, icon: 'âš¡' },
 ];
 
 // Distance landmarks for fun comparisons (in km)
 export const LANDMARKS = [
-  { distance: 1, name: 'a football pitch', icon: '⚽' },
-  { distance: 5, name: 'the height of 5 Eiffel Towers', icon: '🗼' },
-  { distance: 10, name: 'across Central Park', icon: '🌳' },
-  { distance: 21.1, name: 'a half marathon', icon: '🏃' },
-  { distance: 42.2, name: 'a full marathon', icon: '🏅' },
-  { distance: 50, name: 'the English Channel width', icon: '🌊' },
-  { distance: 100, name: 'the length of 1000 football pitches', icon: '💯' },
-  { distance: 160, name: 'the Great Wall section', icon: '🧱' },
-  { distance: 344, name: 'London to Paris', icon: '🇫🇷' },
-  { distance: 500, name: 'the length of Ireland', icon: '☘️' },
-  { distance: 774, name: 'Land\'s End to John o\' Groats', icon: '🇬🇧' },
-  { distance: 1000, name: 'across France', icon: '🥖' },
-  { distance: 2000, name: 'the length of Japan', icon: '🗾' },
-  { distance: 5000, name: 'across the USA', icon: '🇺🇸' },
+  { distance: 1, name: 'a football pitch', icon: 'âš½' },
+  { distance: 5, name: 'the height of 5 Eiffel Towers', icon: 'ðŸ—¼' },
+  { distance: 10, name: 'across Central Park', icon: 'ðŸŒ³' },
+  { distance: 21.1, name: 'a half marathon', icon: 'ðŸƒ' },
+  { distance: 42.2, name: 'a full marathon', icon: 'ðŸ…' },
+  { distance: 50, name: 'the English Channel width', icon: 'ðŸŒŠ' },
+  { distance: 100, name: 'the length of 1000 football pitches', icon: 'ðŸ’¯' },
+  { distance: 160, name: 'the Great Wall section', icon: 'ðŸ§±' },
+  { distance: 344, name: 'London to Paris', icon: 'ðŸ‡«ðŸ‡·' },
+  { distance: 500, name: 'the length of Ireland', icon: 'â˜˜ï¸' },
+  { distance: 774, name: 'Land\'s End to John o\' Groats', icon: 'ðŸ‡¬ðŸ‡§' },
+  { distance: 1000, name: 'across France', icon: 'ðŸ¥–' },
+  { distance: 2000, name: 'the length of Japan', icon: 'ðŸ—¾' },
+  { distance: 5000, name: 'across the USA', icon: 'ðŸ‡ºðŸ‡¸' },
 ];
 
 // Challenge templates
@@ -967,7 +967,7 @@ export const updateChallengeProgress = (challenges, activities, currentStreak) =
   });
 };
 
-// ─── Selectable Challenges ──────────────────────────────────────
+// â”€â”€â”€ Selectable Challenges â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Bonus XP by difficulty (target magnitude)
 const getBonusXpForChallenge = (template, target) => {
@@ -990,7 +990,7 @@ export const getChallengeTemplates = () => {
   }));
 };
 
-// Select a challenge — sets baseline and selectedAt
+// Select a challenge â€” sets baseline and selectedAt
 export const selectChallenge = async (templateId, target) => {
   const template = CHALLENGE_TEMPLATES.find(t => t.id === templateId);
   if (!template) throw new Error('Unknown challenge template: ' + templateId);
@@ -1079,6 +1079,107 @@ export const getSelectedChallengeProgress = (selectedChallenge, activities, curr
     progress,
     completed,
   };
+};
+
+// â”€â”€â”€ Challenge Offer Filtering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Rules:
+//   A: Do not offer duplicates of in-flight challenges (selected or auto)
+//   B: Do not offer challenges already achieved under their own rule window
+
+// Check if a challenge variant (templateId + target) is currently in flight
+export const isChallengeInFlight = (templateId, target, selectedChallenge, autoChallenges) => {
+  // Check selected challenge
+  if (selectedChallenge && !selectedChallenge.completed &&
+      selectedChallenge.templateId === templateId &&
+      selectedChallenge.target === target) {
+    return true;
+  }
+  // Check auto/random challenges that are active (not completed, not expired)
+  if (autoChallenges) {
+    for (const c of autoChallenges) {
+      if (!c.expired && !c.completed && c.templateId === templateId && c.target === target) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+// Calculate current progress for a challenge template under its own rule window
+// (used for offer filtering only â€” NOT for selected challenge progress)
+export const getChallengeOfferProgress = (template, target, activities, currentStreak) => {
+  const now = new Date();
+  const periodStart = template.period === 'daily'
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+  
+  const periodActivities = activities.filter(a =>
+    new Date(a.date || a.timestamp || 0) >= periodStart
+  );
+  
+  let progress = 0;
+  switch (template.type) {
+    case 'distance':
+      progress = periodActivities.reduce((sum, a) => sum + (a.distance || 0), 0);
+      break;
+    case 'count':
+      progress = periodActivities.length;
+      break;
+    case 'streak':
+      progress = currentStreak || 0;
+      break;
+    case 'single_distance':
+      progress = periodActivities.length > 0
+        ? Math.max(...periodActivities.map(a => a.distance || 0))
+        : 0;
+      break;
+    case 'duration':
+      progress = periodActivities.length > 0
+        ? Math.max(...periodActivities.map(a => (a.duration || 0) / 60))
+        : 0;
+      break;
+  }
+  return progress;
+};
+
+// Check if a challenge is already achieved under its own rule window
+export const isChallengeAlreadyAchievedForOffer = (template, target, activities, currentStreak) => {
+  const progress = getChallengeOfferProgress(template, target, activities, currentStreak);
+  return progress >= target;
+};
+
+// Get all offerable challenge variants, filtered by:
+//   - Not in flight (not duplicate of active selected or auto challenges)
+//   - Not already achieved under their own rule window
+// Returns array of { templateId, type, period, target, unit, description, bonusXp }
+export const getOfferableChallenges = (activities, selectedChallenge, autoChallenges, currentStreak) => {
+  const offerable = [];
+  
+  for (const template of CHALLENGE_TEMPLATES) {
+    for (const target of template.targets) {
+      // Rule A: skip if in flight
+      if (isChallengeInFlight(template.id, target, selectedChallenge, autoChallenges)) continue;
+      
+      // Rule B: skip if already achieved
+      if (isChallengeAlreadyAchievedForOffer(template, target, activities, currentStreak)) continue;
+      
+      const maxTarget = Math.max(...template.targets);
+      const ratio = target / maxTarget;
+      const bonusXp = ratio >= 0.8 ? 250 : ratio >= 0.5 ? 100 : 50;
+      
+      offerable.push({
+        templateId: template.id,
+        type: template.type,
+        period: template.period,
+        target,
+        unit: template.unit,
+        description: template.description.replace('{target}', target),
+        bonusXp,
+      });
+    }
+  }
+  
+  return offerable;
 };
 
 // Get challenge reward ledger
@@ -1240,7 +1341,7 @@ export const processActivity = async (activity, allActivities) => {
     });
     
     // Add new challenges
-    const newChallenges = generateChallenges(gamification.stats);
+    const newChallenges = generateChallenges(gamification.stats, allActivities, await getSelectedChallenge(), gamification.challenges);
     gamification.challenges = [...gamification.challenges, ...newChallenges];
     gamification.lastChallengeGeneration = now.toISOString();
   }

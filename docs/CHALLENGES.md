@@ -109,3 +109,33 @@ challengeRewards: [
   { challengeId: "walk_5_miles", awardedAt: "...", xp: 100, source: "selected_challenge" }
 ]
 ```
+## Challenge Offering Rules
+
+### Rule A — No duplicates of in-flight challenges
+
+Challenges offered to the user (both picker and auto-generation) are filtered to exclude any challenge currently in flight:
+- The manually selected challenge (if incomplete)
+- Any auto/random challenge that is active (not completed, not expired)
+
+Identity comparison: 	emplateId + target (same template with different targets may be offered as distinct stretch levels).
+
+### Rule B — No already-achieved challenges
+
+Challenges already met under their own rule window are excluded from offers. This checks current rule-window progress (daily/weekly), NOT selected-challenge progress (which starts from selectedAt).
+
+Example: If user has walked 30km this week, "walk 20km this week" is not offered. But "walk 50km this week" can still be offered.
+
+### Implementation
+
+- isChallengeInFlight(templateId, target, selectedChallenge, autoChallenges) — Rule A
+- getChallengeOfferProgress(template, target, activities, currentStreak) — calculates current rule-window progress
+- isChallengeAlreadyAchievedForOffer(template, target, activities, currentStreak) — Rule B
+- getOfferableChallenges(activities, selectedChallenge, autoChallenges, currentStreak) — returns filtered list
+
+generateChallenges() now uses the offerable pool for auto/random challenge generation.
+The challenge picker modal uses getOfferableChallenges() instead of raw templates.
+
+### Important distinction
+
+- **Selected challenge progress**: starts at selectedAt, not retroactive
+- **Offer filtering progress**: uses current rule window to avoid trivial already-complete challenges
