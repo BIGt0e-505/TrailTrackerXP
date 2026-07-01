@@ -128,14 +128,19 @@ function TabNavigator() {
         name="XP"
         component={XPScreen}
         options={{
-          tabBarIcon: () => null,
-          tabBarLabel: 'XP',
-          tabBarLabelStyle: {
-            fontFamily: 'Inter_700Bold',
-            fontSize: 16,
-            marginTop: 0,
-            paddingBottom: 6,
-          },
+          tabBarIcon: ({ color, focused }) => (
+            <Text style={{
+              color,
+              fontFamily: 'Inter_700Bold',
+              fontSize: focused ? 24 : 22,
+              lineHeight: 28,
+              marginTop: 4,
+            }}>
+              XP
+            </Text>
+          ),
+          tabBarLabel: '',
+          tabBarAccessibilityLabel: 'XP',
         }}
       />
       <Tab.Screen
