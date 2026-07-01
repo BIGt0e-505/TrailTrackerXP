@@ -5,7 +5,7 @@ import { COLORS } from '../src/theme/colors';
 const ThemeContext = createContext();
 
 /**
- * TrailTrackerXP theme — TubePulse/ZeroVPN-style dark-only palette.
+ * TrailTrackerXP theme -- TubePulse/ZeroVPN-style dark-only palette.
  *
  * Green is semantic only: GPS active, tracking active, success states.
  * Blue/cyan (#4FC3F7) is the app accent / family identity.
@@ -64,7 +64,7 @@ export const colors = {
 const SETTINGS_KEY = '@trail_tracker_settings';
 
 const defaultSettings = {
-  appDarkMode: true,  // Always true — dark-only app
+  appDarkMode: true,  // Always true -- dark-only app
   mapDarkMode: false,
   distanceUnit: 'miles',
   username: '',
@@ -138,7 +138,7 @@ export function ThemeProvider({ children }) {
 
   return (
     <ThemeContext.Provider value={{
-      isDark: true,  // Always true — dark-only
+      isDark: true,  // Always true -- dark-only
       isMapDark: settings.mapDarkMode,
       distanceUnit: settings.distanceUnit,
       username: settings.username,

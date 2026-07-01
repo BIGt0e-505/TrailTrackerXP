@@ -524,24 +524,24 @@ export default function TrackingScreen() {
         let message = `${activityType === 'walking' ? 'Walk' : 'Ride'}: ${formatDistance(finalDistance, distanceUnit)} in ${formatDuration(duration)}`;
         
         if (gamification) {
-          message += `\n\n⭐ +${gamification.xpEarned} XP`;
+          message += `\n\n+${gamification.xpEarned} XP`;
           
           if (gamification.newLevel) {
-            message += `\n🎉 Level Up! ${gamification.newLevel.icon} ${gamification.newLevel.name}`;
+            message += `\nLevel Up! ${gamification.newLevel.name}`;
           }
           
           if (gamification.newAchievements && gamification.newAchievements.length > 0) {
-            const achievementNames = gamification.newAchievements.map(a => `${a.icon} ${a.name}`).join('\n');
-            message += `\n\n🏆 New Achievement!\n${achievementNames}`;
+            const achievementNames = gamification.newAchievements.map(a => a.name).join('\n');
+            message += `\n\nNew Achievement!\n${achievementNames}`;
           }
           
           if (gamification.challengesCompleted && gamification.challengesCompleted.length > 0) {
-            message += `\n\n🎯 Challenge Complete!`;
+            message += `\n\nChallenge Complete!`;
           }
         }
         
         setSuccessModalContent({
-          title: gamification?.newLevel ? '🎉 Level Up!' : (gamification?.newAchievements?.length > 0 ? '🏆 Achievement Unlocked!' : 'Activity Saved'),
+          title: gamification?.newLevel ? 'Level Up!' : (gamification?.newAchievements?.length > 0 ? 'Achievement Unlocked!' : 'Activity Saved'),
           message: message,
           icon: 'check'
         });
@@ -940,7 +940,7 @@ export default function TrackingScreen() {
         zoomIn.setAttribute('aria-label', 'Zoom in');
         
         var zoomOut = L.DomUtil.create('a', 'leaflet-control-zoom-out', container);
-        zoomOut.innerHTML = '−';
+        zoomOut.innerHTML = '-';
         zoomOut.href = '#';
         zoomOut.title = 'Zoom out';
         zoomOut.setAttribute('role', 'button');
@@ -1366,7 +1366,7 @@ export default function TrackingScreen() {
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Activity Paused</Text>
             <Text style={[styles.modalStats, { color: theme.textSecondary }]}>
-              {formatDistance(distance, distanceUnit)} • {formatDuration(duration)}
+              {formatDistance(distance, distanceUnit)} - {formatDuration(duration)}
             </Text>
             
             <TouchableOpacity
@@ -1502,14 +1502,14 @@ export default function TrackingScreen() {
             {/* Battery Instructions */}
             <View style={[styles.setupInstructionBox, { backgroundColor: theme.surface }]}>
               <Text style={[styles.setupInstructionTitle, { color: theme.text }]}>
-                📱 Disable Battery Optimization
+              Disable Battery Optimization
               </Text>
               <Text style={[styles.setupInstructionText, { color: theme.textSecondary }]}>
                 For tracking to work with the screen off:
               </Text>
               <View style={styles.setupSteps}>
                 <Text style={[styles.setupStep, { color: theme.text }]}>
-                  Settings → Apps → TrailTrackerXP → Battery → Unrestricted
+                  Settings -> Apps -> TrailTrackerXP -> Battery -> Unrestricted
                 </Text>
               </View>
             </View>
@@ -1526,7 +1526,7 @@ export default function TrackingScreen() {
               onPress={completeSetup}
             >
               <Text style={[styles.setupSecondaryButtonText, { color: theme.text }]}>
-                {setupUsername.trim() ? `Let's Go, ${setupUsername.trim()}! 🚀` : 'Get Started'}
+                {setupUsername.trim() ? `Let's Go, ${setupUsername.trim()}!` : 'Get Started'}
               </Text>
             </TouchableOpacity>
           </View>

@@ -44,7 +44,7 @@ export {
 };
 
 // Strip route data from an activity for lightweight AsyncStorage caching.
-// Full route data lives in GPX files — AsyncStorage only holds metadata.
+// Full route data lives in GPX files -- AsyncStorage only holds metadata.
 const stripRouteForCache = (activity) => {
   const { route, routeData, ...metadata } = activity;
   return metadata;
@@ -58,10 +58,10 @@ export const saveActivity = async (activity) => {
       ...activity,
     };
 
-    // Save full activity (with route) to GPX file first — this is the source of truth
+    // Save full activity (with route) to GPX file first -- this is the source of truth
     await saveActivityToFile(newActivity);
 
-    // Cache only metadata in AsyncStorage (no route data — prevents size limit corruption)
+    // Cache only metadata in AsyncStorage (no route data -- prevents size limit corruption)
     const existingActivities = await getActivities();
     const updatedActivities = [...existingActivities, stripRouteForCache(newActivity)];
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updatedActivities));
@@ -120,7 +120,7 @@ export const getActivities = async () => {
     const activities = json ? JSON.parse(json) : [];
     if (activities.length > 0) return activities;
 
-    // Cache is empty — try to rebuild from GPX files (source of truth)
+    // Cache is empty -- try to rebuild from GPX files (source of truth)
     const fileActivities = await loadActivitiesFromFile();
     if (fileActivities.length > 0) {
       console.log(`Cache empty, rebuilt from ${fileActivities.length} GPX files`);

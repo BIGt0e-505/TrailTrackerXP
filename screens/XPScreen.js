@@ -78,7 +78,7 @@ const TargetIcon = ({ size = 24, color = '#2196F3' }) => (
   </Svg>
 );
 
-const PROGRESS_SETTINGS_KEY = '@trailâ€¦ings';
+const PROGRESS_SETTINGS_KEY = '@trail_tracker_progress_settings';
 
 export default function XPScreen() {
   const { theme, distanceUnit } = useTheme();
@@ -93,19 +93,21 @@ export default function XPScreen() {
   const [selectedAchievement, setSelectedAchievement] = useState(null);
   const [cutoffDate, setCutoffDate] = useState(null);
 
-  // Helper to render achievement icons - handles stacked flames for streak achievements
-  const renderAchievementIcon = (icon, fontSize, isUnlocked = true) => {
+  // Helper to render achievement icons via MaterialCommunityIcons
+  // Handles stacked icons (e.g. multiple flames for streak achievements)
+  const renderAchievementIcon = (iconName, fontSize, isUnlocked = true) => {
     const opacity = isUnlocked ? 1 : 0.3;
-    if (Array.isArray(icon)) {
+    const color = isUnlocked ? theme.accent : theme.textSecondary;
+    if (Array.isArray(iconName)) {
       return (
         <View style={{ flexDirection: 'row' }}>
-          {icon.map((emoji, i) => (
-            <Text key={i} style={{ fontSize, opacity, marginRight: i < icon.length - 1 ? -8 : 0 }}>{emoji}</Text>
+          {iconName.map((name, i) => (
+            <MaterialCommunityIcons key={i} name={name} size={fontSize} color={color} style={{ marginRight: i < iconName.length - 1 ? -8 : 0, opacity }} />
           ))}
         </View>
       );
     }
-    return <Text style={{ fontSize, opacity }}>{icon}</Text>;
+    return <MaterialCommunityIcons name={iconName} size={fontSize} color={color} style={{ opacity }} />;
   };
 
   const getTotalDistance = () => {
@@ -175,7 +177,7 @@ export default function XPScreen() {
     }
   };
 
-  // â”€â”€â”€ Level Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Level Card ---
   const renderLevelCard = () => {
     if (!gamification) return null;
     const level = getLevelForXP(gamification.xp);
@@ -212,7 +214,7 @@ export default function XPScreen() {
       <View style={[styles.levelCard, { backgroundColor: theme.cardBg }]}>
         <View style={styles.levelHeader}>
           <View style={[styles.levelIconContainer, { backgroundColor: 'rgba(156, 39, 176, 0.08)' }]}>
-            <Text style={styles.levelEmoji}>{level.icon}</Text>
+            <MaterialCommunityIcons name={level.icon} size={32} color={theme.accent} />
           </View>
           <View style={styles.levelInfo}>
             <Text style={[styles.levelName, { color: theme.text }]}>{level.name}</Text>
@@ -244,33 +246,36 @@ export default function XPScreen() {
     );
   };
 
-  // â”€â”€â”€ Distance/Landmark Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Distance/Landmark Card ---
   const renderDistanceCard = () => {
     const totalKm = getTotalDistance();
     const comparison = getDistanceComparison(totalKm);
     return (
       <View style={[styles.distanceCard, { backgroundColor: theme.cardBg }]}>
-        <Text style={[styles.distanceTitle, { color: theme.text }]}>ðŸŒ Journey Progress</Text>
+        <Text style={[styles.distanceTitle, { color: theme.text }]}>Journey Progress</Text>
         <View style={styles.distanceMain}>
           <Text style={[styles.distanceValue, { color: theme.primary }]}>{formatDistance(totalKm, distanceUnit)}</Text>
           <Text style={[styles.distanceSubtext, { color: theme.textSecondary }]}>total distance</Text>
         </View>
         {comparison.passedLandmark && (
           <View style={[styles.landmark, { borderColor: theme.primary }]}>
-            <Text style={styles.landmarkEmoji}>{comparison.passedLandmark.icon}</Text>
+            <MaterialCommunityIcons name={comparison.passedLandmark.icon} size={32} color={theme.primary} />
             <View style={styles.landmarkInfo}>
               <Text style={[styles.landmarkLabel, { color: theme.textSecondary }]}>You've travelled</Text>
               <Text style={[styles.landmarkName, { color: theme.text }]}>{comparison.passedLandmark.name}</Text>
             </View>
-            <Text style={[styles.landmarkCheck, { color: theme.primary }]}>âœ“</Text>
+            <MaterialCommunityIcons name="check" size={24} color={theme.primary} />
           </View>
         )}
         {comparison.nextLandmark && (
           <View style={styles.nextLandmark}>
             <Text style={[styles.nextLandmarkLabel, { color: theme.textSecondary }]}>Next milestone:</Text>
-            <Text style={[styles.nextLandmarkName, { color: theme.text }]}>
-              {comparison.nextLandmark.icon} {comparison.nextLandmark.name}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 8 }}>
+              <MaterialCommunityIcons name={comparison.nextLandmark.icon} size={20} color={theme.textSecondary} />
+              <Text style={[styles.nextLandmarkName, { color: theme.text }]}>
+                {comparison.nextLandmark.name}
+              </Text>
+            </View>
             <View style={[styles.landmarkProgress, { backgroundColor: theme.surface }]}>
               <View style={[styles.landmarkProgressFill, { backgroundColor: theme.primary, width: `${Math.min(comparison.progress, 1) * 100}%` }]} />
             </View>
@@ -283,7 +288,7 @@ export default function XPScreen() {
     );
   };
 
-  // â”€â”€â”€ Challenges Card (random/auto) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Challenges Card (random/auto) ---
   const renderChallengesCard = () => {
     if (!gamification?.challenges) return null;
     const activeChallenges = gamification.challenges.filter(c => !c.expired && !c.completed);
@@ -310,7 +315,10 @@ export default function XPScreen() {
         ))}
         {completedChallenges.slice(0, 2).map(challenge => (
           <View key={challenge.id} style={[styles.challenge, { backgroundColor: theme.primaryLight }]}>
-            <Text style={[styles.challengeDesc, { color: theme.primary }]}>âœ“ {challenge.description}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MaterialCommunityIcons name="check-circle-outline" size={20} color={theme.primary} />
+              <Text style={[styles.challengeDesc, { color: theme.primary }]}>{challenge.description}</Text>
+            </View>
           </View>
         ))}
         <TouchableOpacity style={[styles.viewAllButton, { backgroundColor: theme.surface }]} onPress={() => setActiveTab('challenges')}>
@@ -321,7 +329,7 @@ export default function XPScreen() {
     );
   };
 
-  // â”€â”€â”€ Selected Challenge Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Selected Challenge Card ---
   const renderSelectedChallengeCard = () => {
     if (!selectedChallenge) {
       return (
@@ -353,9 +361,12 @@ export default function XPScreen() {
           )}
         </View>
         <View style={[styles.challenge, { backgroundColor: selectedChallenge.completed ? theme.primaryLight : theme.surface }]}>
-          <Text style={[styles.challengeDesc, { color: selectedChallenge.completed ? theme.primary : theme.text }]}>
-            {selectedChallenge.completed ? 'âœ“ ' : ''}{selectedChallenge.description}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {selectedChallenge.completed && <MaterialCommunityIcons name="check-circle-outline" size={20} color={theme.primary} />}
+            <Text style={[styles.challengeDesc, { color: selectedChallenge.completed ? theme.primary : theme.text }]}>
+              {selectedChallenge.description}
+            </Text>
+          </View>
           {!selectedChallenge.completed && (
             <>
               <Text style={[styles.challengeProgress, { color: theme.textSecondary }]}>
@@ -385,12 +396,12 @@ export default function XPScreen() {
     );
   };
 
-  // â”€â”€â”€ Challenge Picker Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Challenge Picker Modal ---
   const renderChallengePicker = () => {
     // Get offerable challenges, filtered to exclude in-flight and already-achieved
     const autoChallenges = gamification?.challenges?.filter(c => !c.expired && !c.completed) || [];
     const offerable = getOfferableChallenges(activities, selectedChallenge, autoChallenges, gamification?.stats?.currentStreak || 0);
-    
+
     if (offerable.length === 0) {
       return (
         <Modal visible={showChallengePicker} transparent={true} animationType="slide" onRequestClose={() => setShowChallengePicker(false)}>
@@ -410,7 +421,7 @@ export default function XPScreen() {
         </Modal>
       );
     }
-    
+
     return (
       <Modal visible={showChallengePicker} transparent={true} animationType="slide" onRequestClose={() => setShowChallengePicker(false)}>
         <View style={styles.modalOverlay}>
@@ -431,7 +442,7 @@ export default function XPScreen() {
                   selectedChallenge.target === challengeDef.target && !selectedChallenge.completed;
                 return (
                   <TouchableOpacity
-                    key={"${challengeDef.templateId}_"}
+                    key={`${challengeDef.templateId}_${challengeDef.target}`}
                     style={[styles.challenge, { backgroundColor: isActive ? theme.primaryLight : theme.surface, opacity: isActive ? 0.6 : 1 }]}
                     disabled={isActive}
                     onPress={async () => {
@@ -496,7 +507,7 @@ const renderAbandonConfirm = () => {
     );
   };
 
-  // â”€â”€â”€ Full Challenges View â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Full Challenges View ---
   const renderChallengesView = () => {
     if (!gamification?.challenges) return null;
     const inProgressChallenges = gamification.challenges.filter(c => !c.expired && !c.completed && (c.progress || 0) > 0);
@@ -507,14 +518,17 @@ const renderAbandonConfirm = () => {
       <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.achievementsViewHeader}>
           <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.surface }]} onPress={() => setActiveTab('overview')}>
-            <Text style={[styles.backButtonText, { color: theme.primary }]}>â† Back</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <MaterialCommunityIcons name="arrow-left" size={18} color={theme.primary} />
+              <Text style={[styles.backButtonText, { color: theme.primary }]}>Back</Text>
+            </View>
           </TouchableOpacity>
           <Text style={[styles.achievementsViewTitle, { color: theme.text }]}>Challenges</Text>
           <View style={styles.backButton} />
         </View>
         {inProgressChallenges.length > 0 && (
           <View style={styles.achievementCategory}>
-            <Text style={[styles.categoryTitle, { color: theme.text }]}>ðŸŽ¯ In Progress</Text>
+            <Text style={[styles.categoryTitle, { color: theme.text }]}>In Progress</Text>
             {inProgressChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.surface }]}>
@@ -535,11 +549,11 @@ const renderAbandonConfirm = () => {
         )}
         {completedChallenges.length > 0 && (
           <View style={styles.achievementCategory}>
-            <Text style={[styles.categoryTitle, { color: theme.text }]}>âœ… Completed</Text>
+            <Text style={[styles.categoryTitle, { color: theme.text }]}>Completed</Text>
             {completedChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg, borderLeftColor: theme.primary, borderLeftWidth: 4 }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.primaryLight }]}>
-                  <Text style={styles.challengeCheckEmoji}>âœ“</Text>
+                  <MaterialCommunityIcons name="check-circle-outline" size={32} color={theme.primary} />
                 </View>
                 <View style={styles.challengeRowInfo}>
                   <Text style={[styles.challengeRowDesc, { color: theme.primary }]}>{challenge.description}</Text>
@@ -551,7 +565,7 @@ const renderAbandonConfirm = () => {
         )}
         {availableChallenges.length > 0 && (
           <View style={styles.achievementCategory}>
-            <Text style={[styles.categoryTitle, { color: theme.text }]}>ðŸ“‹ Available</Text>
+            <Text style={[styles.categoryTitle, { color: theme.text }]}>Available</Text>
             {availableChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.surface }]}>
@@ -572,11 +586,11 @@ const renderAbandonConfirm = () => {
         )}
         {expiredChallenges.length > 0 && (
           <View style={styles.achievementCategory}>
-            <Text style={[styles.categoryTitle, { color: theme.text }]}>â° Expired</Text>
+            <Text style={[styles.categoryTitle, { color: theme.text }]}>Expired</Text>
             {expiredChallenges.map(challenge => (
               <View key={challenge.id} style={[styles.challengeRowLarge, { backgroundColor: theme.cardBg, opacity: 0.6 }]}>
                 <View style={[styles.challengeIconLarge, { backgroundColor: theme.surface }]}>
-                  <Text style={styles.challengeCheckEmoji}>â°</Text>
+                  <MaterialCommunityIcons name="clock-alert-outline" size={32} color={theme.textSecondary} />
                 </View>
                 <View style={styles.challengeRowInfo}>
                   <Text style={[styles.challengeRowDesc, { color: theme.textSecondary }]}>{challenge.description}</Text>
@@ -593,7 +607,7 @@ const renderAbandonConfirm = () => {
     );
   };
 
-  // â”€â”€â”€ Achievements Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Achievements Card ---
   const renderAchievementsCard = () => {
     if (!gamification) return null;
     const achievementList = Object.values(ACHIEVEMENTS);
@@ -615,8 +629,8 @@ const renderAbandonConfirm = () => {
                 style={[styles.achievementItem, { backgroundColor: theme.surface }, !isUnlocked && styles.achievementLocked]}
                 onPress={() => { setSelectedAchievement(achievement); setShowAchievementModal(true); }}
               >
-                {renderAchievementIcon(achievement.icon, 48, isUnlocked)}
-                {!isUnlocked && <View style={styles.achievementLockOverlay}><Text style={styles.lockIcon}>ðŸ”’</Text></View>}
+                {renderAchievementIcon(achievement.icon, 28, isUnlocked)}
+                {!isUnlocked && <View style={styles.achievementLockOverlay}><MaterialCommunityIcons name="lock-outline" size={16} color={theme.textSecondary} /></View>}
               </TouchableOpacity>
             );
           })}
@@ -629,15 +643,18 @@ const renderAbandonConfirm = () => {
     );
   };
 
-  // â”€â”€â”€ Full Achievements View â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Full Achievements View ---
   const renderAchievementsView = () => {
     if (!gamification) return null;
-    const categories = { general: 'ðŸŒŸ General', streak: 'ðŸ”¥ Streaks', walking: 'ðŸš¶ Walking', biking: 'ðŸšµ Mountain Biking' };
+    const categories = { general: 'General', streak: 'Streaks', walking: 'Walking', biking: 'Mountain Biking' };
     return (
       <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.achievementsViewHeader}>
           <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.surface }]} onPress={() => setActiveTab('overview')}>
-            <Text style={[styles.backButtonText, { color: theme.primary }]}>â† Back</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <MaterialCommunityIcons name="arrow-left" size={18} color={theme.primary} />
+              <Text style={[styles.backButtonText, { color: theme.primary }]}>Back</Text>
+            </View>
           </TouchableOpacity>
           <Text style={[styles.achievementsViewTitle, { color: theme.text }]}>Achievements</Text>
           <View style={styles.backButton} />
@@ -657,13 +674,15 @@ const renderAbandonConfirm = () => {
                     onPress={() => { setSelectedAchievement(achievement); setShowAchievementModal(true); }}
                   >
                     <View style={[styles.achievementRowIcon, { backgroundColor: isUnlocked ? theme.primaryLight : theme.surface }]}>
-                      {renderAchievementIcon(achievement.icon, 40, isUnlocked)}
+                      {renderAchievementIcon(achievement.icon, 28, isUnlocked)}
                     </View>
                     <View style={styles.achievementRowInfo}>
                       <Text style={[styles.achievementRowName, { color: isUnlocked ? theme.text : theme.textSecondary }]}>{achievement.name}</Text>
                       <Text style={[styles.achievementRowDesc, { color: theme.textSecondary }]}>{achievement.description}</Text>
                     </View>
-                    {isUnlocked ? <Text style={[styles.achievementCheck, { color: theme.primary }]}>âœ“</Text> : <Text style={styles.achievementLockSmall}>ðŸ”’</Text>}
+                    {isUnlocked
+                      ? <MaterialCommunityIcons name="check" size={20} color={theme.primary} style={{ marginRight: 8 }} />
+                      : <MaterialCommunityIcons name="lock-outline" size={16} color={theme.textSecondary} style={{ marginRight: 8 }} />}
                   </TouchableOpacity>
                 );
               })}
@@ -675,7 +694,7 @@ const renderAbandonConfirm = () => {
     );
   };
 
-  // â”€â”€â”€ Achievement Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Achievement Modal ---
   const renderAchievementModal = () => (
     <Modal visible={showAchievementModal} transparent animationType="fade" onRequestClose={() => setShowAchievementModal(false)}>
       <View style={styles.modalOverlay}>
@@ -683,13 +702,13 @@ const renderAbandonConfirm = () => {
           {selectedAchievement && (
             <>
               <View style={[styles.achievementModalIcon, { backgroundColor: theme.primaryLight }]}>
-                {renderAchievementIcon(selectedAchievement.icon, 56, true)}
+                {renderAchievementIcon(selectedAchievement.icon, 48, true)}
               </View>
               <Text style={[styles.achievementModalName, { color: theme.text }]}>{selectedAchievement.name}</Text>
               <Text style={[styles.achievementModalDesc, { color: theme.textSecondary }]}>{selectedAchievement.description}</Text>
               <View style={[styles.achievementModalBadge, { backgroundColor: theme.primary }]}>
                 <Text style={[styles.achievementModalBadgeText, { color: '#fff' }]}>
-                  {gamification.unlockedAchievements.includes(selectedAchievement.id) ? 'âœ“ Unlocked' : 'ðŸ”’ Locked'}
+                  {gamification.unlockedAchievements.includes(selectedAchievement.id) ? 'Unlocked' : 'Locked'}
                 </Text>
               </View>
               <TouchableOpacity style={[styles.achievementModalClose, { backgroundColor: theme.surface }]} onPress={() => setShowAchievementModal(false)}>
@@ -702,7 +721,7 @@ const renderAbandonConfirm = () => {
     </Modal>
   );
 
-  // â”€â”€â”€ Main Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // --- Main Render ---
   if (activeTab === 'achievements') return renderAchievementsView();
   if (activeTab === 'challenges') return renderChallengesView();
 
@@ -726,7 +745,6 @@ const styles = StyleSheet.create({
   levelCard: { margin: 16, marginBottom: 8, borderRadius: 16, padding: 16 },
   levelHeader: { flexDirection: 'row', alignItems: 'center' },
   levelIconContainer: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
-  levelEmoji: { fontSize: 32 },
   levelInfo: { flex: 1, marginLeft: 12 },
   levelName: { fontSize: 18, fontFamily: 'Inter_700Bold' },
   levelNumber: { fontSize: 13, fontFamily: 'Inter_400Regular' },
@@ -745,14 +763,12 @@ const styles = StyleSheet.create({
   distanceValue: { fontSize: 36, fontFamily: 'Inter_700Bold' },
   distanceSubtext: { fontSize: 13, fontFamily: 'Inter_400Regular' },
   landmark: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
-  landmarkEmoji: { fontSize: 32 },
   landmarkInfo: { flex: 1, marginLeft: 12 },
   landmarkLabel: { fontSize: 12, fontFamily: 'Inter_400Regular' },
   landmarkName: { fontSize: 16, fontFamily: 'Inter_700Bold' },
-  landmarkCheck: { fontSize: 24 },
   nextLandmark: { marginTop: 4 },
   nextLandmarkLabel: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  nextLandmarkName: { fontSize: 14, fontFamily: 'Inter_700Bold', marginTop: 4, marginBottom: 8 },
+  nextLandmarkName: { fontSize: 14, fontFamily: 'Inter_700Bold' },
   landmarkProgress: { height: 8, borderRadius: 4, overflow: 'hidden' },
   landmarkProgressFill: { height: '100%', borderRadius: 4 },
   landmarkProgressText: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 4 },
@@ -767,7 +783,6 @@ const styles = StyleSheet.create({
   challengeBarFill: { height: '100%', borderRadius: 3 },
   challengeRowLarge: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, marginBottom: 8 },
   challengeIconLarge: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center' },
-  challengeCheckEmoji: { fontSize: 32 },
   challengeRowInfo: { flex: 1, marginLeft: 12 },
   challengeRowDesc: { fontSize: 15, fontFamily: 'Inter_700Bold', marginBottom: 4 },
   challengeRowProgress: { fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 8 },
@@ -782,7 +797,6 @@ const styles = StyleSheet.create({
   achievementItem: { width: 72, height: 72, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   achievementLocked: { opacity: 0.5 },
   achievementLockOverlay: { position: 'absolute', bottom: 4, right: 4 },
-  lockIcon: { fontSize: 16 },
   achievementCategory: { padding: 16, paddingTop: 8 },
   categoryTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', marginBottom: 12 },
   achievementRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, marginBottom: 8 },
@@ -790,8 +804,6 @@ const styles = StyleSheet.create({
   achievementRowInfo: { flex: 1, marginLeft: 12 },
   achievementRowName: { fontSize: 15, fontFamily: 'Inter_700Bold', marginBottom: 2 },
   achievementRowDesc: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  achievementCheck: { fontSize: 20, marginRight: 8 },
-  achievementLockSmall: { fontSize: 16, marginRight: 8 },
   achievementsViewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   achievementsViewTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
   backButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, minWidth: 60 },
@@ -802,7 +814,6 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
   achievementModalContent: { width: '100%', maxWidth: 300, borderRadius: 24, padding: 24, alignItems: 'center' },
   achievementModalIcon: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  achievementModalEmoji: { fontSize: 56 },
   achievementModalName: { fontSize: 20, fontFamily: 'Inter_700Bold', textAlign: 'center', marginBottom: 8 },
   achievementModalDesc: { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', marginBottom: 16 },
   achievementModalBadge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 16 },

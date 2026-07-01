@@ -395,7 +395,7 @@ export default function StatsScreen() {
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.progressHeader}>
           <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.surface }]} onPress={() => { setProgressType(null); setProgressActivePage(0); }}>
-            <Text style={[styles.backButtonText, { color: theme.primary }]}>← Back</Text>
+            <Text style={[styles.backButtonText, { color: theme.primary }]}>Back</Text>
           </TouchableOpacity>
           <View style={styles.progressTitleContainer}>
             {progressType === 'walking' ? <WalkingIcon size={24} color={theme.primary} /> : <BikingIcon size={24} color={theme.primary} />}
@@ -410,13 +410,13 @@ export default function StatsScreen() {
             style={[styles.pageTab, progressActivePage === 0 && { borderBottomColor: theme.primary, borderBottomWidth: 2 }]}
             onPress={() => progressPagerRef.current?.scrollTo({ x: 0, animated: true })}
           >
-            <Text style={[styles.pageTabText, { color: progressActivePage === 0 ? theme.primary : theme.textSecondary }]}>📏 Distance</Text>
+            <Text style={[styles.pageTabText, { color: progressActivePage === 0 ? theme.primary : theme.textSecondary }]}>Distance</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.pageTab, progressActivePage === 1 && { borderBottomColor: theme.primary, borderBottomWidth: 2 }]}
             onPress={() => progressPagerRef.current?.scrollTo({ x: SCREEN_WIDTH, animated: true })}
           >
-            <Text style={[styles.pageTabText, { color: progressActivePage === 1 ? theme.primary : theme.textSecondary }]}>⏱ Pace</Text>
+            <Text style={[styles.pageTabText, { color: progressActivePage === 1 ? theme.primary : theme.textSecondary }]}>Pace</Text>
           </TouchableOpacity>
         </View>
 
