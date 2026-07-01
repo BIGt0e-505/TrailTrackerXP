@@ -123,10 +123,22 @@ export default function XPScreen() {
     const opacity = isUnlocked ? 1 : 0.3;
     if (Array.isArray(iconName)) {
       const safeNames = iconName.map(n => safeIconName(n, achievementId));
+      const count = Math.min(safeNames.length, 3);
+      // Compact cluster: 3 icons in a triangle, 2 icons overlapping
+      if (count === 2) {
+        return (
+          <View style={styles.iconCluster}>
+            {safeNames.slice(0, 2).map((name, i) => (
+              <MaterialCommunityIcons key={i} name={name} size={Math.floor(fontSize * 0.7)} color={color} style={[styles.clusterIcon, i === 0 ? styles.clusterTwoLeft : styles.clusterTwoRight, { opacity }]} />
+            ))}
+          </View>
+        );
+      }
+      // count === 3: triangle layout
       return (
-        <View style={{ flexDirection: 'row' }}>
-          {safeNames.map((name, i) => (
-            <MaterialCommunityIcons key={i} name={name} size={fontSize} color={color} style={{ marginRight: i < iconName.length - 1 ? -8 : 0, opacity }} />
+        <View style={styles.iconCluster}>
+          {safeNames.slice(0, 3).map((name, i) => (
+            <MaterialCommunityIcons key={i} name={name} size={Math.floor(fontSize * 0.65)} color={color} style={[styles.clusterIcon, i === 0 ? styles.clusterTop : i === 1 ? styles.clusterBottomLeft : styles.clusterBottomRight, { opacity }]} />
           ))}
         </View>
       );
@@ -837,4 +849,12 @@ const styles = StyleSheet.create({
   achievementModalBadgeText: { fontSize: 14, fontFamily: 'Inter_700Bold' },
   achievementModalClose: { width: '100%', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   achievementModalCloseText: { fontSize: 16, fontFamily: 'Inter_700Bold' },
+  // Compact icon cluster for repeated-icon achievements (e.g. streak flames)
+  iconCluster: { width: 48, height: 48, position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  clusterIcon: { position: 'absolute' },
+  clusterTop: { top: 2, left: 11 },
+  clusterBottomLeft: { bottom: 3, left: 2 },
+  clusterBottomRight: { bottom: 3, right: 2 },
+  clusterTwoLeft: { left: 4 },
+  clusterTwoRight: { right: 4 },
 });
