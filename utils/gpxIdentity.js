@@ -117,6 +117,46 @@ export const isDuplicate = (a, b) => {
 };
 
 /**
+ * Normalise a GPX filename for duplicate detection.
+ * Strips copy suffixes like (1), - Copy, copy, _duplicate etc.
+ * Returns the normalised basename (lowercase, no .gpx extension).
+ */
+export const normaliseDuplicateFilename = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/\.gpx\s*\(\d+\)\s*$/i, '.gpx')   // activity.gpx (1) → activity.gpx
+    .replace(/\.gpx\s*-\s*copy\s*$/i, '.gpx')    // activity.gpx - copy → activity.gpx
+    .replace(/\.gpx\s+copy\s*$/i, '.gpx')        // activity.gpx copy → activity.gpx
+    .replace(/\.gpx\s*-\s*duplicate\s*$/i, '.gpx') // activity.gpx - duplicate → activity.gpx
+    .replace(/\.gpx\s+duplicate\s*$/i, '.gpx')   // activity.gpx duplicate → activity.gpx
+    .replace(/\.gpx_copy\s*$/i, '.gpx')           // activity.gpx_copy → activity.gpx
+    .replace(/\.gpx_duplicate\s*$/i, '.gpx')     // activity.gpx_duplicate → activity.gpx
+    .replace(/\.gpx\s*\(\d+\)\s*/ig, '.gpx')    // any remaining .gpx (N) mid-string
+    .replace(/\(\d+\)/g, '')                     // any remaining (N) patterns
+    .replace(/\s+/g, ' ')                         // normalise whitespace
+    .trim();
+};
+
+/**
+ * Simple string hash for content comparison.
+ * Not cryptographic — just a fast stable hash for detecting identical file content.
+ */
+export const simpleHash = (str) => {
+  if (!str) return null;
+  let hash = 0;
+  // Sample the string to avoid hashing multi-MB files character by character
+  const len = str.length;
+  const step = Math.max(1, Math.floor(len / 10000)); // sample ~10k chars max
+  for (let i = 0; i < len; i += step) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & 0xFFFFFFFF;
+  }
+  // Also include length in the hash so different-length files don't collide
+  return `${len}-${(hash >>> 0).toString(16)}`;
+};
+
+/**
  * Build signature from a GPX file content string (parsed).
  * Convenience wrapper for use during import/export scanning.
  *

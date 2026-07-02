@@ -254,29 +254,92 @@ export default function SettingsScreen() {
       // Save this directory URI so future activities auto-export here
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       await AsyncStorage.setItem('@trail_tracker_auto_export_dir', destinationUri);
+
+      // --- Export idempotency: enumerate existing GPX-like files in target folder ---
+      // Android SAF silently creates "activity.gpx (1)" if you createFileAsync with an existing name.
+      // We must check for existing files BEFORE creating.
+      const { normaliseDuplicateFilename, signatureFromGPXContent, isDuplicate, simpleHash } = require('../utils/gpxIdentity');
+
+      const existingEntries = await FileSystem.StorageAccessFramework.readDirectoryAsync(destinationUri);
+      const existingNormalised = new Set();  // normalised filenames already in folder
+      const existingExactNames = new Set();   // exact lowercased filenames
+      const existingSignatures = [];         // GPX signatures of existing files
+
+      // Same GPX-like pattern as the folder cleanup scanner
+      const gpxLikePattern = /\.gpx(\s*\(\d+\)|\s*-\s*copy|\s+copy|\s*-\s*duplicate|\s+duplicate|\s*_copy|\s*_duplicate)\s*$/i;
+
+      for (const fileUri of existingEntries) {
+        let decoded = fileUri;
+        try { decoded = decodeURIComponent(fileUri); } catch (e) {}
+        let fileName = decoded.split('/').pop();
+        if (fileName.includes(':')) fileName = fileName.split(':').pop();
+
+        const lowerName = fileName.toLowerCase();
+        if (lowerName.endsWith('.gpx') || gpxLikePattern.test(lowerName)) {
+          existingNormalised.add(normaliseDuplicateFilename(fileName));
+          existingExactNames.add(lowerName);
+          // Try to read content for signature-based dedup
+          try {
+            const content = await FileSystem.StorageAccessFramework.readAsStringAsync(fileUri);
+            const sig = signatureFromGPXContent(content);
+            if (sig) existingSignatures.push(sig);
+          } catch (e) {
+            // Can't read — skip signature check for this file
+          }
+        }
+      }
+
+      console.log(`[export] Found ${existingNormalised.size} normalised GPX names, ${existingSignatures.length} signatures in target folder`);
+
       let exportedCount = 0;
+      let skippedCount = 0;
       let failedCount = 0;
 
-      // Copy each GPX file to the selected directory
       for (const gpxPath of gpxPaths) {
         try {
-          // Extract filename from path
+          // Extract filename from internal path
           const fileName = gpxPath.split('/').pop();
+          const normalisedName = normaliseDuplicateFilename(fileName);
 
-          // Read the GPX file content
+          // Read internal GPX content
           const content = await FileSystem.readAsStringAsync(gpxPath);
+          const sig = signatureFromGPXContent(content);
 
-          // Create file in the selected directory using SAF
+          // Check 1: exact filename already exists
+          if (existingExactNames.has(fileName.toLowerCase())) {
+            console.log(`[export] Skip (exact name exists): ${fileName}`);
+            skippedCount++;
+            continue;
+          }
+
+          // Check 2: normalised filename already exists (e.g. "activity.gpx (1)" exists)
+          if (existingNormalised.has(normalisedName)) {
+            console.log(`[export] Skip (normalised name exists): ${fileName} → ${normalisedName}`);
+            skippedCount++;
+            continue;
+          }
+
+          // Check 3: route signature matches an existing file
+          if (sig && existingSignatures.some(es => isDuplicate(sig, es))) {
+            console.log(`[export] Skip (signature match): ${fileName}`);
+            skippedCount++;
+            continue;
+          }
+
+          // No existing file found — safe to create
           const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
             destinationUri,
             fileName,
             'application/gpx+xml'
           );
 
-          // Write content to the new file
           await FileSystem.writeAsStringAsync(newFileUri, content);
 
           exportedCount++;
+          // Update index so subsequent files in the same batch don't create dupes
+          existingNormalised.add(normalisedName);
+          existingExactNames.add(fileName.toLowerCase());
+          if (sig) existingSignatures.push(sig);
         } catch (err) {
           console.error(`Error exporting ${gpxPath}:`, err);
           failedCount++;
@@ -284,8 +347,9 @@ export default function SettingsScreen() {
       }
 
       setOperationResult({
-        success: exportedCount > 0,
+        success: exportedCount > 0 || skippedCount > 0,
         count: exportedCount,
+        skipped: skippedCount,
         failed: failedCount,
         total: gpxPaths.length,
       });
@@ -1042,7 +1106,7 @@ export default function SettingsScreen() {
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]}>
                   {operationResult.success
-                    ? `Exported ${operationResult.count} GPX file${operationResult.count !== 1 ? 's' : ''} to selected folder.${operationResult.failed > 0 ? `\n${operationResult.failed} file${operationResult.failed !== 1 ? 's' : ''} failed.` : ''}`
+                    ? `Exported ${operationResult.count} GPX file${operationResult.count !== 1 ? 's' : ''} to selected folder.${operationResult.skipped > 0 ? `\n${operationResult.skipped} already existed (skipped).` : ''}${operationResult.failed > 0 ? `\n${operationResult.failed} file${operationResult.failed !== 1 ? 's' : ''} failed.` : ''}`
                     : operationResult.error
                   }
                 </Text>
@@ -1229,12 +1293,14 @@ export default function SettingsScreen() {
                   Duplicates Found
                 </Text>
                 <Text style={[styles.modalMessage, { color: theme.textSecondary }]} >
-                  {folderScanResult?.totalScanned || 0} GPX files scanned.{"\n"}
-                  {folderScanResult?.uniqueCount || 0} unique activities found.{"\n"}
-                  {folderScanResult?.duplicateFilesCount || 0} duplicate files found.{"\n"}
-                  {folderScanResult?.fuzzyDuplicateFiles > 0 ? `${folderScanResult.fuzzyDuplicateFiles} ambiguous (not auto-deleted).\n` : ''}
-                  {folderScanResult?.unparseableCount > 0 ? `${folderScanResult.unparseableCount} could not be parsed.\n` : ''}
-                  {folderScanResult?.filesToDelete?.length || 0} files will be deleted.
+                  {folderScanResult?.totalEntries != null ? `${folderScanResult.totalEntries} entries in folder\n` : ''}
+                  {folderScanResult?.gpxCount != null ? `${folderScanResult.gpxCount} GPX-like files (${folderScanResult.gpxPlainCount || 0} .gpx + ${folderScanResult.gpxDuplicateNameCount || 0} copy-suffixed)\n` : ''}
+                  {folderScanResult?.otherNonGpxCount > 0 ? `${folderScanResult.otherNonGpxCount} other files ignored\n` : ''}
+                  {folderScanResult?.parseableCount != null ? `${folderScanResult.parseableCount} parseable\n` : ''}
+                  {folderScanResult?.unparseableCount > 0 ? `${folderScanResult.unparseableCount} unparseable\n` : ''}
+                  {folderScanResult?.uniqueCount != null ? `${folderScanResult.uniqueCount} unique activities\n` : ''}
+                  {folderScanResult?.duplicateFilesCount > 0 ? `${folderScanResult.duplicateFilesCount} duplicate files to delete (${folderScanResult.filenameDuplicates || 0} filename, ${folderScanResult.contentHashDuplicates || 0} hash, ${folderScanResult.signatureDuplicates || 0} signature)\n` : '0 duplicates to delete\n'}
+                  {folderScanResult?.fuzzyDuplicateFiles > 0 ? `${folderScanResult.fuzzyDuplicateFiles} ambiguous (not auto-deleted)\n` : ''}
                 </Text>
                 <TouchableOpacity
                   style={[styles.modalButton, { backgroundColor: theme.danger }]}

@@ -466,31 +466,55 @@ export const importGPXFromUri = async (fileUri, fileName, metadata = null) => {
  * @returns {Object} scan result with groups for deletion
  */
 export const scanGPXFolderForDuplicates = async (directoryUri, onProgress = null) => {
-  const { signatureFromGPXContent, groupDuplicates } = require('./gpxIdentity');
+  const { signatureFromGPXContent, groupDuplicates, normaliseDuplicateFilename } = require('./gpxIdentity');
 
-  // Read all files in the directory
-  const allFiles = await FileSystem.StorageAccessFramework.readDirectoryAsync(directoryUri);
+  // Phase 1: Raw folder enumeration — count EVERYTHING before any filtering
+  const allEntries = await FileSystem.StorageAccessFramework.readDirectoryAsync(directoryUri);
+  const totalEntries = allEntries.length;
 
-  // Filter to GPX files and read content
+  // Classify files: GPX files, GPX-like duplicate-name files, and other
+  // Android puts copy suffixes AFTER the extension: "route.gpx (1)", "route.gpx - copy"
   const gpxFiles = [];
-  for (const fileUri of allFiles) {
+  let gpxDuplicateNameCount = 0;
+  let otherNonGpxCount = 0;
+
+  // A file is GPX-like if it ends with .gpx OR has .gpx followed by a copy/duplicate suffix
+  const gpxLikePattern = /\.gpx(\s*\(\d+\)|\s*-\s*copy|\s+copy|\s*-\s*duplicate|\s+duplicate|\s*_copy|\s*_duplicate)\s*$/i;
+
+  for (const fileUri of allEntries) {
+    // Decode SAF URI to extract filename
     let decoded = fileUri;
     try { decoded = decodeURIComponent(fileUri); } catch (e) {}
     let fileName = decoded.split('/').pop();
     if (fileName.includes(':')) fileName = fileName.split(':').pop();
 
-    if (fileName.toLowerCase().endsWith('.gpx')) {
-      gpxFiles.push({ uri: fileUri, name: fileName });
+    const lowerName = fileName.toLowerCase();
+    const isPlainGpx = lowerName.endsWith('.gpx');
+    const isGpxDuplicateName = gpxLikePattern.test(lowerName);
+
+    if (isPlainGpx || isGpxDuplicateName) {
+      gpxFiles.push({ uri: fileUri, name: fileName, isPlainGpx, isGpxDuplicateName });
+      if (isGpxDuplicateName && !isPlainGpx) gpxDuplicateNameCount++;
+    } else {
+      otherNonGpxCount++;
     }
   }
 
   if (gpxFiles.length === 0) {
-    return { success: false, error: 'No GPX files found in selected folder' };
+    return {
+      success: false,
+      error: 'No GPX files found in selected folder',
+      totalEntries,
+      gpxCount: 0,
+      gpxDuplicateNameCount: 0,
+      otherNonGpxCount,
+    };
   }
 
-  // Read content and build signatures
+  // Phase 2: Read content for each GPX-like file (with progress)
   const filesWithContent = [];
   const unparseable = [];
+  let firstParseError = null;
 
   for (let i = 0; i < gpxFiles.length; i++) {
     const f = gpxFiles[i];
@@ -498,38 +522,139 @@ export const scanGPXFolderForDuplicates = async (directoryUri, onProgress = null
 
     try {
       const content = await FileSystem.StorageAccessFramework.readAsStringAsync(f.uri);
-      filesWithContent.push({ ...f, content });
+      // Diagnostic: log first parse failure in detail
+      if (!firstParseError && (!content || content.length === 0)) {
+        firstParseError = { name: f.name, byteLength: 0, firstChars: '(empty)', error: 'Empty content from SAF read' };
+        console.log(`[folder-scan] Empty read for ${f.name}: uri=${f.uri.substring(0, 80)}`);
+      } else if (!firstParseError && !content.includes('<trkpt') && !content.includes('<trk') && !content.includes('<?xml')) {
+        firstParseError = { name: f.name, byteLength: content.length, firstChars: content.substring(0, 200), error: 'No GPX/XML structure found' };
+        console.log(`[folder-scan] Non-XML content for ${f.name}: length=${content.length}, first 200="${content.substring(0, 200)}"`);
+      }
+      filesWithContent.push({ ...f, content, contentHash: simpleHash(content), normalisedName: normaliseDuplicateFilename(f.name) });
     } catch (e) {
       console.log(`[folder-scan] Could not read ${f.name}: ${e.message}`);
-      unparseable.push({ ...f, error: e.message });
+      if (!firstParseError) {
+        firstParseError = { name: f.name, byteLength: 0, firstChars: '(read failed)', error: e.message };
+      }
+      // Still keep the file for filename-based dedup even if we can't read it
+      unparseable.push({ ...f, error: e.message, normalisedName: normaliseDuplicateFilename(f.name) });
     }
   }
 
-  // Group duplicates
-  const { groups, unique, duplicateGroups, unparseable: unparseableSig } = groupDuplicates(filesWithContent);
+  // Phase 3: Group duplicates using multiple signals
+  // A. Route signature dedup (for parseable files)
+  const { groups: sigGroups, unique: sigUnique, duplicateGroups: sigDupGroups, unparseable: sigUnparseable } = groupDuplicates(filesWithContent);
 
-  // Collect all duplicate files to delete (only id and routeHash confidence — not fuzzy)
+  // B. Filename-based dedup (for ALL gpx files, including unparseable)
+  // Group by normalised filename — files with same normalised name are likely copies
+  const filenameGroups = {};
+  for (const f of [...filesWithContent, ...unparseable]) {
+    const key = f.normalisedName || f.name;
+    if (!filenameGroups[key]) filenameGroups[key] = [];
+    filenameGroups[key].push(f);
+  }
+
+  // C. Content-hash dedup (for parseable files with same hash)
+  const hashGroups = {};
+  for (const f of filesWithContent) {
+    if (!f.contentHash) continue;
+    if (!hashGroups[f.contentHash]) hashGroups[f.contentHash] = [];
+    hashGroups[f.contentHash].push(f);
+  }
+
+  // Build the deletion list
   const filesToDelete = [];
-  const safeDuplicateGroups = duplicateGroups.filter(g => g.confidence === 'id' || g.confidence === 'routeHash');
-  const fuzzyGroups = duplicateGroups.filter(g => g.confidence === 'fuzzy');
+  const deletedUris = new Set();
 
-  for (const group of safeDuplicateGroups) {
+  // From signature groups (id + routeHash confidence only)
+  const safeSigGroups = sigDupGroups.filter(g => g.confidence === 'id' || g.confidence === 'routeHash');
+  const fuzzySigGroups = sigDupGroups.filter(g => g.confidence === 'fuzzy');
+
+  for (const group of safeSigGroups) {
     for (const dup of group.duplicates) {
-      filesToDelete.push({ uri: dup.uri, name: dup.name, canonicalName: group.canonical.name });
+      if (!deletedUris.has(dup.uri)) {
+        filesToDelete.push({ uri: dup.uri, name: dup.name, canonicalName: group.canonical.name, reason: `signature:${group.confidence}` });
+        deletedUris.add(dup.uri);
+      }
     }
   }
+
+  // From filename groups (normalised name matches)
+  for (const [normalisedName, files] of Object.entries(filenameGroups)) {
+    if (files.length < 2) continue;
+    // Pick canonical: prefer non-copy filename, then shortest name, then alphabetical
+    const sorted = [...files].sort((a, b) => {
+      const aIsCopy = /\(\d+\)|copy|duplicate/i.test(a.name);
+      const bIsCopy = /\(\d+\)|copy|duplicate/i.test(b.name);
+      if (aIsCopy && !bIsCopy) return 1;
+      if (!aIsCopy && bIsCopy) return -1;
+      if (a.name.length !== b.name.length) return a.name.length - b.name.length;
+      return a.name.localeCompare(b.name);
+    });
+    const canonical = sorted[0];
+    for (const dup of sorted.slice(1)) {
+      if (!deletedUris.has(dup.uri)) {
+        // For filename-based dedup, require either content hash match or both parseable with sig match
+        // If we can't read content, only delete if the normalised name is an obvious copy pattern
+        const isObviousCopy = /\(\d+\)|\bcopy\b|\bduplicate\b/i.test(dup.name);
+        if (isObviousCopy) {
+          filesToDelete.push({ uri: dup.uri, name: dup.name, canonicalName: canonical.name, reason: 'filename-copy' });
+          deletedUris.add(dup.uri);
+        } else if (dup.contentHash && canonical.contentHash && dup.contentHash === canonical.contentHash) {
+          filesToDelete.push({ uri: dup.uri, name: dup.name, canonicalName: canonical.name, reason: 'filename+hash' });
+          deletedUris.add(dup.uri);
+        }
+      }
+    }
+  }
+
+  // From content-hash groups (identical content even if filenames differ)
+  for (const [hash, files] of Object.entries(hashGroups)) {
+    if (files.length < 2) continue;
+    const sorted = [...files].sort((a, b) => {
+      const aIsTTP = /TrailTracker/i.test(a.name);
+      const bIsTTP = /TrailTracker/i.test(b.name);
+      if (aIsTTP && !bIsTTP) return 1;
+      if (!aIsTTP && bIsTTP) return -1;
+      return a.name.length - b.name.length;
+    });
+    const canonical = sorted[0];
+    for (const dup of sorted.slice(1)) {
+      if (!deletedUris.has(dup.uri)) {
+        filesToDelete.push({ uri: dup.uri, name: dup.name, canonicalName: canonical.name, reason: 'content-hash' });
+        deletedUris.add(dup.uri);
+      }
+    }
+  }
+
+  // Count unique activities (from all parseable files minus duplicates)
+  const uniqueCount = sigGroups.length;
 
   return {
     success: true,
-    totalScanned: gpxFiles.length,
-    uniqueCount: unique.length,
-    duplicateGroupsCount: safeDuplicateGroups.length,
+    // Raw enumeration counts
+    totalEntries,              // every entry in the folder (files + dirs)
+    gpxCount: gpxFiles.length, // every GPX-like file (plain .gpx + .gpx (1) etc)
+    gpxPlainCount: gpxFiles.filter(f => f.isPlainGpx).length,
+    gpxDuplicateNameCount,    // files like "route.gpx (1)", "route.gpx - copy"
+    otherNonGpxCount,          // truly non-GPX files
+    // Parse counts
+    parseableCount: filesWithContent.length,
+    unparseableCount: unparseable.length,
+    firstParseError,           // diagnostic: first file that failed to parse
+    // Dedup counts
+    uniqueCount,               // unique activity signatures
     duplicateFilesCount: filesToDelete.length,
-    fuzzyDuplicateGroups: fuzzyGroups.length,
-    fuzzyDuplicateFiles: fuzzyGroups.reduce((sum, g) => sum + g.duplicates.length, 0),
-    unparseableCount: unparseable.length + unparseableSig.length,
+    fuzzyDuplicateGroups: fuzzySigGroups.length,
+    fuzzyDuplicateFiles: fuzzySigGroups.reduce((sum, g) => sum + g.duplicates.length, 0),
+    // Breakdown by deletion reason
+    filenameDuplicates: filesToDelete.filter(f => f.reason.startsWith('filename')).length,
+    contentHashDuplicates: filesToDelete.filter(f => f.reason === 'content-hash').length,
+    signatureDuplicates: filesToDelete.filter(f => f.reason.startsWith('signature')).length,
+    // Deletion targets
     filesToDelete,
-    groups: safeDuplicateGroups.map(g => ({
+    // Diagnostic info
+    groups: safeSigGroups.map(g => ({
       canonical: g.canonical.name,
       duplicates: g.duplicates.map(d => d.name),
       confidence: g.confidence,

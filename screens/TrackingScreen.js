@@ -11,6 +11,8 @@ import {
   Platform,
   Linking,
   TextInput,
+  Keyboard,
+  ScrollView,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useFocusEffect } from '@react-navigation/native';
@@ -154,6 +156,8 @@ export default function TrackingScreen() {
   const [cacheProgress, setCacheProgress] = useState({ current: 0, total: 0 });
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [setupUsername, setSetupUsername] = useState('');
+  const [setupStep, setSetupStep] = useState('name'); // 'name' | 'battery' | 'go'
+  const nameInputRef = useRef(null);
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [recoveryData, setRecoveryData] = useState(null);
   
@@ -294,6 +298,7 @@ export default function TrackingScreen() {
     try {
       const setupComplete = await AsyncStorage.getItem(SETUP_COMPLETE_KEY);
       if (!setupComplete) {
+        setSetupStep('name');
         setShowSetupModal(true);
       }
     } catch (e) {
@@ -308,11 +313,23 @@ export default function TrackingScreen() {
         await setUsername(setupUsername.trim());
       }
       await AsyncStorage.setItem(SETUP_COMPLETE_KEY, 'true');
+      Keyboard.dismiss();
       setShowSetupModal(false);
     } catch (e) {
       console.log('Error saving setup state:', e);
       setShowSetupModal(false);
     }
+  };
+
+  const goToBatteryStep = () => {
+    nameInputRef.current?.blur();
+    Keyboard.dismiss();
+    setSetupStep('battery');
+  };
+
+  const goToGoStep = () => {
+    Keyboard.dismiss();
+    setSetupStep('go');
   };
 
   const openBatterySettings = () => {
@@ -1570,7 +1587,7 @@ export default function TrackingScreen() {
         </View>
       </Modal>
 
-      {/* First Run Setup Modal */}
+      {/* First Run Setup Modal — 3-step guided onboarding */}
       <Modal
         visible={showSetupModal}
         transparent={true}
@@ -1578,68 +1595,109 @@ export default function TrackingScreen() {
         onRequestClose={() => {}}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.setupModalContent, { backgroundColor: theme.cardBg }]}>
-            <View style={[styles.setupIconContainer, { backgroundColor: theme.primaryLight }]}>
-              <RecenterIcon size={40} color={theme.primary} />
-            </View>
-            <Text style={[styles.setupModalTitle, { color: theme.text }]}>
-              Welcome to TrailTrackerXP!
-            </Text>
-            <Text style={[styles.setupModalSubtitle, { color: theme.textSecondary }]}>
-              Let's get you set up
-            </Text>
-            
-            {/* Name Input */}
-            <View style={[styles.setupInputBox, { backgroundColor: theme.surface }]}>
-              <Text style={[styles.setupInputLabel, { color: theme.text }]}>
-                What's your name?
-              </Text>
-              <TextInput
-                style={[styles.setupInput, { 
-                  backgroundColor: theme.cardBg, 
-                  color: theme.text,
-                  borderColor: theme.border,
-                }]}
-                placeholder="Enter your name"
-                placeholderTextColor={theme.textSecondary}
-                value={setupUsername}
-                onChangeText={setSetupUsername}
-                autoCapitalize="words"
-                maxLength={20}
-              />
-            </View>
-            
-            {/* Battery Instructions */}
-            <View style={[styles.setupInstructionBox, { backgroundColor: theme.surface }]}>
-              <Text style={[styles.setupInstructionTitle, { color: theme.text }]}>
-              Disable Battery Optimization
-              </Text>
-              <Text style={[styles.setupInstructionText, { color: theme.textSecondary }]}>
-                For tracking to work with the screen off:
-              </Text>
-              <View style={styles.setupSteps}>
-                <Text style={[styles.setupStep, { color: theme.text }]}>
-                  Settings -> Apps -> TrailTrackerXP -> Battery -> Unrestricted
-                </Text>
+          <ScrollView contentContainerStyle={styles.setupScrollContent} keyboardShouldPersistTaps="handled">
+            <View style={[styles.setupModalContent, { backgroundColor: theme.cardBg }]}>
+              <View style={[styles.setupIconContainer, { backgroundColor: theme.primaryLight }]}>
+                <RecenterIcon size={40} color={theme.primary} />
               </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.setupButton, { backgroundColor: theme.primary }]}
-              onPress={openBatterySettings}
-            >
-              <Text style={styles.setupButtonText}>Open Settings</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.setupSecondaryButton, { backgroundColor: theme.surface }]}
-              onPress={completeSetup}
-            >
-              <Text style={[styles.setupSecondaryButtonText, { color: theme.text }]}>
-                {setupUsername.trim() ? `Let's Go, ${setupUsername.trim()}!` : 'Get Started'}
+              <Text style={[styles.setupModalTitle, { color: theme.text }]}>
+                Welcome to TrailTrackerXP!
               </Text>
-            </TouchableOpacity>
-          </View>
+              <Text style={[styles.setupModalSubtitle, { color: theme.textSecondary }]}>
+                {setupStep === 'name' ? 'Step 1 of 3: What\u2019s your name?' : setupStep === 'battery' ? 'Step 2 of 3: Battery Settings' : 'Step 3 of 3: Ready to Go'}
+              </Text>
+
+              {/* Step 1: NAME */}
+              {setupStep === 'name' && (
+                <>
+                  <View style={[styles.setupInputBox, { backgroundColor: theme.surface }]}>
+                    <TextInput
+                      ref={nameInputRef}
+                      style={[styles.setupInput, {
+                        backgroundColor: theme.cardBg,
+                        color: theme.text,
+                        borderColor: theme.border,
+                      }]}
+                      placeholder="Enter your name"
+                      placeholderTextColor={theme.textSecondary}
+                      value={setupUsername}
+                      onChangeText={setSetupUsername}
+                      autoCapitalize="words"
+                      maxLength={20}
+                      returnKeyType="next"
+                      autoFocus={true}
+                      onSubmitEditing={goToBatteryStep}
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.setupButton, { backgroundColor: theme.primary }]}
+                    onPress={goToBatteryStep}
+                  >
+                    <Text style={styles.setupButtonText}>Continue</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* Step 2: BATTERY */}
+              {setupStep === 'battery' && (
+                <>
+                  <View style={[styles.setupInstructionBox, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.setupInstructionTitle, { color: theme.text }]}>
+                      Disable Battery Optimization
+                    </Text>
+                    <Text style={[styles.setupInstructionText, { color: theme.textSecondary }]}>
+                      For tracking to work with the screen off:
+                    </Text>
+                    <View style={styles.setupSteps}>
+                      <Text style={[styles.setupStep, { color: theme.text }]}>
+                        Settings → Apps → TrailTrackerXP → Battery → Unrestricted
+                      </Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.setupButton, { backgroundColor: theme.primary }]}
+                    onPress={openBatterySettings}
+                  >
+                    <Text style={styles.setupButtonText}>Open Settings</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.setupSecondaryButton, { backgroundColor: theme.surface }]}
+                    onPress={goToGoStep}
+                  >
+                    <Text style={[styles.setupSecondaryButtonText, { color: theme.text }]}>
+                      Continue
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* Step 3: LET'S GO */}
+              {setupStep === 'go' && (
+                <>
+                  <View style={[styles.setupInstructionBox, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.setupInstructionText, { color: theme.textSecondary }]}>
+                      {setupUsername.trim() ? `You\u2019re all set up, ${setupUsername.trim()}!` : 'You\u2019re all set up!'}
+                    </Text>
+                    <Text style={[styles.setupInstructionText, { color: theme.textSecondary, marginTop: 8 }]}>
+                      You can now start tracking your activities. If you skipped the battery settings, you can always do it later from the app menu.
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.setupButton, { backgroundColor: theme.primary }]}
+                    onPress={completeSetup}
+                  >
+                    <Text style={styles.setupButtonText}>
+                      {setupUsername.trim() ? `Let\u2019s Go, ${setupUsername.trim()}!` : 'Get Started'}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -1890,6 +1948,12 @@ const createStyles = (theme) => StyleSheet.create({
     fontFamily: 'Inter_700Bold',
   },
   // Setup Modal Styles
+  setupScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
   setupModalContent: {
     width: '100%',
     maxWidth: 340,
