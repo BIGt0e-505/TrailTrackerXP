@@ -278,26 +278,7 @@ if (Test-Path $taskServicePath) {
     }
 }
 
-# --- Step 3: Gradle build ---
-Write-Host ""
-Write-Host "[3/5] Building APK with Gradle ($BuildType)..."
-Set-Location $ANDROID_DIR
-if ($ReleaseBuild) {
-    # Enable ProGuard/minification for release builds
-    & .\gradlew.bat $GradleTask '--no-daemon' '-Pandroid.enableProguardInReleaseBuilds=true' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
-} else {
-    & .\gradlew.bat $GradleTask '--no-daemon' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
-}
-$gradleExit = $LASTEXITCODE
-Set-Location $REPO_DIR
-
-if ($gradleExit -ne 0) {
-    Write-Error "gradle build failed (exit $gradleExit). Log: $env:TEMP\gradle-build-trailtracker.log"
-    exit 1
-}
-Write-Host "  BUILD SUCCESSFUL  OK"
-
-# --- Step 3b: Patch build.gradle for release signing (before gradle build) ---
+# --- Step 3a: Patch build.gradle for release signing (BEFORE gradle build) ---
 if ($ReleaseBuild) {
     # Copy release keystore into android/app/ (survives clean because it lives in repo root)
     $releaseKeystoreSrc = Join-Path $REPO_DIR "release.keystore"
@@ -326,6 +307,25 @@ if ($ReleaseBuild) {
         }
     }
 }
+
+# --- Step 3: Gradle build ---
+Write-Host ""
+Write-Host "[3/5] Building APK with Gradle ($BuildType)..."
+Set-Location $ANDROID_DIR
+if ($ReleaseBuild) {
+    # Enable ProGuard/minification for release builds
+    & .\gradlew.bat $GradleTask '--no-daemon' '-Pandroid.enableProguardInReleaseBuilds=true' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
+} else {
+    & .\gradlew.bat $GradleTask '--no-daemon' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
+}
+$gradleExit = $LASTEXITCODE
+Set-Location $REPO_DIR
+
+if ($gradleExit -ne 0) {
+    Write-Error "gradle build failed (exit $gradleExit). Log: $env:TEMP\gradle-build-trailtracker.log"
+    exit 1
+}
+Write-Host "  BUILD SUCCESSFUL  OK"
 
 # --- Step 4: Verify signing (release mode builds signed APK during gradle build) ---
 if ($ReleaseBuild) {
