@@ -24,6 +24,7 @@
 #   - JDK 21 at C:\Program Files\Java\jdk-21
 #   - Android SDK at D:\dev\android-sdk
 #   - Node.js + npm
+#   - For -ReleaseBuild: env vars TRAILTRACKER_STORE_PASSWORD and TRAILTRACKER_KEY_PASSWORD
 # ============================================================
 
 [CmdletBinding()]
@@ -298,7 +299,13 @@ if ($ReleaseBuild) {
             Write-Host "  build.gradle already patched for release signing  OK"
         } else {
             # Add release signing config after the debug block
-            $releaseSigningBlock = "`n        release {`n            storeFile file('release.keystore')`n            storePassword 'REMOVED_LEAKED_PASSWORD'`n            keyAlias 'trailtracker'`n            keyPassword 'REMOVED_LEAKED_PASSWORD'`n        }`n"
+            $storePwd = $env:TRAILTRACKER_STORE_PASSWORD
+            $keyPwd = $env:TRAILTRACKER_KEY_PASSWORD
+            if (-not $storePwd -or -not $keyPwd) {
+                Write-Error "Release signing passwords not set. Set env vars: TRAILTRACKER_STORE_PASSWORD and TRAILTRACKER_KEY_PASSWORD"
+                exit 1
+            }
+            $releaseSigningBlock = "`n        release {`n            storeFile file('release.keystore')`n            storePassword '$storePwd'`n            keyAlias 'trailtracker'`n            keyPassword '$keyPwd'`n        }`n"
             $gradleContent = $gradleContent -replace '(signingConfigs\s*\{\s*debug\s*\{[^}]*}\s*)', "`$1$releaseSigningBlock"
             # Replace 'signingConfig signingConfigs.debug' in release buildType
             $gradleContent = $gradleContent -replace 'signingConfig signingConfigs\.debug', 'signingConfig signingConfigs.release'

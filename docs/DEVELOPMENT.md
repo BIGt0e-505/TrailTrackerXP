@@ -26,16 +26,16 @@ Open Expo Go on your phone, scan the QR code, and grant location permissions.
 TrailTrackerXP/
 ├── App.js                        # Navigation, theming, font loading
 ├── app.json                      # Expo config (permissions, splash, icons)
-├── eas.json                      # EAS build profiles
 ├── babel.config.js               # Babel config (babel-preset-expo)
 ├── screens/
 │   ├── TrackingScreen.js         # GPS tracking + live map (1800+ lines)
 │   ├── CalendarScreen.js         # Activity calendar
-│   ├── StatsScreen.js            # Charts, XP, achievements, challenges
+│   ├── StatsScreen.js            # Walking/biking stats, charts, recent activities
+│   ├── XPScreen.js              # XP, levels, achievements, challenges, streaks
 │   ├── ActivityDetailScreen.js   # Per-activity detail + route playback
 │   └── SettingsScreen.js         # Preferences, import/export, Garmin settings
 ├── utils/
-│   ├── theme.js                  # ThemeProvider, light/dark colours
+│   ├── theme.js                  # Theme colours (dark-only TubePulse palette)
 │   ├── storage.js                # AsyncStorage CRUD, distance calc
 │   ├── fileStorage.js            # File-based GPX/JSON storage
 │   ├── gamification.js           # XP, levels, achievements, challenges

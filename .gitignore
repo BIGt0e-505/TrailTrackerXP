@@ -61,3 +61,13 @@ docs/archive/*.md
 # Release signing keystore
 release.keystore
 android/app/release.keystore
+
+# Stale legacy docs (kept on disk, no longer tracked)
+GARMIN_SETUP_GUIDE.md
+docs/REPO_AUDIT_BEFORE_UI_MAKEOVER.md
+docs/UI_MAKEOVER_PLAN.md
+
+# Old EAS build scripts (superseded by scripts/build-and-release.ps1)
+build-apk.bat
+build-apk.sh
+eas.json
