@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import { processActivity, recalculateGamification, loadGamification } from './gamification';
-import { 
+import {
   initFileStorage, 
   saveActivityToFile, 
   deleteActivityFromFile,
@@ -18,6 +18,7 @@ import {
   verifyDataIntegrity,
   createFullExport,
   exportGPXFiles,
+  isActivitySaved,
   getGPXFilePath,
   getAllGPXFilePaths,
 } from './fileStorage';
@@ -27,7 +28,7 @@ const CACHED_TILES_KEY = '@trail_tracker_cached_tiles';
 const TILE_CACHE_DIR = `${FileSystem.documentDirectory}tile_cache/`;
 
 // Re-export file storage functions for use elsewhere
-export { 
+export {
   initFileStorage,
   exportCacheToFileStorage,
   recoverFromFileStorage,
@@ -41,6 +42,7 @@ export {
   getAllGPXFilePaths,
   loadRouteFromFile,
   enrichActivitiesWithRoutes,
+  isActivitySaved,
 };
 
 // Strip route data from an activity for lightweight AsyncStorage caching.
@@ -62,8 +64,18 @@ export const saveActivity = async (activity) => {
     };
 
     // Save full activity (with route) to GPX file first -- this is the source of truth
-    await saveActivityToFile(newActivity);
+    const fileResult = await saveActivityToFile(newActivity);
+    if (!fileResult) {
+      throw new Error('saveActivityToFile returned false — GPX persistence failed');
+    }
     console.log('[save] Activity persisted to file:', newActivity.id);
+
+    // Verify the GPX file actually exists on disk
+    const verified = await isActivitySaved(newActivity.id);
+    if (!verified) {
+      throw new Error('Save verification failed — GPX file not found after write');
+    }
+    console.log('[save] Activity verified on disk:', newActivity.id);
 
     // Cache only metadata in AsyncStorage (no route data -- prevents size limit corruption)
     const existingActivities = await getActivities();
@@ -102,7 +114,7 @@ export const updateActivity = async (id, updates) => {
     const activities = await getActivities();
     const index = activities.findIndex(a => a.id === id);
     if (index === -1) throw new Error('Activity not found');
-    
+
     activities[index] = { ...activities[index], ...updates };
 
     // Update GPX file with full data (load route from file if needed)
@@ -115,14 +127,14 @@ export const updateActivity = async (id, updates) => {
 
     // Cache only metadata in AsyncStorage
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(activities.map(stripRouteForCache)));
-    
+
     // Recalculate gamification since activity type may affect achievements
     await recalculateGamification(activities);
-    
+
     // Also save gamification to file storage
     const gamificationData = await loadGamification();
     await saveGamificationToFile(gamificationData);
-    
+
     return activities[index];
   } catch (error) {
     console.error('Error updating activity:', error);
@@ -165,7 +177,7 @@ export const getActivityById = async (id) => {
   try {
     const activities = await getActivities();
     const activity = activities.find(a => a.id === id) || null;
-    
+
     if (activity) {
       // If activity doesn't have route data, try to load from GPX
       if (!activity.route || activity.route.length === 0) {
@@ -175,7 +187,7 @@ export const getActivityById = async (id) => {
         }
       }
     }
-    
+
     return activity;
   } catch (error) {
     console.error('Error getting activity:', error);
@@ -188,13 +200,13 @@ export const deleteActivity = async (id) => {
     const activities = await getActivities();
     const filteredActivities = activities.filter(a => a.id !== id);
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(filteredActivities));
-    
+
     // Also delete from file storage
     await deleteActivityFromFile(id);
-    
+
     // Recalculate gamification based on remaining activities
     await recalculateGamification(filteredActivities);
-    
+
     // Also save gamification to file storage
     const gamificationData = await loadGamification();
     await saveGamificationToFile(gamificationData);
@@ -206,7 +218,7 @@ export const deleteActivity = async (id) => {
 
 export const calculateDistance = (coords) => {
   if (!coords || coords.length < 2) return 0;
-  
+
   let totalDistance = 0;
   for (let i = 1; i < coords.length; i++) {
     totalDistance += getDistanceBetweenPoints(
@@ -242,7 +254,7 @@ const kmToMiles = (km) => km * 0.621371;
 // When km selected: show metres for small distances, km for larger
 export const formatDistance = (km, unit = 'miles') => {
   if (km === undefined || km === null) return unit === 'miles' ? '0.00 mi' : '0 m';
-  
+
   if (unit === 'miles') {
     const miles = kmToMiles(km);
     return `${miles.toFixed(2)} mi`;
@@ -267,7 +279,7 @@ export const formatDuration = (seconds) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   } else if (minutes > 0) {
@@ -287,14 +299,14 @@ export const formatDurationLong = (seconds) => {
 // Calculate moving time (time when speed > threshold)
 export const calculateMovingTime = (routeData) => {
   if (!routeData || routeData.length < 2) return 0;
-  
+
   let movingTime = 0;
   const speedThreshold = 0.5; // km/h minimum to count as moving
-  
+
   for (let i = 1; i < routeData.length; i++) {
     const timeDiff = (routeData[i].timestamp - routeData[i-1].timestamp) / 1000; // seconds
     if (timeDiff <= 0) continue;
-    
+
     const distance = getDistanceBetweenPoints(
       routeData[i-1].latitude,
       routeData[i-1].longitude,
@@ -302,19 +314,19 @@ export const calculateMovingTime = (routeData) => {
       routeData[i].longitude
     );
     const speed = (distance / timeDiff) * 3600; // km/h
-    
+
     if (speed > speedThreshold) {
       movingTime += timeDiff;
     }
   }
-  
+
   return movingTime;
 };
 
 // Calculate elevation gain
 export const calculateElevationGain = (routeData) => {
   if (!routeData || routeData.length < 2) return 0;
-  
+
   let gain = 0;
   for (let i = 1; i < routeData.length; i++) {
     const elevDiff = (routeData[i].altitude || 0) - (routeData[i-1].altitude || 0);
@@ -328,7 +340,7 @@ export const calculateElevationGain = (routeData) => {
 // Calculate elevation loss
 export const calculateElevationLoss = (routeData) => {
   if (!routeData || routeData.length < 2) return 0;
-  
+
   let loss = 0;
   for (let i = 1; i < routeData.length; i++) {
     const elevDiff = (routeData[i].altitude || 0) - (routeData[i-1].altitude || 0);
@@ -342,12 +354,12 @@ export const calculateElevationLoss = (routeData) => {
 // Get speed data for graphing (smoothed over ~5 seconds)
 export const getSpeedData = (routeData) => {
   if (!routeData || routeData.length < 2) return [];
-  
+
   const rawSpeeds = [];
   for (let i = 1; i < routeData.length; i++) {
     const timeDiff = (routeData[i].timestamp - routeData[i-1].timestamp) / 1000;
     if (timeDiff <= 0) continue;
-    
+
     const distance = getDistanceBetweenPoints(
       routeData[i-1].latitude,
       routeData[i-1].longitude,
@@ -355,7 +367,7 @@ export const getSpeedData = (routeData) => {
       routeData[i].longitude
     );
     const speed = (distance / timeDiff) * 3600; // km/h
-    
+
     rawSpeeds.push({
       time: (routeData[i].timestamp - routeData[0].timestamp) / 1000 / 60,
       timestamp: routeData[i].timestamp,
@@ -363,16 +375,16 @@ export const getSpeedData = (routeData) => {
       distance: routeData[i].cumulativeDistance || 0,
     });
   }
-  
+
   // Smooth speeds using a 10-second rolling average for cleaner graphs
   const smoothedSpeeds = [];
   const smoothingWindow = 10000; // 10 seconds in ms
-  
+
   for (let i = 0; i < rawSpeeds.length; i++) {
     const currentTime = rawSpeeds[i].timestamp;
     let sumSpeed = 0;
     let count = 0;
-    
+
     // Look back and forward within the window
     for (let j = 0; j < rawSpeeds.length; j++) {
       if (Math.abs(rawSpeeds[j].timestamp - currentTime) <= smoothingWindow / 2) {
@@ -380,21 +392,21 @@ export const getSpeedData = (routeData) => {
         count++;
       }
     }
-    
+
     smoothedSpeeds.push({
       time: rawSpeeds[i].time,
       speed: count > 0 ? sumSpeed / count : rawSpeeds[i].speed,
       distance: rawSpeeds[i].distance,
     });
   }
-  
+
   return smoothedSpeeds;
 };
 
 // Get elevation data for graphing
 export const getElevationData = (routeData) => {
   if (!routeData || routeData.length < 1) return [];
-  
+
   return routeData
     .filter(point => point.altitude !== undefined && point.altitude !== null)
     .map((point, index) => ({
@@ -437,7 +449,7 @@ export const clearCachedTiles = async () => {
   try {
     // Clear AsyncStorage record
     await AsyncStorage.removeItem(CACHED_TILES_KEY);
-    
+
     // Actually delete the cached tile files from the file system
     const dirInfo = await FileSystem.getInfoAsync(TILE_CACHE_DIR);
     if (dirInfo.exists) {
@@ -483,32 +495,32 @@ export const formatElevation = (meters, unit = 'miles') => {
 /**
  * Auto-export a single activity as GPX to an external location (Download folder via MediaStore).
  * This is called automatically after each activity is saved to ensure a user-accessible backup.
- * Uses the app's persistent SAF permission if already granted, otherwise writes to 
+ * Uses the app's persistent SAF permission if already granted, otherwise writes to
  * the app's Downloads-like directory and logs the location.
  */
 export const autoExportActivityGPX = async (activity) => {
   try {
     const { activityToGPX } = await import('./fileStorage');
-    
+
     const routeData = activity.routeData || activity.route || [];
     if (routeData.length === 0) {
       console.log('autoExportActivityGPX: no route data, skipping');
       return { success: false, reason: 'no_route_data' };
     }
-    
+
     const activityWithRoute = { ...activity, routeData };
     const gpxContent = activityToGPX(activityWithRoute);
     const fileName = `TrailTracker_${activity.id}.gpx`;
-    
+
     // Use SAF to write directly to a user-accessible location
-    // We use the Documents directory for the 'TrailTrackerXP' folder 
-    // (visible in any file explorer under Android/data is restricted, 
+    // We use the Documents directory for the 'TrailTrackerXP' folder
+    // (visible in any file explorer under Android/data is restricted,
     //  but we write via SAF to a persistent permission if available)
-    
+
     // Check if we have a stored export directory URI from a previous export
     const AsyncStorageLib = (await import('@react-native-async-storage/async-storage')).default;
     const savedDirUri = await AsyncStorageLib.getItem('@trail_tracker_auto_export_dir');
-    
+
     if (savedDirUri) {
       try {
         const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
@@ -525,11 +537,11 @@ export const autoExportActivityGPX = async (activity) => {
         await AsyncStorageLib.removeItem('@trail_tracker_auto_export_dir');
       }
     }
-    
+
     // No stored dir - silently save to internal for now; user can set export dir in settings
     console.log('Auto-export: no external dir configured. Activity saved to internal GPX storage only.');
     return { success: false, reason: 'no_external_dir_configured' };
-    
+
   } catch (error) {
     console.log('autoExportActivityGPX error:', error.message);
     return { success: false, error: error.message };

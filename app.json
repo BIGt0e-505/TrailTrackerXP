@@ -2,7 +2,7 @@
     "expo":  {
                  "name":  "TrailTrackerXP",
                  "slug":  "trail-tracker-xp",
-                 "version":  "1.2.0",
+                 "version":  "1.2.1",
                  "orientation":  "portrait",
                  "icon":  "./assets/icon.png",
                  "userInterfaceStyle":  "dark",
@@ -16,7 +16,7 @@
                                          ],
                  "android":  {
                                  "package":  "com.trailtrackerxp.app",
-                                 "versionCode":  4,
+                                 "versionCode":  5,
                                  "permissions":  [
                                                      "ACCESS_COARSE_LOCATION",
                                                      "ACCESS_FINE_LOCATION",

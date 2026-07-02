@@ -251,37 +251,32 @@ export const isActivitySaved = async (activityId) => {
  * Save an activity to file storage as GPX
  */
 export const saveActivityToFile = async (activity) => {
-  try {
-    await initFileStorage();
-    
-    // Get the route data - it might be stored as 'route' or 'routeData'
-    const routeData = activity.routeData || activity.route || [];
-    
-    // Only save if there's route data
-    if (routeData.length === 0) {
-      console.log(`Activity ${activity.id} has no route data, skipping GPX save`);
-      return false;
-    }
-    
-    // Create activity object with routeData properly set
-    const activityWithRoute = {
-      ...activity,
-      routeData: routeData,
-    };
-    
-    // Convert to GPX format
-    const gpxContent = activityToGPX(activityWithRoute);
-    
-    // Save to file
-    const gpxFile = `${ACTIVITIES_DIR}${activity.id}.gpx`;
-    await FileSystem.writeAsStringAsync(gpxFile, gpxContent);
-    
-    console.log(`Activity ${activity.id} saved as GPX`);
-    return true;
-  } catch (error) {
-    console.error('Error saving activity to GPX:', error);
+  await initFileStorage();
+  
+  // Get the route data - it might be stored as 'route' or 'routeData'
+  const routeData = activity.routeData || activity.route || [];
+  
+  // Only save if there's route data
+  if (routeData.length === 0) {
+    console.log(`Activity ${activity.id} has no route data, skipping GPX save`);
     return false;
   }
+  
+  // Create activity object with routeData properly set
+  const activityWithRoute = {
+    ...activity,
+    routeData: routeData,
+  };
+  
+  // Convert to GPX format
+  const gpxContent = activityToGPX(activityWithRoute);
+  
+  // Save to file
+  const gpxFile = `${ACTIVITIES_DIR}${activity.id}.gpx`;
+  await FileSystem.writeAsStringAsync(gpxFile, gpxContent);
+  
+  console.log(`Activity ${activity.id} saved as GPX`);
+  return true;
 };
 
 /**
