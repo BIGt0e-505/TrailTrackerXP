@@ -320,8 +320,8 @@ Write-Host ""
 Write-Host "[3/5] Building APK with Gradle ($BuildType)..."
 Set-Location $ANDROID_DIR
 if ($ReleaseBuild) {
-    # Enable ProGuard/minification for release builds
-    & .\gradlew.bat $GradleTask '--no-daemon' '-Pandroid.enableProguardInReleaseBuilds=true' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
+    # ProGuard/minification disabled — strips code the tracking service needs
+    & .\gradlew.bat $GradleTask '--no-daemon' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
 } else {
     & .\gradlew.bat $GradleTask '--no-daemon' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
 }
