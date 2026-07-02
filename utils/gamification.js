@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GAMIFICATION_KEY = '@trail_tracker_gamification';
+const SELECTED_CHALLENGE_KEY = '@trail_tracker_selected_challenge';
+const CHALLENGE_REWARDS_KEY = '@trail_tracker_challenge_rewards';
 export const STATS_CUTOFF_DATE_KEY = '@trail_tracker_stats_cutoff_date';
 
 // Helper to get cutoff date
@@ -45,61 +47,68 @@ const getWalkingDistanceLast365Days = (activities) => {
 
 // Achievement definitions - separated into walking, biking (mountain biking focused), and general
 export const ACHIEVEMENTS = {
-  // ========== GENERAL ACHIEVEMENTS ==========
+  // --- GENERAL ACHIEVEMENTS ---
   first_activity: {
     id: 'first_activity',
     name: 'Getting Started',
     description: 'Complete your first activity',
-    icon: '🌟',
+    icon: 'flag-outline',
     category: 'general',
+    tier: 'bronze',
     check: (stats) => stats.totalActivities >= 1,
   },
   ten_activities: {
     id: 'ten_activities',
     name: 'Regular',
     description: 'Complete 10 activities',
-    icon: '🔟',
+    icon: 'calendar-check',
     category: 'general',
+    tier: 'bronze',
     check: (stats) => stats.totalActivities >= 10,
   },
   twentyfive_activities: {
     id: 'twentyfive_activities',
     name: 'Committed',
     description: 'Complete 25 activities',
-    icon: '✨',
+    icon: 'star-outline',
     category: 'general',
+    tier: 'silver',
     check: (stats) => stats.totalActivities >= 25,
   },
   fifty_activities: {
     id: 'fifty_activities',
     name: 'Dedicated',
     description: 'Complete 50 activities',
-    icon: '⭐',
+    icon: 'star-outline',
     category: 'general',
+    tier: 'gold',
     check: (stats) => stats.totalActivities >= 50,
   },
   hundred_activities: {
     id: 'hundred_activities',
     name: 'Centurion',
     description: 'Complete 100 activities',
-    icon: '💫',
+    icon: 'trophy-outline',
     category: 'general',
+    tier: 'gold',
     check: (stats) => stats.totalActivities >= 100,
   },
   both_types: {
     id: 'both_types',
     name: 'All-Rounder',
     description: 'Complete both a walk and a bike ride',
-    icon: '🎭',
+    icon: 'compass-outline',
     category: 'general',
+    tier: 'bronze',
     check: (stats) => stats.walkingActivities >= 1 && stats.bikingActivities >= 1,
   },
   early_bird: {
     id: 'early_bird',
     name: 'Early Bird',
     description: 'Start an activity before 7am',
-    icon: '🌅',
+    icon: 'weather-sunny',
     category: 'general',
+    tier: 'silver',
     check: (stats, activity) => {
       if (!activity) return false;
       const hour = new Date(activity.timestamp).getHours();
@@ -110,8 +119,9 @@ export const ACHIEVEMENTS = {
     id: 'night_owl',
     name: 'Night Owl',
     description: 'Start an activity after 9pm',
-    icon: '🦉',
+    icon: 'weather-night',
     category: 'general',
+    tier: 'silver',
     check: (stats, activity) => {
       if (!activity) return false;
       const hour = new Date(activity.timestamp).getHours();
@@ -122,109 +132,122 @@ export const ACHIEVEMENTS = {
     id: 'hour_long',
     name: 'Hour Power',
     description: 'Complete an activity lasting over 1 hour',
-    icon: '⏱️',
+    icon: 'clock-outline',
     category: 'general',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.duration >= 3600,
   },
   two_hour: {
     id: 'two_hour',
     name: 'Endurance',
     description: 'Complete an activity lasting over 2 hours',
-    icon: '⏳',
+    icon: 'clock-outline',
     category: 'general',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.duration >= 7200,
   },
   weekend_warrior: {
     id: 'weekend_warrior',
     name: 'Weekend Warrior',
     description: 'Complete activities on both Saturday and Sunday',
-    icon: '🎉',
+    icon: 'calendar-weekend',
     category: 'general',
+    tier: 'silver',
     check: (stats) => stats.hasWeekendPair,
   },
   
-  // ========== STREAK ACHIEVEMENTS ==========
+  // --- STREAK ACHIEVEMENTS ---
   three_day_streak: {
     id: 'three_day_streak',
     name: 'Hat Trick',
     description: 'Activity 3 days in a row',
-    icon: '🔥',
+    icon: 'fire',
     category: 'streak',
+    tier: 'bronze',
     check: (stats) => stats.currentStreak >= 3,
   },
   seven_day_streak: {
     id: 'seven_day_streak',
     name: 'Week Warrior',
     description: 'Activity 7 days in a row',
-    icon: '🔥🔥',
+    icon: ['fire', 'fire'],
     category: 'streak',
+    tier: 'silver',
     check: (stats) => stats.currentStreak >= 7,
   },
   fourteen_day_streak: {
     id: 'fourteen_day_streak',
     name: 'Fortnight Force',
     description: 'Activity 14 days in a row',
-    icon: '💪',
+    icon: 'arm-flex',
     category: 'streak',
+    tier: 'silver',
     check: (stats) => stats.currentStreak >= 14,
   },
   thirty_day_streak: {
     id: 'thirty_day_streak',
     name: 'Unstoppable',
     description: 'Activity 30 days in a row',
-    icon: '🔥🔥🔥',
+    icon: ['fire', 'fire', 'fire'],
     category: 'streak',
+    tier: 'gold',
     check: (stats) => stats.currentStreak >= 30,
   },
   
-  // ========== WALKING ACHIEVEMENTS ==========
+  // --- WALKING ACHIEVEMENTS ---
   // Distance - single activity
   walk_first_km: {
     id: 'walk_first_km',
     name: 'First Steps',
     description: 'Walk your first kilometre',
-    icon: '👟',
+    icon: 'shoe-print',
     category: 'walking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 1,
   },
   walk_3km: {
     id: 'walk_3km',
     name: 'Morning Stroll',
     description: 'Walk 3km in one activity',
-    icon: '🚶',
+    icon: 'walk',
     category: 'walking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 3,
   },
   walk_5km: {
     id: 'walk_5km',
     name: 'Park Runner',
     description: 'Walk 5km in one activity',
-    icon: '🏃',
+    icon: 'run',
     category: 'walking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 5,
   },
   walk_10km: {
     id: 'walk_10km',
     name: 'Rambler',
     description: 'Walk 10km in one activity',
-    icon: '🥾',
+    icon: 'hiking',
     category: 'walking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 10,
   },
   walk_half_marathon: {
     id: 'walk_half_marathon',
     name: 'Half Marathon Walker',
     description: 'Walk 21km in one activity',
-    icon: '🏅',
+    icon: 'medal-outline',
     category: 'walking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 21,
   },
   walk_marathon: {
     id: 'walk_marathon',
     name: 'Marathon Walker',
     description: 'Walk 42km in one activity',
-    icon: '🏆',
+    icon: 'trophy-outline',
     category: 'walking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'walking' && activity.distance >= 42,
   },
   
@@ -233,59 +256,66 @@ export const ACHIEVEMENTS = {
     id: 'walk_total_10km',
     name: 'Walking Novice',
     description: 'Walk 10km total',
-    icon: '👣',
+    icon: 'shoe-print',
     category: 'walking',
+    tier: 'bronze',
     check: (stats) => stats.walkingDistance >= 10,
   },
   walk_total_50km: {
     id: 'walk_total_50km',
     name: 'Trail Finder',
     description: 'Walk 50km total',
-    icon: '🗺️',
+    icon: 'map-marker-distance',
     category: 'walking',
+    tier: 'bronze',
     check: (stats) => stats.walkingDistance >= 50,
   },
   walk_total_100km: {
     id: 'walk_total_100km',
     name: 'Walking Century',
     description: 'Walk 100km total',
-    icon: '💯',
+    icon: 'map-marker-distance',
     category: 'walking',
+    tier: 'silver',
     check: (stats) => stats.walkingDistance >= 100,
   },
   walk_total_250km: {
     id: 'walk_total_250km',
     name: 'Path Pioneer',
     description: 'Walk 250km total',
-    icon: '🧭',
+    icon: 'compass-outline',
     category: 'walking',
+    tier: 'silver',
     check: (stats) => stats.walkingDistance >= 250,
   },
   walk_total_500km: {
     id: 'walk_total_500km',
     name: 'Walking Legend',
     description: 'Walk 500km total',
-    icon: '🌟',
+    icon: 'star-outline',
     category: 'walking',
+    tier: 'gold',
     check: (stats) => stats.walkingDistance >= 500,
   },
   walk_total_1000km: {
     id: 'walk_total_1000km',
     name: 'Thousand Mile Walker',
     description: 'Walk 1000km total',
-    icon: '👑',
+    icon: 'crown',
     category: 'walking',
+    tier: 'gold',
     check: (stats) => stats.walkingDistance >= 1000,
   },
   
   // MAJOR ACHIEVEMENT - Rolling 365-day distance
   walk_1000_miles_365_days: {
     id: 'walk_1000_miles_365_days',
-    name: '🏆 1000 Mile Year',
+    name: '1000 Mile Year',
     description: 'Walk 1000 miles (1609km) within a 365-day period',
-    icon: '🏆',
+    icon: 'trophy',
     category: 'walking',
     isMajor: true,
+    tier: 'gold',
     // 1000 miles = 1609.34 km
     check: (stats) => (stats.walkingDistanceLast365Days || 0) >= 1609.34,
   },
@@ -295,40 +325,45 @@ export const ACHIEVEMENTS = {
     id: 'walk_climb_50m',
     name: 'Hill Walker',
     description: 'Climb 50m elevation on a walk',
-    icon: '⛰️',
+    icon: 'elevation-rise',
     category: 'walking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'walking' && (activity.elevationGain || 0) >= 50,
   },
   walk_climb_100m: {
     id: 'walk_climb_100m',
     name: 'Peak Seeker',
     description: 'Climb 100m elevation on a walk',
-    icon: '🏔️',
+    icon: 'terrain',
     category: 'walking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'walking' && (activity.elevationGain || 0) >= 100,
   },
   walk_climb_250m: {
     id: 'walk_climb_250m',
     name: 'Mountain Hiker',
     description: 'Climb 250m elevation on a walk',
-    icon: '🗻',
+    icon: 'terrain',
     category: 'walking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'walking' && (activity.elevationGain || 0) >= 250,
   },
   walk_total_elevation_500m: {
     id: 'walk_total_elevation_500m',
     name: 'Upward Bound',
     description: 'Gain 500m total elevation walking',
-    icon: '📈',
+    icon: 'elevation-rise',
     category: 'walking',
+    tier: 'silver',
     check: (stats) => stats.walkingElevation >= 500,
   },
   walk_total_elevation_2000m: {
     id: 'walk_total_elevation_2000m',
     name: 'Summit Collector',
     description: 'Gain 2000m total elevation walking',
-    icon: '🏔️',
+    icon: 'terrain',
     category: 'walking',
+    tier: 'gold',
     check: (stats) => stats.walkingElevation >= 2000,
   },
   
@@ -337,75 +372,84 @@ export const ACHIEVEMENTS = {
     id: 'walk_5_activities',
     name: 'Regular Walker',
     description: 'Complete 5 walks',
-    icon: '🚶‍♂️',
+    icon: 'walk',
     category: 'walking',
+    tier: 'bronze',
     check: (stats) => stats.walkingActivities >= 5,
   },
   walk_20_activities: {
     id: 'walk_20_activities',
     name: 'Walking Habit',
     description: 'Complete 20 walks',
-    icon: '🚶‍♀️',
+    icon: 'walk',
     category: 'walking',
+    tier: 'silver',
     check: (stats) => stats.walkingActivities >= 20,
   },
   walk_50_activities: {
     id: 'walk_50_activities',
     name: 'Walking Enthusiast',
     description: 'Complete 50 walks',
-    icon: '🥇',
+    icon: 'medal-outline',
     category: 'walking',
+    tier: 'gold',
     check: (stats) => stats.walkingActivities >= 50,
   },
   
-  // ========== MOUNTAIN BIKING ACHIEVEMENTS ==========
+  // --- MOUNTAIN BIKING ACHIEVEMENTS ---
   // Distance - single activity (tuned for MTB - shorter distances than road)
   mtb_first_km: {
     id: 'mtb_first_km',
     name: 'First Pedal',
     description: 'Ride your first kilometre',
-    icon: '🚲',
+    icon: 'bike',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 1,
   },
   mtb_3km: {
     id: 'mtb_3km',
     name: 'Trail Taster',
     description: 'Ride 3km in one activity',
-    icon: '🌲',
+    icon: 'sign-direction',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 3,
   },
   mtb_5km: {
     id: 'mtb_5km',
     name: 'Trail Rider',
     description: 'Ride 5km in one activity',
-    icon: '🚵',
+    icon: 'bike',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 5,
   },
   mtb_10km: {
     id: 'mtb_10km',
     name: 'Trail Blazer',
     description: 'Ride 10km in one activity',
-    icon: '🔥',
+    icon: 'fire',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 10,
   },
   mtb_20km: {
     id: 'mtb_20km',
     name: 'Enduro Rider',
     description: 'Ride 20km in one activity',
-    icon: '💪',
+    icon: 'arm-flex',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 20,
   },
   mtb_30km: {
     id: 'mtb_30km',
     name: 'Epic Ride',
     description: 'Ride 30km in one activity',
-    icon: '🏆',
+    icon: 'trophy-outline',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && activity.distance >= 30,
   },
   
@@ -414,48 +458,54 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_10km',
     name: 'Bike Beginner',
     description: 'Ride 10km total',
-    icon: '🎯',
+    icon: 'target',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingDistance >= 10,
   },
   mtb_total_50km: {
     id: 'mtb_total_50km',
     name: 'Trail Explorer',
     description: 'Ride 50km total',
-    icon: '🗺️',
+    icon: 'map-marker-distance',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingDistance >= 50,
   },
   mtb_total_100km: {
     id: 'mtb_total_100km',
     name: 'MTB Century',
     description: 'Ride 100km total',
-    icon: '💯',
+    icon: 'map-marker-distance',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingDistance >= 100,
   },
   mtb_total_250km: {
     id: 'mtb_total_250km',
     name: 'Trail Master',
     description: 'Ride 250km total',
-    icon: '🧭',
+    icon: 'compass-outline',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingDistance >= 250,
   },
   mtb_total_500km: {
     id: 'mtb_total_500km',
     name: 'MTB Legend',
     description: 'Ride 500km total',
-    icon: '🌟',
+    icon: 'star-outline',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingDistance >= 500,
   },
   mtb_total_1000km: {
     id: 'mtb_total_1000km',
     name: 'Thousand Mile Rider',
     description: 'Ride 1000km total',
-    icon: '👑',
+    icon: 'crown',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingDistance >= 1000,
   },
   
@@ -464,40 +514,45 @@ export const ACHIEVEMENTS = {
     id: 'mtb_climb_25m',
     name: 'Hill Finder',
     description: 'Climb 25m elevation on a ride',
-    icon: '📈',
+    icon: 'elevation-rise',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 25,
   },
   mtb_climb_50m: {
     id: 'mtb_climb_50m',
     name: 'Climb Time',
     description: 'Climb 50m elevation on a ride',
-    icon: '⬆️',
+    icon: 'arrow-up-bold',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 50,
   },
   mtb_climb_100m: {
     id: 'mtb_climb_100m',
     name: 'Hill Crusher',
     description: 'Climb 100m elevation on a ride',
-    icon: '⛰️',
+    icon: 'elevation-rise',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 100,
   },
   mtb_climb_200m: {
     id: 'mtb_climb_200m',
     name: 'Mountain Biker',
     description: 'Climb 200m elevation on a ride',
-    icon: '🏔️',
+    icon: 'terrain',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 200,
   },
   mtb_climb_500m: {
     id: 'mtb_climb_500m',
     name: 'Alpine Assault',
     description: 'Climb 500m elevation on a ride',
-    icon: '🗻',
+    icon: 'terrain',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationGain || 0) >= 500,
   },
   
@@ -506,48 +561,54 @@ export const ACHIEVEMENTS = {
     id: 'mtb_drop_5m',
     name: 'First Drop',
     description: 'Descend 5m elevation loss on a ride',
-    icon: '⬇️',
+    icon: 'arrow-down-bold',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 5,
   },
   mtb_drop_10m: {
     id: 'mtb_drop_10m',
     name: 'Bombhole Hunter',
     description: 'Descend 10m elevation loss on a ride',
-    icon: '💣',
+    icon: 'bomb',
     category: 'biking',
+    tier: 'bronze',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 10,
   },
   mtb_drop_25m: {
     id: 'mtb_drop_25m',
     name: 'Gravity Rider',
     description: 'Descend 25m elevation loss on a ride',
-    icon: '🎢',
+    icon: 'speedometer',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 25,
   },
   mtb_drop_50m: {
     id: 'mtb_drop_50m',
     name: 'Downhill Demon',
     description: 'Descend 50m elevation loss on a ride',
-    icon: '👹',
+    icon: 'emoticon-devil-outline',
     category: 'biking',
+    tier: 'silver',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 50,
   },
   mtb_drop_100m: {
     id: 'mtb_drop_100m',
     name: 'Descent King',
     description: 'Descend 100m elevation loss on a ride',
-    icon: '👑',
+    icon: 'crown',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 100,
   },
   mtb_drop_200m: {
     id: 'mtb_drop_200m',
     name: 'Freefall Master',
     description: 'Descend 200m elevation loss on a ride',
-    icon: '🦅',
+    icon: 'feather',
     category: 'biking',
+    tier: 'gold',
     check: (stats, activity) => activity && activity.type === 'biking' && (activity.elevationLoss || 0) >= 200,
   },
   
@@ -556,24 +617,27 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_climb_250m',
     name: 'Climbing Legs',
     description: 'Gain 250m total elevation biking',
-    icon: '🦵',
+    icon: 'arm-flex',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingElevation >= 250,
   },
   mtb_total_climb_1000m: {
     id: 'mtb_total_climb_1000m',
     name: 'Elevation Hunter',
     description: 'Gain 1000m total elevation biking',
-    icon: '🎿',
+    icon: 'target',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingElevation >= 1000,
   },
   mtb_total_climb_5000m: {
     id: 'mtb_total_climb_5000m',
     name: 'Everest Equivalent',
     description: 'Gain 5000m total elevation biking',
-    icon: '🏔️',
+    icon: 'terrain',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingElevation >= 5000,
   },
   
@@ -582,24 +646,27 @@ export const ACHIEVEMENTS = {
     id: 'mtb_total_descent_250m',
     name: 'Descent Lover',
     description: 'Descend 250m total on bike',
-    icon: '📉',
+    icon: 'arrow-down-bold',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingDescent >= 250,
   },
   mtb_total_descent_1000m: {
     id: 'mtb_total_descent_1000m',
     name: 'Drop Zone',
     description: 'Descend 1000m total on bike',
-    icon: '🎯',
+    icon: 'target',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingDescent >= 1000,
   },
   mtb_total_descent_5000m: {
     id: 'mtb_total_descent_5000m',
     name: 'Gravity Addict',
     description: 'Descend 5000m total on bike',
-    icon: '🌋',
+    icon: 'speedometer',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingDescent >= 5000,
   },
   
@@ -608,66 +675,70 @@ export const ACHIEVEMENTS = {
     id: 'mtb_5_activities',
     name: 'Regular Rider',
     description: 'Complete 5 rides',
-    icon: '🚴',
+    icon: 'bike',
     category: 'biking',
+    tier: 'bronze',
     check: (stats) => stats.bikingActivities >= 5,
   },
   mtb_20_activities: {
     id: 'mtb_20_activities',
     name: 'Riding Habit',
     description: 'Complete 20 rides',
-    icon: '🚴‍♂️',
+    icon: 'bike',
     category: 'biking',
+    tier: 'silver',
     check: (stats) => stats.bikingActivities >= 20,
   },
   mtb_50_activities: {
     id: 'mtb_50_activities',
     name: 'MTB Enthusiast',
     description: 'Complete 50 rides',
-    icon: '🥇',
+    icon: 'medal-outline',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingActivities >= 50,
   },
   mtb_100_activities: {
     id: 'mtb_100_activities',
     name: 'Trail Veteran',
     description: 'Complete 100 rides',
-    icon: '🏅',
+    icon: 'medal-outline',
     category: 'biking',
+    tier: 'gold',
     check: (stats) => stats.bikingActivities >= 100,
   },
 };
 
 // Level definitions
 export const LEVELS = [
-  { level: 1, name: 'Trail Beginner', xpRequired: 0, icon: '🌱' },
-  { level: 2, name: 'Trail Walker', xpRequired: 100, icon: '🚶' },
-  { level: 3, name: 'Trail Trekker', xpRequired: 250, icon: '🥾' },
-  { level: 4, name: 'Trail Runner', xpRequired: 500, icon: '🏃' },
-  { level: 5, name: 'Trail Blazer', xpRequired: 1000, icon: '🔥' },
-  { level: 6, name: 'Trail Master', xpRequired: 2000, icon: '⭐' },
-  { level: 7, name: 'Trail Champion', xpRequired: 3500, icon: '🏆' },
-  { level: 8, name: 'Trail Legend', xpRequired: 5000, icon: '👑' },
-  { level: 9, name: 'Trail Hero', xpRequired: 7500, icon: '🦸' },
-  { level: 10, name: 'Trail God', xpRequired: 10000, icon: '⚡' },
+  { level: 1, name: 'Trail Beginner', xpRequired: 0, icon: 'shoe-print' },
+  { level: 2, name: 'Trail Walker', xpRequired: 100, icon: 'walk' },
+  { level: 3, name: 'Trail Trekker', xpRequired: 250, icon: 'hiking' },
+  { level: 4, name: 'Trail Runner', xpRequired: 500, icon: 'run-fast' },
+  { level: 5, name: 'Trail Blazer', xpRequired: 1000, icon: 'fire' },
+  { level: 6, name: 'Trail Master', xpRequired: 2000, icon: 'trophy' },
+  { level: 7, name: 'Trail Champion', xpRequired: 3500, icon: 'medal' },
+  { level: 8, name: 'Trail Legend', xpRequired: 5000, icon: 'crown' },
+  { level: 9, name: 'Trail Hero', xpRequired: 7500, icon: 'star-shooting' },
+  { level: 10, name: 'Trail God', xpRequired: 10000, icon: 'emoticon-devil-outline' },
 ];
 
 // Distance landmarks for fun comparisons (in km)
 export const LANDMARKS = [
-  { distance: 1, name: 'a football pitch', icon: '⚽' },
-  { distance: 5, name: 'the height of 5 Eiffel Towers', icon: '🗼' },
-  { distance: 10, name: 'across Central Park', icon: '🌳' },
-  { distance: 21.1, name: 'a half marathon', icon: '🏃' },
-  { distance: 42.2, name: 'a full marathon', icon: '🏅' },
-  { distance: 50, name: 'the English Channel width', icon: '🌊' },
-  { distance: 100, name: 'the length of 1000 football pitches', icon: '💯' },
-  { distance: 160, name: 'the Great Wall section', icon: '🧱' },
-  { distance: 344, name: 'London to Paris', icon: '🇫🇷' },
-  { distance: 500, name: 'the length of Ireland', icon: '☘️' },
-  { distance: 774, name: 'Land\'s End to John o\' Groats', icon: '🇬🇧' },
-  { distance: 1000, name: 'across France', icon: '🥖' },
-  { distance: 2000, name: 'the length of Japan', icon: '🗾' },
-  { distance: 5000, name: 'across the USA', icon: '🇺🇸' },
+  { distance: 1, name: 'a football pitch', icon: 'soccer-field' },
+  { distance: 5, name: 'the height of 5 Eiffel Towers', icon: 'tower-beach' },
+  { distance: 10, name: 'across Central Park', icon: 'tree-outline' },
+  { distance: 21.1, name: 'a half marathon', icon: 'run' },
+  { distance: 42.2, name: 'a full marathon', icon: 'run-fast' },
+  { distance: 50, name: 'the English Channel width', icon: 'ferry' },
+  { distance: 100, name: 'the length of 1000 football pitches', icon: 'soccer' },
+  { distance: 160, name: 'the Great Wall section', icon: 'wall' },
+  { distance: 344, name: 'London to Paris', icon: 'train' },
+  { distance: 500, name: 'the length of Ireland', icon: 'map-outline' },
+  { distance: 774, name: 'Land\'s End to John o\' Groats', icon: 'compass-outline' },
+  { distance: 1000, name: 'across France', icon: 'flag-outline' },
+  { distance: 2000, name: 'the length of Japan', icon: 'flag-variant-outline' },
+  { distance: 5000, name: 'across the USA', icon: 'flag-variant' },
 ];
 
 // Challenge templates
@@ -965,6 +1036,274 @@ export const updateChallengeProgress = (challenges, activities, currentStreak) =
   });
 };
 
+// --- Selectable Challenges ---
+
+// Bonus XP by difficulty (target magnitude)
+const getBonusXpForChallenge = (template, target) => {
+  const maxTarget = Math.max(...template.targets);
+  const ratio = target / maxTarget;
+  if (ratio >= 0.8) return 250;
+  if (ratio >= 0.5) return 100;
+  return 50;
+};
+
+// Get all available challenge templates (for selection UI)
+export const getChallengeTemplates = () => {
+  return CHALLENGE_TEMPLATES.map(template => ({
+    templateId: template.id,
+    type: template.type,
+    period: template.period,
+    targets: template.targets,
+    unit: template.unit,
+    description: template.description,
+  }));
+};
+
+// Select a challenge -- sets baseline and selectedAt
+export const selectChallenge = async (templateId, target) => {
+  const template = CHALLENGE_TEMPLATES.find(t => t.id === templateId);
+  if (!template) throw new Error('Unknown challenge template: ' + templateId);
+  
+  if (!target || !template.targets.includes(target)) {
+    target = template.targets[Math.floor(Math.random() * template.targets.length)];
+  }
+  
+  const bonusXp = getBonusXpForChallenge(template, target);
+  const description = template.description.replace('{target}', target);
+  
+  const selectedChallenge = {
+    templateId: template.id,
+    description,
+    type: template.type,
+    period: template.period,
+    target,
+    unit: template.unit,
+    bonusXp,
+    selectedAt: new Date().toISOString(),
+    baseline: { distance: 0, duration: 0, elevation: 0, activityCount: 0 },
+    completedAt: null,
+    bonusXpAwarded: false,
+  };
+  
+  await AsyncStorage.setItem(SELECTED_CHALLENGE_KEY, JSON.stringify(selectedChallenge));
+  return selectedChallenge;
+};
+
+// Get the currently selected challenge (or null)
+export const getSelectedChallenge = async () => {
+  try {
+    const data = await AsyncStorage.getItem(SELECTED_CHALLENGE_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    console.log('Error loading selected challenge:', e);
+    return null;
+  }
+};
+
+// Abandon the current selected challenge
+export const abandonSelectedChallenge = async () => {
+  await AsyncStorage.removeItem(SELECTED_CHALLENGE_KEY);
+};
+
+// Calculate progress for a selected challenge
+// Only counts activities with timestamp >= selectedAt
+export const getSelectedChallengeProgress = (selectedChallenge, activities, currentStreak) => {
+  if (!selectedChallenge) return null;
+  
+  const selectedAt = new Date(selectedChallenge.selectedAt);
+  
+  // Filter activities since selection point
+  const relevantActivities = activities.filter(a => {
+    const activityDate = new Date(a.date || a.timestamp || 0);
+    return activityDate >= selectedAt;
+  });
+  
+  let progress = 0;
+  
+  switch (selectedChallenge.type) {
+    case 'distance':
+      progress = relevantActivities.reduce((sum, a) => sum + (a.distance || 0), 0);
+      break;
+    case 'count':
+      progress = relevantActivities.length;
+      break;
+    case 'streak':
+      progress = currentStreak || 0;
+      break;
+    case 'single_distance':
+      progress = relevantActivities.length > 0
+        ? Math.max(...relevantActivities.map(a => a.distance || 0))
+        : 0;
+      break;
+    case 'duration':
+      progress = relevantActivities.length > 0
+        ? Math.max(...relevantActivities.map(a => (a.duration || 0) / 60))
+        : 0;
+      break;
+  }
+  
+  const completed = progress >= selectedChallenge.target;
+  return {
+    ...selectedChallenge,
+    progress,
+    completed,
+  };
+};
+
+// --- Challenge Offer Filtering ---
+// Rules:
+//   A: Do not offer duplicates of in-flight challenges (selected or auto)
+//   B: Do not offer challenges already achieved under their own rule window
+
+// Check if a challenge variant (templateId + target) is currently in flight
+export const isChallengeInFlight = (templateId, target, selectedChallenge, autoChallenges) => {
+  // Check selected challenge
+  if (selectedChallenge && !selectedChallenge.completed &&
+      selectedChallenge.templateId === templateId &&
+      selectedChallenge.target === target) {
+    return true;
+  }
+  // Check auto/random challenges that are active (not completed, not expired)
+  if (autoChallenges) {
+    for (const c of autoChallenges) {
+      if (!c.expired && !c.completed && c.templateId === templateId && c.target === target) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+// Calculate current progress for a challenge template under its own rule window
+// (used for offer filtering only -- NOT for selected challenge progress)
+export const getChallengeOfferProgress = (template, target, activities, currentStreak) => {
+  const now = new Date();
+  const periodStart = template.period === 'daily'
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+  
+  const periodActivities = activities.filter(a =>
+    new Date(a.date || a.timestamp || 0) >= periodStart
+  );
+  
+  let progress = 0;
+  switch (template.type) {
+    case 'distance':
+      progress = periodActivities.reduce((sum, a) => sum + (a.distance || 0), 0);
+      break;
+    case 'count':
+      progress = periodActivities.length;
+      break;
+    case 'streak':
+      progress = currentStreak || 0;
+      break;
+    case 'single_distance':
+      progress = periodActivities.length > 0
+        ? Math.max(...periodActivities.map(a => a.distance || 0))
+        : 0;
+      break;
+    case 'duration':
+      progress = periodActivities.length > 0
+        ? Math.max(...periodActivities.map(a => (a.duration || 0) / 60))
+        : 0;
+      break;
+  }
+  return progress;
+};
+
+// Check if a challenge is already achieved under its own rule window
+export const isChallengeAlreadyAchievedForOffer = (template, target, activities, currentStreak) => {
+  const progress = getChallengeOfferProgress(template, target, activities, currentStreak);
+  return progress >= target;
+};
+
+// Get all offerable challenge variants, filtered by:
+//   - Not in flight (not duplicate of active selected or auto challenges)
+//   - Not already achieved under their own rule window
+// Returns array of { templateId, type, period, target, unit, description, bonusXp }
+export const getOfferableChallenges = (activities, selectedChallenge, autoChallenges, currentStreak) => {
+  const offerable = [];
+  
+  for (const template of CHALLENGE_TEMPLATES) {
+    for (const target of template.targets) {
+      // Rule A: skip if in flight
+      if (isChallengeInFlight(template.id, target, selectedChallenge, autoChallenges)) continue;
+      
+      // Rule B: skip if already achieved
+      if (isChallengeAlreadyAchievedForOffer(template, target, activities, currentStreak)) continue;
+      
+      const maxTarget = Math.max(...template.targets);
+      const ratio = target / maxTarget;
+      const bonusXp = ratio >= 0.8 ? 250 : ratio >= 0.5 ? 100 : 50;
+      
+      offerable.push({
+        templateId: template.id,
+        type: template.type,
+        period: template.period,
+        target,
+        unit: template.unit,
+        description: template.description.replace('{target}', target),
+        bonusXp,
+      });
+    }
+  }
+  
+  return offerable;
+};
+
+// Get challenge reward ledger
+export const getChallengeRewards = async () => {
+  try {
+    const data = await AsyncStorage.getItem(CHALLENGE_REWARDS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.log('Error loading challenge rewards:', e);
+    return [];
+  }
+};
+
+// Award bonus XP for completing a selected challenge
+// Returns the updated gamification state and whether the award was made
+export const awardSelectedChallengeBonus = async (gamification, selectedChallenge) => {
+  if (!selectedChallenge || selectedChallenge.bonusXpAwarded) {
+    return { gamification, awarded: false };
+  }
+  
+  // Check if already in reward ledger
+  const rewards = await getChallengeRewards();
+  const alreadyAwarded = rewards.some(
+    r => r.challengeId === selectedChallenge.templateId &&
+         r.selectedAt === selectedChallenge.selectedAt
+  );
+  if (alreadyAwarded) {
+    return { gamification, awarded: false };
+  }
+  
+  // Award bonus XP
+  gamification.xp += selectedChallenge.bonusXp;
+  
+  // Add to reward ledger
+  const reward = {
+    challengeId: selectedChallenge.templateId,
+    selectedAt: selectedChallenge.selectedAt,
+    awardedAt: new Date().toISOString(),
+    xp: selectedChallenge.bonusXp,
+    source: 'selected_challenge',
+  };
+  rewards.push(reward);
+  await AsyncStorage.setItem(CHALLENGE_REWARDS_KEY, JSON.stringify(rewards));
+  
+  // Mark as awarded in selected challenge
+  const updated = {
+    ...selectedChallenge,
+    completedAt: new Date().toISOString(),
+    bonusXpAwarded: true,
+  };
+  await AsyncStorage.setItem(SELECTED_CHALLENGE_KEY, JSON.stringify(updated));
+  
+  return { gamification, awarded: true, bonusXp: selectedChallenge.bonusXp, updatedChallenge: updated };
+};
+
 // Process a new activity - update all gamification
 export const processActivity = async (activity, allActivities) => {
   const gamification = await loadGamification();
@@ -1071,9 +1410,23 @@ export const processActivity = async (activity, allActivities) => {
     });
     
     // Add new challenges
-    const newChallenges = generateChallenges(gamification.stats);
+    const newChallenges = generateChallenges(gamification.stats, allActivities, await getSelectedChallenge(), gamification.challenges);
     gamification.challenges = [...gamification.challenges, ...newChallenges];
     gamification.lastChallengeGeneration = now.toISOString();
+  }
+  
+  // Check selected challenge for completion and award bonus XP
+  const selectedChallenge = await getSelectedChallenge();
+  if (selectedChallenge && !selectedChallenge.bonusXpAwarded) {
+    const progressData = getSelectedChallengeProgress(selectedChallenge, allActivities, gamification.stats.currentStreak);
+    if (progressData.completed) {
+      const awardResult = await awardSelectedChallengeBonus(gamification, selectedChallenge);
+      if (awardResult.awarded) {
+        gamification = awardResult.gamification;
+        results.xpEarned += awardResult.bonusXp;
+        results.selectedChallengeCompleted = awardResult.updatedChallenge;
+      }
+    }
   }
   
   // Save and return
@@ -1201,5 +1554,6 @@ export const recalculateGamification = async (activities, cutoffDate = null) => 
   // Save the recalculated gamification
   await saveGamification(gamification);
   
+
   return gamification;
 };

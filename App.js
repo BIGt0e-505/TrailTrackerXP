@@ -17,6 +17,7 @@ import { initFileStorage } from './utils/storage';
 import TrackingScreen from './screens/TrackingScreen';
 import CalendarScreen from './screens/CalendarScreen';
 import StatsScreen from './screens/StatsScreen';
+import XPScreen from './screens/XPScreen';
 import ActivityDetailScreen from './screens/ActivityDetailScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import { TrackIcon, CalendarIcon, StatsIcon, SettingsIcon } from './components/Icons';
@@ -27,7 +28,7 @@ const Stack = createNativeStackNavigator();
 // Keep splash screen visible while loading
 SplashScreen.preventAutoHideAsync();
 
-// Custom header — TubePulse-style dark with accent
+// Custom header -- TubePulse-style dark with accent
 function CustomHeader({ title, username }) {
   const displayTitle = username ? `${username}'s ${title}` : title;
   return (
@@ -121,6 +122,25 @@ function TabNavigator() {
         component={CalendarScreen}
         options={{
           tabBarIcon: ({ color }) => <CalendarIcon size={24} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="XP"
+        component={XPScreen}
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <Text style={{
+              color,
+              fontFamily: 'Inter_700Bold',
+              fontSize: focused ? 24 : 22,
+              lineHeight: 28,
+              marginTop: 4,
+            }}>
+              XP
+            </Text>
+          ),
+          tabBarLabel: '',
+          tabBarAccessibilityLabel: 'XP',
         }}
       />
       <Tab.Screen
