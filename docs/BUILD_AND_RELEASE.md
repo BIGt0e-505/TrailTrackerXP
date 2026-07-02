@@ -43,10 +43,15 @@ Output: `releases/TrailTrackerXP-v<version>-dev-debug.apk`
 ### Release Build (for public release)
 
 ```powershell
+# Set signing passwords first (env vars, not hardcoded in the script):
+$env:TRAILTRACKER_STORE_PASSWORD = "<your-store-password>"
+$env:TRAILTRACKER_KEY_PASSWORD = "<your-key-password>"
+
 .\scripts\build-and-release.ps1 -ReleaseBuild
 ```
 
 Produces a signed, minified release APK. Use only when cutting a public release.
+Requires `TRAILTRACKER_STORE_PASSWORD` and `TRAILTRACKER_KEY_PASSWORD` environment variables.
 
 Output: `releases/TrailTrackerXP-v<version>.apk`
 
