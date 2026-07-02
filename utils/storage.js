@@ -6,6 +6,7 @@ import {
   saveActivityToFile, 
   deleteActivityFromFile,
   loadActivitiesFromFile,
+  loadActivityFromFile,
   loadActivityWithStreams,
   loadRouteFromFile,
   enrichActivitiesWithRoutes,
@@ -19,6 +20,7 @@ import {
   createFullExport,
   exportGPXFiles,
   isActivitySaved,
+  getSavedActivityIds,
   getGPXFilePath,
   getAllGPXFilePaths,
 } from './fileStorage';
@@ -43,6 +45,8 @@ export {
   loadRouteFromFile,
   enrichActivitiesWithRoutes,
   isActivitySaved,
+  getSavedActivityIds,
+  loadActivityFromFile,
 };
 
 // Strip route data from an activity for lightweight AsyncStorage caching.
@@ -57,11 +61,39 @@ export const saveActivity = async (activity) => {
   // If this succeeds, the activity is saved regardless of what happens later.
   let newActivity;
   try {
+    // If the incoming activity already has an id (e.g. from pending-save recovery),
+    // check whether it's already been saved to avoid duplicates.
+    if (activity.id) {
+      const alreadySaved = await isActivitySaved(activity.id);
+      if (alreadySaved) {
+        console.log('[save] Activity already exists in GPX storage, skipping re-save:', activity.id);
+        // Ensure it's in the AsyncStorage cache too, then return early
+        const existing = await getActivities();
+        if (!existing.some(a => a.id === activity.id)) {
+          const fileActivity = await loadActivityFromFile(activity.id);
+          if (fileActivity) {
+            const updated = [...existing, stripRouteForCache(fileActivity)];
+            await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updated));
+          }
+        }
+        // Return without creating a duplicate
+        const existingActs = await getActivities();
+        return { activity: { ...activity, timestamp: activity.timestamp || activity.date }, gamification: null, gamificationError: null };
+      }
+    }
+
     newActivity = {
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
+      id: activity.id || Date.now().toString(),
+      timestamp: activity.timestamp || new Date().toISOString(),
       ...activity,
     };
+    // Ensure id and timestamp take precedence over spread activity fields
+    if (activity.id) {
+      newActivity.id = activity.id;
+    }
+    if (activity.timestamp) {
+      newActivity.timestamp = activity.timestamp;
+    }
 
     // Save full activity (with route) to GPX file first -- this is the source of truth
     const fileResult = await saveActivityToFile(newActivity);
@@ -78,8 +110,10 @@ export const saveActivity = async (activity) => {
     console.log('[save] Activity verified on disk:', newActivity.id);
 
     // Cache only metadata in AsyncStorage (no route data -- prevents size limit corruption)
+    // Dedupe: replace existing entry with same id instead of appending a duplicate
     const existingActivities = await getActivities();
-    const updatedActivities = [...existingActivities, stripRouteForCache(newActivity)];
+    const filteredExisting = existingActivities.filter(a => a.id !== newActivity.id);
+    const updatedActivities = [...filteredExisting, stripRouteForCache(newActivity)];
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updatedActivities));
     console.log('[save] Activity cached to AsyncStorage:', newActivity.id);
   } catch (error) {
@@ -145,8 +179,52 @@ export const updateActivity = async (id, updates) => {
 export const getActivities = async () => {
   try {
     const json = await AsyncStorage.getItem(ACTIVITIES_KEY);
-    const activities = json ? JSON.parse(json) : [];
-    if (activities.length > 0) return activities;
+    const cachedActivities = json ? JSON.parse(json) : [];
+
+    // Get all GPX file IDs (source of truth)
+    const savedIds = new Set(await getSavedActivityIds());
+
+    if (cachedActivities.length > 0) {
+      // Merge: keep cache entries that have a backing GPX file,
+      // and add file-only entries that are missing from cache.
+      const cacheIds = new Set(cachedActivities.map(a => a.id?.toString()));
+      const validFromCache = cachedActivities.filter(a => savedIds.has(a.id?.toString()));
+      const orphanedFromCache = cachedActivities.filter(a => !savedIds.has(a.id?.toString()));
+      if (orphanedFromCache.length > 0) {
+        console.log(`[getActivities] Dropping ${orphanedFromCache.length} orphaned cache entr(y/ies) with no GPX file`);
+        // Clean AsyncStorage to remove orphans
+        await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(validFromCache.map(stripRouteForCache)));
+      }
+
+      // Check for GPX files not in cache (e.g. cache is partial)
+      const missingFromCache = [...savedIds].filter(id => !cacheIds.has(id));
+      if (missingFromCache.length > 0) {
+        console.log(`[getActivities] Found ${missingFromCache.length} GPX file(s) not in cache, merging`);
+        const fileActivities = await loadActivitiesFromFile();
+        const toAdd = fileActivities.filter(a => !cacheIds.has(a.id?.toString()));
+        const merged = [...validFromCache, ...toAdd.map(({ route, routeData, ...metadata }) => metadata)];
+        // Dedupe by id (shouldn't be needed after above logic, but guarantees no duplicates)
+        const seen = new Set();
+        const deduped = merged.filter(a => {
+          const id = a.id?.toString();
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+        await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(deduped.map(stripRouteForCache)));
+        return deduped;
+      }
+
+      // Dedupe by id (safety net)
+      const seen = new Set();
+      const deduped = validFromCache.filter(a => {
+        const id = a.id?.toString();
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+      return deduped;
+    }
 
     // Cache is empty -- try to rebuild from GPX files (source of truth)
     const fileActivities = await loadActivitiesFromFile();
@@ -198,6 +276,7 @@ export const getActivityById = async (id) => {
 export const deleteActivity = async (id) => {
   try {
     const activities = await getActivities();
+    // Filter out the activity (and any duplicates with the same id)
     const filteredActivities = activities.filter(a => a.id !== id);
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(filteredActivities));
 

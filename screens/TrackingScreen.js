@@ -226,6 +226,18 @@ export default function TrackingScreen() {
             { text: 'Discard', style: 'destructive', onPress: () => clearPendingSaveSnapshot() },
             { text: 'Save Now', onPress: async () => {
               try {
+                // Check if this activity was already saved (e.g. save succeeded but
+                // clearPendingSaveSnapshot didn't run before crash)
+                if (parsed.id) {
+                  const { isActivitySaved, getActivities } = require('../utils/storage');
+                  const alreadyExists = await isActivitySaved(parsed.id);
+                  if (alreadyExists) {
+                    console.log('[pending-save] Activity already saved, clearing snapshot');
+                    await clearPendingSaveSnapshot();
+                    Alert.alert('Already Saved', 'This activity was already saved successfully. The recovery snapshot has been cleared.');
+                    return;
+                  }
+                }
                 const result = await saveActivity(parsed);
                 console.log('[pending-save] Retry save succeeded:', result.activity.id);
                 await clearPendingSaveSnapshot();
@@ -571,6 +583,10 @@ export default function TrackingScreen() {
       // Recovery data is NOT cleared until save is verified.
       // Write a pending-save snapshot so we can recover if save fails or app crashes.
       const activityForSave = { ...activity };
+      // Preserve the date as timestamp for consistency
+      if (activityForSave.date && !activityForSave.timestamp) {
+        activityForSave.timestamp = activityForSave.date;
+      }
       await writePendingSaveSnapshot(activityForSave);
 
       let savedActivity = null;

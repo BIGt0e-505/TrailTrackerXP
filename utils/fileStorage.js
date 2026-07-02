@@ -100,11 +100,15 @@ export const activityToGPX = (activity) => {
   
   // Build the GPX document (matching Strava/sample format)
   // Note: Using <n> tag for name as seen in Strava exports
+  // Include activity id in <desc> for dedup detection on re-import
+  const descTag = activity.id
+    ? `  <desc>TrailTrackerXP activity id: ${escapeXML(activity.id)}</desc>\n`
+    : '';
   const gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx creator="TrailTrackerXP" version="1.1" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
  <metadata>
   <time>${metadataTime}</time>
- </metadata>
+${descTag} </metadata>
  <trk>
   <name>${escapeXML(name)}</name>
   <type>${gpxType}</type>

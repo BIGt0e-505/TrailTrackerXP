@@ -459,6 +459,114 @@ export const importGPXFromUri = async (fileUri, fileName, metadata = null) => {
 };
 
 /**
+ * Scan a user-selected GPX folder for duplicates and optionally delete them.
+ *
+ * @param {string} directoryUri - SAF URI for the selected folder
+ * @param {Function} onProgress - callback(current, total, fileName)
+ * @returns {Object} scan result with groups for deletion
+ */
+export const scanGPXFolderForDuplicates = async (directoryUri, onProgress = null) => {
+  const { signatureFromGPXContent, groupDuplicates } = require('./gpxIdentity');
+
+  // Read all files in the directory
+  const allFiles = await FileSystem.StorageAccessFramework.readDirectoryAsync(directoryUri);
+
+  // Filter to GPX files and read content
+  const gpxFiles = [];
+  for (const fileUri of allFiles) {
+    let decoded = fileUri;
+    try { decoded = decodeURIComponent(fileUri); } catch (e) {}
+    let fileName = decoded.split('/').pop();
+    if (fileName.includes(':')) fileName = fileName.split(':').pop();
+
+    if (fileName.toLowerCase().endsWith('.gpx')) {
+      gpxFiles.push({ uri: fileUri, name: fileName });
+    }
+  }
+
+  if (gpxFiles.length === 0) {
+    return { success: false, error: 'No GPX files found in selected folder' };
+  }
+
+  // Read content and build signatures
+  const filesWithContent = [];
+  const unparseable = [];
+
+  for (let i = 0; i < gpxFiles.length; i++) {
+    const f = gpxFiles[i];
+    if (onProgress) onProgress(i + 1, gpxFiles.length, f.name);
+
+    try {
+      const content = await FileSystem.StorageAccessFramework.readAsStringAsync(f.uri);
+      filesWithContent.push({ ...f, content });
+    } catch (e) {
+      console.log(`[folder-scan] Could not read ${f.name}: ${e.message}`);
+      unparseable.push({ ...f, error: e.message });
+    }
+  }
+
+  // Group duplicates
+  const { groups, unique, duplicateGroups, unparseable: unparseableSig } = groupDuplicates(filesWithContent);
+
+  // Collect all duplicate files to delete (only id and routeHash confidence — not fuzzy)
+  const filesToDelete = [];
+  const safeDuplicateGroups = duplicateGroups.filter(g => g.confidence === 'id' || g.confidence === 'routeHash');
+  const fuzzyGroups = duplicateGroups.filter(g => g.confidence === 'fuzzy');
+
+  for (const group of safeDuplicateGroups) {
+    for (const dup of group.duplicates) {
+      filesToDelete.push({ uri: dup.uri, name: dup.name, canonicalName: group.canonical.name });
+    }
+  }
+
+  return {
+    success: true,
+    totalScanned: gpxFiles.length,
+    uniqueCount: unique.length,
+    duplicateGroupsCount: safeDuplicateGroups.length,
+    duplicateFilesCount: filesToDelete.length,
+    fuzzyDuplicateGroups: fuzzyGroups.length,
+    fuzzyDuplicateFiles: fuzzyGroups.reduce((sum, g) => sum + g.duplicates.length, 0),
+    unparseableCount: unparseable.length + unparseableSig.length,
+    filesToDelete,
+    groups: safeDuplicateGroups.map(g => ({
+      canonical: g.canonical.name,
+      duplicates: g.duplicates.map(d => d.name),
+      confidence: g.confidence,
+    })),
+  };
+};
+
+/**
+ * Delete duplicate GPX files from a user-selected folder.
+ *
+ * @param {Array} filesToDelete - [{ uri, name }]
+ * @param {Function} onProgress - callback(current, total, fileName)
+ * @returns {Object} result
+ */
+export const deleteDuplicateGPXFiles = async (filesToDelete, onProgress = null) => {
+  let deleted = 0;
+  let failed = 0;
+  const failedFiles = [];
+
+  for (let i = 0; i < filesToDelete.length; i++) {
+    const f = filesToDelete[i];
+    if (onProgress) onProgress(i + 1, filesToDelete.length, f.name);
+
+    try {
+      await FileSystem.StorageAccessFramework.deleteAsync(f.uri);
+      deleted++;
+    } catch (e) {
+      console.log(`[folder-cleanup] Could not delete ${f.name}: ${e.message}`);
+      failed++;
+      failedFiles.push({ name: f.name, error: e.message });
+    }
+  }
+
+  return { success: true, deleted, failed, failedFiles };
+};
+
+/**
  * Import selected GPX files
  * 
  * @param {Array} gpxFiles - Array of file objects from document picker
@@ -476,28 +584,101 @@ export const importSelectedFiles = async (gpxFiles, metadata = {}, onProgress = 
         failed: 0,
       };
     }
-    
+
+    // --- Dedup: build signatures for all existing internal activities ---
+    const { signatureFromGPXContent, isDuplicate, buildSignature } = require('./gpxIdentity');
+    const { getSavedActivityIds, loadActivityFromFile } = require('./fileStorage');
+
+    const internalIds = new Set(await getSavedActivityIds());
+    const internalSignatures = [];
+
+    for (const id of internalIds) {
+      try {
+        const activity = await loadActivityFromFile(id);
+        if (activity) {
+          const routeData = activity.routeData || activity.route || [];
+          const sig = buildSignature({
+            routeData,
+            timestamp: activity.timestamp,
+            distance: activity.distance,
+            duration: activity.duration,
+            type: activity.type,
+            id: activity.id,
+          });
+          if (sig) internalSignatures.push(sig);
+        }
+      } catch (e) {
+        // Skip activities that can't be loaded
+      }
+    }
+
+    console.log(`[import] Built ${internalSignatures.length} internal signatures for dedup`);
+
     let imported = 0;
     let failed = 0;
+    let skippedDuplicates = 0;
     const errors = [];
-    const importedActivities = []; // Collect all imported activities
-    
+    const importedActivities = [];
+
     for (let i = 0; i < gpxFiles.length; i++) {
       const file = gpxFiles[i];
       const fileName = file.name;
-      
+
       if (onProgress) {
         onProgress(i + 1, gpxFiles.length, fileName);
       }
-      
+
+      // Read GPX content for dedup check
+      let gpxContent;
+      try {
+        if (file.uri.startsWith('content://')) {
+          gpxContent = await FileSystem.StorageAccessFramework.readAsStringAsync(file.uri);
+        } else {
+          gpxContent = await FileSystem.readAsStringAsync(file.uri);
+        }
+      } catch (e) {
+        failed++;
+        errors.push({ file: fileName, error: `Could not read file: ${e.message}` });
+        continue;
+      }
+
+      // Build signature from GPX content
+      const importSig = signatureFromGPXContent(gpxContent);
+
+      // Check against internal activities
+      const isDup = importSig ? internalSignatures.some(is => isDuplicate(importSig, is)) : false;
+
+      if (isDup) {
+        console.log(`[import] Skipping duplicate: ${fileName}`);
+        skippedDuplicates++;
+        continue;
+      }
+
+      // Also check for duplicates within this import batch
+      const isBatchDup = importedActivities.some(a => {
+        const routeData = a.routeData || a.route || [];
+        const aSig = buildSignature({ routeData, timestamp: a.timestamp, distance: a.distance, duration: a.duration, type: a.type, id: a.id });
+        return isDuplicate(importSig, aSig);
+      });
+
+      if (isBatchDup) {
+        console.log(`[import] Skipping intra-batch duplicate: ${fileName}`);
+        skippedDuplicates++;
+        continue;
+      }
+
       // Look up metadata by filename
       const fileMetadata = metadata[fileName] || null;
-      
+
       const result = await importGPXFromUri(file.uri, fileName, fileMetadata);
-      
+
       if (result.success) {
         imported++;
         importedActivities.push(result.activity);
+        // Add to internal signatures so subsequent files are checked against it
+        const routeData = result.activity.routeData || result.activity.route || [];
+        const newSig = buildSignature({ routeData, timestamp: result.activity.timestamp, distance: result.activity.distance, duration: result.activity.duration, type: result.activity.type, id: result.activity.id });
+        if (newSig) internalSignatures.push(newSig);
       } else {
         failed++;
         errors.push({ file: fileName, error: result.error });
@@ -574,6 +755,7 @@ export const importSelectedFiles = async (gpxFiles, metadata = {}, onProgress = 
       success: true,
       imported,
       failed,
+      skipped: skippedDuplicates,
       total: gpxFiles.length,
       errors: errors.slice(0, 10), // Only return first 10 errors
     };

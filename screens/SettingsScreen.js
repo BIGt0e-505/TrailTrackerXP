@@ -38,6 +38,8 @@ import {
   pickActivitiesCSV,
   parseActivitiesCSV,
   importSelectedFiles,
+  scanGPXFolderForDuplicates,
+  deleteDuplicateGPXFiles,
 } from '../utils/stravaImport';
 import { MapIcon, ExportIcon, TrashIcon, CheckIcon, InfoIcon, SyncIcon, DownloadIcon, UploadIcon, WarningIcon } from '../components/Icons';
 
@@ -76,6 +78,10 @@ export default function SettingsScreen() {
   const [selectedGPXFiles, setSelectedGPXFiles] = useState([]);
   const [csvMetadata, setCsvMetadata] = useState(null);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0, file: '' });
+  const [showFolderCleanupModal, setShowFolderCleanupModal] = useState(false);
+  const [folderScanResult, setFolderScanResult] = useState(null);
+  const [folderCleanupProgress, setFolderCleanupProgress] = useState({ current: 0, total: 0, file: '' });
+  const [cleanupPhase, setCleanupPhase] = useState('idle');
 
   // Stats cutoff date
   const [statsCutoffDate, setStatsCutoffDateState] = useState(null);
@@ -304,6 +310,58 @@ export default function SettingsScreen() {
     setIsProcessing(false);
     setSelectedGPXFiles([]);
     setCsvMetadata(null);
+  };
+
+  const handleFolderCleanup = () => {
+    setShowFolderCleanupModal(true);
+    setFolderScanResult(null);
+    setFolderCleanupProgress({ current: 0, total: 0, file: '' });
+    setCleanupPhase('idle');
+    setOperationResult(null);
+  };
+
+  const startFolderScan = async () => {
+    setCleanupPhase('scanning');
+    setFolderScanResult(null);
+
+    try {
+      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+      if (!permissions.granted) {
+        setOperationResult({ success: false, error: 'Permission denied. Please select a folder to scan.' });
+        setCleanupPhase('idle');
+        return;
+      }
+
+      const result = await scanGPXFolderForDuplicates(permissions.directoryUri);
+      setFolderScanResult(result);
+      setCleanupPhase('confirm');
+    } catch (error) {
+      setOperationResult({ success: false, error: error.message });
+      setCleanupPhase('idle');
+    }
+  };
+
+  const confirmDeleteDuplicates = async () => {
+    if (!folderScanResult || !folderScanResult.filesToDelete) return;
+
+    setCleanupPhase('deleting');
+    setFolderCleanupProgress({ current: 0, total: folderScanResult.filesToDelete.length, file: '' });
+
+    try {
+      const result = await deleteDuplicateGPXFiles(
+        folderScanResult.filesToDelete,
+        (current, total, file) => {
+          setFolderCleanupProgress({ current, total, file });
+        }
+      );
+
+      setOperationResult(result);
+      setCleanupPhase('done');
+    } catch (error) {
+      setOperationResult({ success: false, error: error.message });
+      setCleanupPhase('done');
+    }
   };
 
   const handlePickGPXFiles = async () => {
@@ -576,6 +634,26 @@ export default function SettingsScreen() {
                 </Text>
                 <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
                   Import GPX files from Strava export
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={handleFolderCleanup}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <SyncIcon size={22} color={theme.icon} />
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>
+                  Clean GPX Folder Duplicates
+                </Text>
+                <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>
+                  Scan a folder for duplicate GPX files and remove them
                 </Text>
               </View>
             </View>
@@ -1093,6 +1171,124 @@ export default function SettingsScreen() {
                     setOperationResult(null);
                     setSelectedGPXFiles([]);
                     setCsvMetadata(null);
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Folder Cleanup Modal */}
+      <Modal
+        visible={showFolderCleanupModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => cleanupPhase === 'idle' || cleanupPhase === 'confirm' || cleanupPhase === 'done' ? setShowFolderCleanupModal(false) : null}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContentWide, { backgroundColor: theme.cardBg }]}>
+            {cleanupPhase === 'idle' ? (
+              <>
+                <SyncIcon size={56} color={theme.primary} />
+                <Text style={[styles.modalTitle, { color: theme.text }]} >
+                  Clean GPX Folder Duplicates
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]} >
+                  Select a folder to scan for duplicate GPX files. This will identify files with identical names or content and let you remove the duplicates.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                  onPress={startFolderScan}
+                >
+                  <Text style={styles.modalButtonText}>Select Folder to Scan</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalCancelButton, { backgroundColor: theme.surface }]}
+                  onPress={() => setShowFolderCleanupModal(false)}
+                >
+                  <Text style={[styles.modalCancelButtonText, { color: theme.text }]}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : cleanupPhase === 'scanning' ? (
+              <>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={[styles.modalTitle, { color: theme.text }]} >
+                  Scanning Folder...
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]} >
+                  Looking for duplicate GPX files in the selected folder.
+                </Text>
+              </>
+            ) : cleanupPhase === 'confirm' ? (
+              <>
+                <WarningIcon size={56} color={theme.warning} />
+                <Text style={[styles.modalTitle, { color: theme.text }]} >
+                  Duplicates Found
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]} >
+                  {folderScanResult?.totalScanned || 0} GPX files scanned.{"\n"}
+                  {folderScanResult?.uniqueCount || 0} unique activities found.{"\n"}
+                  {folderScanResult?.duplicateFilesCount || 0} duplicate files found.{"\n"}
+                  {folderScanResult?.fuzzyDuplicateFiles > 0 ? `${folderScanResult.fuzzyDuplicateFiles} ambiguous (not auto-deleted).\n` : ''}
+                  {folderScanResult?.unparseableCount > 0 ? `${folderScanResult.unparseableCount} could not be parsed.\n` : ''}
+                  {folderScanResult?.filesToDelete?.length || 0} files will be deleted.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.danger }]}
+                  onPress={confirmDeleteDuplicates}
+                >
+                  <Text style={styles.modalButtonText}>Delete {folderScanResult?.filesToDelete?.length || 0} Duplicates</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalCancelButton, { backgroundColor: theme.surface }]}
+                  onPress={() => {
+                    setShowFolderCleanupModal(false);
+                    setCleanupPhase('idle');
+                  }}
+                >
+                  <Text style={[styles.modalCancelButtonText, { color: theme.text }]}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : cleanupPhase === 'deleting' ? (
+              <>
+                <ActivityIndicator size="large" color={theme.danger} />
+                <Text style={[styles.modalTitle, { color: theme.text }]} >
+                  Deleting Duplicates...
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]} >
+                  {folderCleanupProgress.current} of {folderCleanupProgress.total}
+                </Text>
+                {folderCleanupProgress.file ? (
+                  <Text style={[styles.modalSubMessage, { color: theme.textSecondary }]} >
+                    {folderCleanupProgress.file}
+                  </Text>
+                ) : null}
+              </>
+            ) : cleanupPhase === 'done' ? (
+              <>
+                {operationResult?.success ? (
+                  <CheckIcon size={56} color={theme.success} />
+                ) : (
+                  <WarningIcon size={56} color={theme.warning} />
+                )}
+                <Text style={[styles.modalTitle, { color: theme.text }]} >
+                  {operationResult?.success ? 'Cleanup Complete!' : 'Error'}
+                </Text>
+                <Text style={[styles.modalMessage, { color: theme.textSecondary }]} >
+                  {operationResult?.success
+                    ? `Deleted ${operationResult.deleted} duplicate file${operationResult.deleted !== 1 ? 's' : ''}.${operationResult.failed > 0 ? `\n${operationResult.failed} file${operationResult.failed !== 1 ? 's' : ''} could not be deleted.` : ''}`
+                    : operationResult?.error
+                  }
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                  onPress={() => {
+                    setShowFolderCleanupModal(false);
+                    setCleanupPhase('idle');
+                    setOperationResult(null);
                   }}
                 >
                   <Text style={styles.modalButtonText}>Done</Text>

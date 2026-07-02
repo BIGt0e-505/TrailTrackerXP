@@ -135,8 +135,17 @@ export default function CalendarScreen() {
 
   const loadActivities = async () => {
     // Load activity metadata only (fast - no GPX file reads)
+    // getActivities() now dedupes by id and validates against GPX files
     const data = await getActivities();
-    setActivities(data);
+    
+    // Safety net: dedupe by id in case getActivities returns duplicates
+    const seen = new Set();
+    const deduped = data.filter(a => {
+      if (seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
+    setActivities(deduped);
     
     const marks = {};
     data.forEach(activity => {
