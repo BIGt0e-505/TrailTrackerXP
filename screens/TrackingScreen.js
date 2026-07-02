@@ -34,6 +34,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 const TRACKING_RECOVERY_KEY = '@trail_tracker_recovery_data';
+const PENDING_SAVE_KEY = '@trail_tracker_pending_save_activity';
 
 // Global state for background tracking
 let backgroundRouteData = [];
@@ -64,13 +65,38 @@ const autoSaveTrackingData = async () => {
   }
 };
 
-// Clear recovery data (called when tracking is properly stopped)
+// Clear recovery data (called when tracking is properly stopped/saved)
 const clearRecoveryData = async () => {
   try {
     await AsyncStorage.removeItem(TRACKING_RECOVERY_KEY);
     console.log('Cleared recovery data');
   } catch (e) {
     console.error('Error clearing recovery data:', e);
+  }
+};
+
+// Write a pending-save snapshot before attempting final save.
+// If the app crashes or save fails, this snapshot can be offered for recovery on next launch.
+const writePendingSaveSnapshot = async (activityData) => {
+  try {
+    const snapshot = {
+      ...activityData,
+      pendingAt: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem(PENDING_SAVE_KEY, JSON.stringify(snapshot));
+    console.log('[pending-save] Snapshot written:', activityData.route?.length, 'points');
+  } catch (e) {
+    console.error('[pending-save] Error writing snapshot:', e);
+  }
+};
+
+// Clear the pending-save snapshot after verified save
+const clearPendingSaveSnapshot = async () => {
+  try {
+    await AsyncStorage.removeItem(PENDING_SAVE_KEY);
+    console.log('[pending-save] Snapshot cleared');
+  } catch (e) {
+    console.error('[pending-save] Error clearing snapshot:', e);
   }
 };
 
@@ -144,6 +170,7 @@ export default function TrackingScreen() {
   useEffect(() => {
     checkFirstRun();
     checkForRecoveryData();
+    checkForPendingSaveSnapshot();
     requestPermissions();
     backgroundDistanceUnit = distanceUnit;
     
@@ -181,6 +208,38 @@ export default function TrackingScreen() {
       }
     } catch (e) {
       console.log('Error checking recovery data:', e);
+    }
+  };
+
+  // Check for a pending-save snapshot from a failed save or crash during save
+  const checkForPendingSaveSnapshot = async () => {
+    try {
+      const pending = await AsyncStorage.getItem(PENDING_SAVE_KEY);
+      if (pending) {
+        const parsed = JSON.parse(pending);
+        console.log('[pending-save] Found unsaved activity snapshot:', parsed.route?.length, 'points');
+        // Offer the user to retry saving this activity
+        Alert.alert(
+          'Unsaved Activity Found',
+          `An activity from ${parsed.pendingAt ? new Date(parsed.pendingAt).toLocaleString() : 'a previous session'} (${parsed.route?.length || 0} route points, ${formatDistance(parsed.distance || 0, backgroundDistanceUnit)}) was not saved.\n\nWould you like to try saving it now?`,
+          [
+            { text: 'Discard', style: 'destructive', onPress: () => clearPendingSaveSnapshot() },
+            { text: 'Save Now', onPress: async () => {
+              try {
+                const result = await saveActivity(parsed);
+                console.log('[pending-save] Retry save succeeded:', result.activity.id);
+                await clearPendingSaveSnapshot();
+                Alert.alert('Activity Saved', 'The recovered activity has been saved successfully.');
+              } catch (error) {
+                console.error('[pending-save] Retry save failed:', error);
+                Alert.alert('Save Failed', 'Could not save the recovered activity. The snapshot has been kept for another retry.');
+              }
+            }},
+          ]
+        );
+      }
+    } catch (e) {
+      console.log('Error checking pending save snapshot:', e);
     }
   };
 
@@ -510,6 +569,10 @@ export default function TrackingScreen() {
       // --- Critical save phase: persist + verify ---
       // Route/state is NOT cleared until we confirm the activity is saved.
       // Recovery data is NOT cleared until save is verified.
+      // Write a pending-save snapshot so we can recover if save fails or app crashes.
+      const activityForSave = { ...activity };
+      await writePendingSaveSnapshot(activityForSave);
+
       let savedActivity = null;
       let gamification = null;
       let gamificationError = null;
@@ -538,8 +601,9 @@ export default function TrackingScreen() {
         return; // ⛔ Do not proceed to state clearing
       }
 
-      // --- Save verified. Now safe to clear recovery data. ---
+      // --- Save verified. Now safe to clear recovery data and pending snapshot. ---
       await clearRecoveryData();
+      await clearPendingSaveSnapshot();
 
       // Auto-export GPX to external storage (non-blocking)
       autoExportActivityGPX(savedActivity).catch(e => 
