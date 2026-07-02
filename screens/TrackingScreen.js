@@ -490,9 +490,6 @@ export default function TrackingScreen() {
 
     deactivateKeepAwake();
     
-    // Clear recovery data since we're properly saving
-    await clearRecoveryData();
-
     const finalRouteData = backgroundRouteData.length > 0 ? backgroundRouteData : routeCoordinates;
 
     if (finalRouteData.length > 0) {
@@ -510,57 +507,80 @@ export default function TrackingScreen() {
         date: new Date().toISOString(),
       };
 
+      // --- Critical save phase: persist + verify ---
+      // Route/state is NOT cleared until we confirm the activity is saved.
+      // Recovery data is NOT cleared until save is verified.
+      let savedActivity = null;
+      let gamification = null;
+      let gamificationError = null;
+
       try {
         const result = await saveActivity(activity);
-        const { gamification, activity: savedActivity, gamificationError } = result;
-        console.log('[saveTracking] Activity saved:', savedActivity.id, 'gamificationError:', gamificationError);
-        
-        // Auto-export GPX to external storage (Downloads or user-chosen folder)
-        // This runs in background - don't await so it doesn't delay the UI
-        autoExportActivityGPX(savedActivity).catch(e => 
-          console.log('Auto-export GPX failed (non-critical):', e.message)
-        );
-        
-        // Build success message with gamification info
-        let message = `${activityType === 'walking' ? 'Walk' : 'Ride'}: ${formatDistance(finalDistance, distanceUnit)} in ${formatDuration(duration)}`;
-        
-        if (gamificationError) {
-          // Activity saved but gamification/challenge processing had an issue
-          message += `\n\n⚠ XP/challenge updates may need refreshing`;
-        }
-        
-        if (gamification) {
-          message += `\n\n+${gamification.xpEarned} XP`;
-          
-          if (gamification.newLevel) {
-            message += `\nLevel Up! ${gamification.newLevel.name}`;
-          }
-          
-          if (gamification.newAchievements && gamification.newAchievements.length > 0) {
-            const achievementNames = gamification.newAchievements.map(a => a.name).join('\n');
-            message += `\n\nNew Achievement!\n${achievementNames}`;
-          }
-          
-          if (gamification.challengesCompleted && gamification.challengesCompleted.length > 0) {
-            message += `\n\nChallenge Complete!`;
-          }
-        }
-        
-        setSuccessModalContent({
-          title: gamificationError
-            ? 'Activity Saved'
-            : (gamification?.newLevel ? 'Level Up!' : (gamification?.newAchievements?.length > 0 ? 'Achievement Unlocked!' : 'Activity Saved')),
-          message: message,
-          icon: 'check'
-        });
-        setShowSuccessModal(true);
+        gamification = result.gamification;
+        savedActivity = result.activity;
+        gamificationError = result.gamificationError;
+        console.log('[saveTracking] Activity saved and verified:', savedActivity.id);
       } catch (error) {
-        // Only reaches here if critical persistence (file/AsyncStorage) failed
+        // CRITICAL: save failed. Do NOT clear route, distance, duration, or recovery data.
         console.error('[saveTracking] Activity save FAILED:', error);
-        Alert.alert('Error', 'Failed to save activity');
+        Alert.alert(
+          'Save Failed',
+          'Your activity could not be saved. Your current track has been kept so you can try again.\n\nError: ' + (error.message || String(error)),
+          [
+            { text: 'Retry Save', onPress: () => saveTracking() },
+            { text: 'OK', style: 'cancel' },
+          ]
+        );
+        // Restart location tracking infrastructure so the app is in a usable state
+        // but keep all tracking data intact for retry
+        setIsTracking(false); // show tracking UI as stopped but data preserved
+        setIsPaused(true);   // show as paused so user can retry
+        return; // ⛔ Do not proceed to state clearing
       }
+
+      // --- Save verified. Now safe to clear recovery data. ---
+      await clearRecoveryData();
+
+      // Auto-export GPX to external storage (non-blocking)
+      autoExportActivityGPX(savedActivity).catch(e => 
+        console.log('Auto-export GPX failed (non-critical):', e.message)
+      );
+      
+      // Build success message with gamification info
+      let message = `${activityType === 'walking' ? 'Walk' : 'Ride'}: ${formatDistance(finalDistance, distanceUnit)} in ${formatDuration(duration)}`;
+      
+      if (gamificationError) {
+        message += `\n\n⚠ XP/challenge updates may need refreshing`;
+      }
+      
+      if (gamification) {
+        message += `\n\n+${gamification.xpEarned} XP`;
+        
+        if (gamification.newLevel) {
+          message += `\nLevel Up! ${gamification.newLevel.name}`;
+        }
+        
+        if (gamification.newAchievements && gamification.newAchievements.length > 0) {
+          const achievementNames = gamification.newAchievements.map(a => a.name).join('\n');
+          message += `\n\nNew Achievement!\n${achievementNames}`;
+        }
+        
+        if (gamification.challengesCompleted && gamification.challengesCompleted.length > 0) {
+          message += `\n\nChallenge Complete!`;
+        }
+      }
+      
+      setSuccessModalContent({
+        title: gamificationError
+          ? 'Activity Saved'
+          : (gamification?.newLevel ? 'Level Up!' : (gamification?.newAchievements?.length > 0 ? 'Achievement Unlocked!' : 'Activity Saved')),
+        message: message,
+        icon: 'check'
+      });
+      setShowSuccessModal(true);
     }
 
+    // --- Post-save cleanup: only reached if save succeeded or no route data ---
     setIsTracking(false);
     setIsPaused(false);
     setRouteCoordinates([]);
