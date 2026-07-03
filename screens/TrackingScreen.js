@@ -24,6 +24,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useTheme } from '../utils/theme';
 import { 
   saveActivity, 
+  processPostSave, 
   calculateDistance, 
   formatDistance, 
   formatDuration,
@@ -246,6 +247,8 @@ export default function TrackingScreen() {
                 console.log('[pending-save] Retry save succeeded:', result.activity.id);
                 await clearPendingSaveSnapshot();
                 Alert.alert('Activity Saved', 'The recovered activity has been saved successfully.');
+                // Fire-and-forget gamification processing
+                processPostSave(result.activity).catch(e => console.log('[pending-save] Post-save gamification failed:', e.message));
               } catch (error) {
                 console.error('[pending-save] Retry save failed:', error);
                 Alert.alert('Save Failed', 'Could not save the recovered activity. The snapshot has been kept for another retry.');
@@ -617,16 +620,12 @@ export default function TrackingScreen() {
       _smark('pending_snapshot:end');
 
       let savedActivity = null;
-      let gamification = null;
-      let gamificationError = null;
 
       try {
         _smark('saveActivity:start');
         const result = await saveActivity(activity);
         _smark('saveActivity:end');
-        gamification = result.gamification;
         savedActivity = result.activity;
-        gamificationError = result.gamificationError;
         console.log('[saveTracking] Activity saved and verified:', savedActivity.id);
       } catch (error) {
         // CRITICAL: save failed. Do NOT clear route, distance, duration, or recovery data.
@@ -644,7 +643,7 @@ export default function TrackingScreen() {
         // but keep all tracking data intact for retry
         setIsTracking(false); // show tracking UI as stopped but data preserved
         setIsPaused(true);   // show as paused so user can retry
-        return; // ⛔ Do not proceed to state clearing
+        return; // Do not proceed to state clearing
       }
 
       // --- Save verified. Now safe to clear recovery data and pending snapshot. ---
@@ -655,46 +654,31 @@ export default function TrackingScreen() {
       await clearPendingSaveSnapshot();
       _smark('clearPendingSaveSnapshot:end');
 
-      // Auto-export GPX to external storage (non-blocking)
-      _smark('autoExport:start');
-      autoExportActivityGPX(savedActivity).catch(e => 
-        console.log('Auto-export GPX failed (non-critical):', e.message)
-      );
-      _smark('autoExport:fire-and-forget');
-      
-      // Build success message with gamification info
+      // Show "Activity Saved" IMMEDIATELY -- before gamification/export/dedupe.
+      // The activity is safely on disk. Everything else is background work.
       let message = `${activityType === 'walking' ? 'Walk' : 'Ride'}: ${formatDistance(finalDistance, distanceUnit)} in ${formatDuration(duration)}`;
       
-      if (gamificationError) {
-        message += `\n\n⚠ XP/challenge updates may need refreshing`;
-      }
-      
-      if (gamification) {
-        message += `\n\n+${gamification.xpEarned} XP`;
-        
-        if (gamification.newLevel) {
-          message += `\nLevel Up! ${gamification.newLevel.name}`;
-        }
-        
-        if (gamification.newAchievements && gamification.newAchievements.length > 0) {
-          const achievementNames = gamification.newAchievements.map(a => a.name).join('\n');
-          message += `\n\nNew Achievement!\n${achievementNames}`;
-        }
-        
-        if (gamification.challengesCompleted && gamification.challengesCompleted.length > 0) {
-          message += `\n\nChallenge Complete!`;
-        }
-      }
-      
       setSuccessModalContent({
-        title: gamificationError
-          ? 'Activity Saved'
-          : (gamification?.newLevel ? 'Level Up!' : (gamification?.newAchievements?.length > 0 ? 'Achievement Unlocked!' : 'Activity Saved')),
+        title: 'Activity Saved',
         message: message,
         icon: 'check'
       });
       setShowSuccessModal(true);
       _smark('success_modal_shown');
+
+      // --- Background work: gamification, achievements, challenges, export ---
+      // All fire-and-forget. Failures here do NOT affect the save confirmation.
+      processPostSave(savedActivity).then(result => {
+        console.log('[saveTracking] Post-save gamification done:', result);
+      }).catch(e => {
+        console.error('[saveTracking] Post-save gamification failed (non-critical):', e);
+      });
+
+      // Auto-export GPX to external storage (non-blocking)
+      autoExportActivityGPX(savedActivity).catch(e => 
+        console.log('Auto-export GPX failed (non-critical):', e.message)
+      );
+
     }
 
     // --- Post-save cleanup: only reached if save succeeded or no route data ---
@@ -1607,7 +1591,7 @@ export default function TrackingScreen() {
         </View>
       </Modal>
 
-      {/* First Run Setup Modal — 3-step guided onboarding */}
+      {/* First Run Setup Modal ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â 3-step guided onboarding */}
       <Modal
         visible={showSetupModal}
         transparent={true}
@@ -1671,7 +1655,7 @@ export default function TrackingScreen() {
                     </Text>
                     <View style={styles.setupSteps}>
                       <Text style={[styles.setupStep, { color: theme.text }]}>
-                        Settings → Apps → TrailTrackerXP → Battery → Unrestricted
+                        Settings ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Apps ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ TrailTrackerXP ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Battery ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Unrestricted
                       </Text>
                     </View>
                   </View>

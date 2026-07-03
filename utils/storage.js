@@ -61,8 +61,10 @@ export const saveActivity = async (activity) => {
   const _mark = (label) => console.log(`[SAVE_TIMING] ${label}: ${Date.now() - _t0}ms`);
   _mark('saveActivity:start');
 
-  // --- Phase 1: Critical persistence (GPX file + AsyncStorage cache) ---
-  // If this succeeds, the activity is saved regardless of what happens later.
+  // --- Phase 1 ONLY: Critical persistence (GPX file + AsyncStorage cache) ---
+  // If this succeeds, the activity is saved. We return immediately so the UI
+  // can confirm "Activity Saved". Gamification/achievements/challenges run
+  // later via processPostSave() (fire-and-forget from the caller).
   let newActivity;
   try {
     // If the incoming activity already has an id (e.g. from pending-save recovery),
@@ -73,10 +75,12 @@ export const saveActivity = async (activity) => {
       _mark('isActivitySaved(check existing):end');
       if (alreadySaved) {
         console.log('[save] Activity already exists in GPX storage, skipping re-save:', activity.id);
-        // Ensure it's in the AsyncStorage cache too, then return early
-        _mark('getActivities(existing):start');
-        const existing = await getActivities();
-        _mark('getActivities(existing):end');
+        // Ensure it's in the AsyncStorage cache too, then return early.
+        // Read AsyncStorage directly instead of calling getActivities() (avoids folder enumeration).
+        _mark('AsyncStorage.getItem(existing):start');
+        const json = await AsyncStorage.getItem(ACTIVITIES_KEY);
+        _mark('AsyncStorage.getItem(existing):end');
+        const existing = json ? JSON.parse(json) : [];
         if (!existing.some(a => a.id === activity.id)) {
           const fileActivity = await loadActivityFromFile(activity.id);
           if (fileActivity) {
@@ -84,12 +88,8 @@ export const saveActivity = async (activity) => {
             await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updated));
           }
         }
-        // Return without creating a duplicate
-        _mark('getActivities(existingActs):start');
-        const existingActs = await getActivities();
-        _mark('getActivities(existingActs):end');
         _mark('saveActivity:done(already existed)');
-        return { activity: { ...activity, timestamp: activity.timestamp || activity.date }, gamification: null, gamificationError: null };
+        return { activity: { ...activity, timestamp: activity.timestamp || activity.date }, gamification: null, gamificationError: null, alreadyExisted: true };
       }
     }
 
@@ -112,7 +112,7 @@ export const saveActivity = async (activity) => {
     const fileResult = await saveActivityToFile(newActivity);
     _mark('saveActivityToFile:end');
     if (!fileResult) {
-      throw new Error('saveActivityToFile returned false — GPX persistence failed');
+      throw new Error('saveActivityToFile returned false â€” GPX persistence failed');
     }
     console.log('[save] Activity persisted to file:', newActivity.id);
 
@@ -121,15 +121,18 @@ export const saveActivity = async (activity) => {
     const verified = await isActivitySaved(newActivity.id);
     _mark('isActivitySaved(verify):end');
     if (!verified) {
-      throw new Error('Save verification failed — GPX file not found after write');
+      throw new Error('Save verification failed â€” GPX file not found after write');
     }
     console.log('[save] Activity verified on disk:', newActivity.id);
 
-    // Cache only metadata in AsyncStorage (no route data -- prevents size limit corruption)
-    // Dedupe: replace existing entry with same id instead of appending a duplicate
-    _mark('getActivities(cache update):start');
-    const existingActivities = await getActivities();
-    _mark('getActivities(cache update):end');
+    // Cache only metadata in AsyncStorage (no route data -- prevents size limit corruption).
+    // Dedupe: replace existing entry with same id instead of appending a duplicate.
+    // Read AsyncStorage directly instead of calling getActivities() to avoid
+    // folder enumeration + dedup + orphan-cleanup on every save.
+    _mark('AsyncStorage.getItem(cache):start');
+    const json = await AsyncStorage.getItem(ACTIVITIES_KEY);
+    _mark('AsyncStorage.getItem(cache):end');
+    const existingActivities = json ? JSON.parse(json) : [];
     const filteredExisting = existingActivities.filter(a => a.id !== newActivity.id);
     const updatedActivities = [...filteredExisting, stripRouteForCache(newActivity)];
     _mark('AsyncStorage.setItem(cache):start');
@@ -142,20 +145,32 @@ export const saveActivity = async (activity) => {
     throw error; // This is a real save failure
   }
 
-  _mark('phase1_complete');
+  _mark('phase1_complete (UI can confirm now)');
 
-  // --- Phase 2: Post-save processing (gamification, challenges) ---
-  // Failures here must NOT claim the activity failed to save.
+  // Return immediately. Phase 2 is the caller's responsibility (fire-and-forget).
+  return { activity: newActivity, gamification: null, gamificationError: null };
+};
+
+/**
+ * Post-save processing: gamification, challenges, gamification file persistence.
+ * This is non-critical -- the activity is already safely saved to disk.
+ * Callers should fire-and-forget this (e.g. .catch() without await).
+ */
+export const processPostSave = async (activity) => {
+  const _t0 = Date.now();
+  const _mark = (label) => console.log(`[SAVE_TIMING] postSave.${label}: ${Date.now() - _t0}ms`);
+  _mark('start');
+
   let gamificationResults = null;
   let gamificationError = null;
   try {
-    _mark('getActivities(phase2):start');
+    _mark('getActivities:start');
     const updatedActivities = await getActivities();
-    _mark('getActivities(phase2):end');
+    _mark('getActivities:end');
     _mark('processActivity:start');
-    gamificationResults = await processActivity(newActivity, updatedActivities);
+    gamificationResults = await processActivity(activity, updatedActivities);
     _mark('processActivity:end');
-    console.log('[save] Gamification processed for:', newActivity.id);
+    console.log('[postSave] Gamification processed for:', activity.id);
 
     // Also save gamification to file storage
     _mark('loadGamification:start');
@@ -164,14 +179,14 @@ export const saveActivity = async (activity) => {
     _mark('saveGamificationToFile:start');
     await saveGamificationToFile(gamificationData);
     _mark('saveGamificationToFile:end');
-    console.log('[save] Gamification persisted for:', newActivity.id);
+    console.log('[postSave] Gamification persisted for:', activity.id);
   } catch (error) {
-    console.error('[save] Post-save gamification processing failed (activity already saved):', error);
+    console.error('[postSave] Gamification processing failed (activity already saved):', error);
     gamificationError = error.message || String(error);
   }
 
-  _mark('saveActivity:done');
-  return { activity: newActivity, gamification: gamificationResults, gamificationError };
+  _mark('done');
+  return { gamification: gamificationResults, gamificationError };
 };
 
 // Update an existing activity (e.g., change type)
