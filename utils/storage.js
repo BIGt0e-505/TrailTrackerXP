@@ -57,6 +57,10 @@ const stripRouteForCache = (activity) => {
 };
 
 export const saveActivity = async (activity) => {
+  const _t0 = Date.now();
+  const _mark = (label) => console.log(`[SAVE_TIMING] ${label}: ${Date.now() - _t0}ms`);
+  _mark('saveActivity:start');
+
   // --- Phase 1: Critical persistence (GPX file + AsyncStorage cache) ---
   // If this succeeds, the activity is saved regardless of what happens later.
   let newActivity;
@@ -64,11 +68,15 @@ export const saveActivity = async (activity) => {
     // If the incoming activity already has an id (e.g. from pending-save recovery),
     // check whether it's already been saved to avoid duplicates.
     if (activity.id) {
+      _mark('isActivitySaved(check existing):start');
       const alreadySaved = await isActivitySaved(activity.id);
+      _mark('isActivitySaved(check existing):end');
       if (alreadySaved) {
         console.log('[save] Activity already exists in GPX storage, skipping re-save:', activity.id);
         // Ensure it's in the AsyncStorage cache too, then return early
+        _mark('getActivities(existing):start');
         const existing = await getActivities();
+        _mark('getActivities(existing):end');
         if (!existing.some(a => a.id === activity.id)) {
           const fileActivity = await loadActivityFromFile(activity.id);
           if (fileActivity) {
@@ -77,11 +85,15 @@ export const saveActivity = async (activity) => {
           }
         }
         // Return without creating a duplicate
+        _mark('getActivities(existingActs):start');
         const existingActs = await getActivities();
+        _mark('getActivities(existingActs):end');
+        _mark('saveActivity:done(already existed)');
         return { activity: { ...activity, timestamp: activity.timestamp || activity.date }, gamification: null, gamificationError: null };
       }
     }
 
+    _mark('build activity object');
     newActivity = {
       id: activity.id || Date.now().toString(),
       timestamp: activity.timestamp || new Date().toISOString(),
@@ -96,14 +108,18 @@ export const saveActivity = async (activity) => {
     }
 
     // Save full activity (with route) to GPX file first -- this is the source of truth
+    _mark('saveActivityToFile:start');
     const fileResult = await saveActivityToFile(newActivity);
+    _mark('saveActivityToFile:end');
     if (!fileResult) {
       throw new Error('saveActivityToFile returned false — GPX persistence failed');
     }
     console.log('[save] Activity persisted to file:', newActivity.id);
 
     // Verify the GPX file actually exists on disk
+    _mark('isActivitySaved(verify):start');
     const verified = await isActivitySaved(newActivity.id);
+    _mark('isActivitySaved(verify):end');
     if (!verified) {
       throw new Error('Save verification failed — GPX file not found after write');
     }
@@ -111,34 +127,50 @@ export const saveActivity = async (activity) => {
 
     // Cache only metadata in AsyncStorage (no route data -- prevents size limit corruption)
     // Dedupe: replace existing entry with same id instead of appending a duplicate
+    _mark('getActivities(cache update):start');
     const existingActivities = await getActivities();
+    _mark('getActivities(cache update):end');
     const filteredExisting = existingActivities.filter(a => a.id !== newActivity.id);
     const updatedActivities = [...filteredExisting, stripRouteForCache(newActivity)];
+    _mark('AsyncStorage.setItem(cache):start');
     await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updatedActivities));
+    _mark('AsyncStorage.setItem(cache):end');
     console.log('[save] Activity cached to AsyncStorage:', newActivity.id);
   } catch (error) {
     console.error('[save] CRITICAL: Activity persistence failed:', error);
+    _mark('saveActivity:FAILED(phase1)');
     throw error; // This is a real save failure
   }
+
+  _mark('phase1_complete');
 
   // --- Phase 2: Post-save processing (gamification, challenges) ---
   // Failures here must NOT claim the activity failed to save.
   let gamificationResults = null;
   let gamificationError = null;
   try {
+    _mark('getActivities(phase2):start');
     const updatedActivities = await getActivities();
+    _mark('getActivities(phase2):end');
+    _mark('processActivity:start');
     gamificationResults = await processActivity(newActivity, updatedActivities);
+    _mark('processActivity:end');
     console.log('[save] Gamification processed for:', newActivity.id);
 
     // Also save gamification to file storage
+    _mark('loadGamification:start');
     const gamificationData = await loadGamification();
+    _mark('loadGamification:end');
+    _mark('saveGamificationToFile:start');
     await saveGamificationToFile(gamificationData);
+    _mark('saveGamificationToFile:end');
     console.log('[save] Gamification persisted for:', newActivity.id);
   } catch (error) {
     console.error('[save] Post-save gamification processing failed (activity already saved):', error);
     gamificationError = error.message || String(error);
   }
 
+  _mark('saveActivity:done');
   return { activity: newActivity, gamification: gamificationResults, gamificationError };
 };
 
@@ -177,9 +209,12 @@ export const updateActivity = async (id, updates) => {
 };
 
 export const getActivities = async () => {
+  const _t0 = Date.now();
   try {
+    const _t1 = Date.now();
     const json = await AsyncStorage.getItem(ACTIVITIES_KEY);
     const cachedActivities = json ? JSON.parse(json) : [];
+    console.log(`[SAVE_TIMING] getActivities.AsyncStorage: ${Date.now() - _t1}ms (${cachedActivities.length} cached)`);
 
     // Get all GPX file IDs (source of truth)
     const savedIds = new Set(await getSavedActivityIds());
@@ -212,6 +247,7 @@ export const getActivities = async () => {
           return true;
         });
         await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(deduped.map(stripRouteForCache)));
+        console.log(`[SAVE_TIMING] getActivities.total: ${Date.now() - _t0}ms (merged, ${deduped.length} activities)`);
         return deduped;
       }
 
@@ -223,6 +259,7 @@ export const getActivities = async () => {
         seen.add(id);
         return true;
       });
+      console.log(`[SAVE_TIMING] getActivities.total: ${Date.now() - _t0}ms (cache hit, ${deduped.length} activities)`);
       return deduped;
     }
 
@@ -232,11 +269,14 @@ export const getActivities = async () => {
       console.log(`Cache empty, rebuilt from ${fileActivities.length} GPX files`);
       const stripped = fileActivities.map(({ route, routeData, ...metadata }) => metadata);
       await AsyncStorage.setItem(ACTIVITIES_KEY, JSON.stringify(stripped));
+      console.log(`[SAVE_TIMING] getActivities.total: ${Date.now() - _t0}ms (rebuilt from files, ${stripped.length} activities)`);
       return stripped;
     }
+    console.log(`[SAVE_TIMING] getActivities.total: ${Date.now() - _t0}ms (empty)`);
     return [];
   } catch (error) {
     console.error('Error getting activities, attempting GPX recovery:', error);
+    console.log(`[SAVE_TIMING] getActivities.total: ${Date.now() - _t0}ms (ERROR path)`);
     try {
       const fileActivities = await loadActivitiesFromFile();
       if (fileActivities.length > 0) {

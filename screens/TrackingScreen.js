@@ -558,6 +558,10 @@ export default function TrackingScreen() {
   };
 
   const saveTracking = async () => {
+    const _st0 = Date.now();
+    const _smark = (label) => console.log(`[SAVE_TIMING] saveTracking.${label}: ${Date.now() - _st0}ms`);
+    _smark('start');
+    
     setShowPauseModal(false);
     
     try {
@@ -565,6 +569,7 @@ export default function TrackingScreen() {
     } catch (e) {
       console.log('Error stopping location updates:', e);
     }
+    _smark('location_stopped');
     
     if (durationInterval.current) {
       clearInterval(durationInterval.current);
@@ -577,6 +582,7 @@ export default function TrackingScreen() {
     }
 
     deactivateKeepAwake();
+    _smark('cleanup_done');
     
     const finalRouteData = backgroundRouteData.length > 0 ? backgroundRouteData : routeCoordinates;
 
@@ -584,6 +590,7 @@ export default function TrackingScreen() {
       const finalDistance = calculateDistance(finalRouteData);
       const movingTime = calculateMovingTime(finalRouteData);
       const elevationGain = calculateElevationGain(finalRouteData);
+      _smark('stats_calculated');
       
       const activity = {
         type: activityType,
@@ -594,6 +601,7 @@ export default function TrackingScreen() {
         route: finalRouteData,
         date: new Date().toISOString(),
       };
+      _smark('activity_object_built');
 
       // --- Critical save phase: persist + verify ---
       // Route/state is NOT cleared until we confirm the activity is saved.
@@ -604,14 +612,18 @@ export default function TrackingScreen() {
       if (activityForSave.date && !activityForSave.timestamp) {
         activityForSave.timestamp = activityForSave.date;
       }
+      _smark('pending_snapshot:start');
       await writePendingSaveSnapshot(activityForSave);
+      _smark('pending_snapshot:end');
 
       let savedActivity = null;
       let gamification = null;
       let gamificationError = null;
 
       try {
+        _smark('saveActivity:start');
         const result = await saveActivity(activity);
+        _smark('saveActivity:end');
         gamification = result.gamification;
         savedActivity = result.activity;
         gamificationError = result.gamificationError;
@@ -619,6 +631,7 @@ export default function TrackingScreen() {
       } catch (error) {
         // CRITICAL: save failed. Do NOT clear route, distance, duration, or recovery data.
         console.error('[saveTracking] Activity save FAILED:', error);
+        _smark('saveActivity:FAILED');
         Alert.alert(
           'Save Failed',
           'Your activity could not be saved. Your current track has been kept so you can try again.\n\nError: ' + (error.message || String(error)),
@@ -635,13 +648,19 @@ export default function TrackingScreen() {
       }
 
       // --- Save verified. Now safe to clear recovery data and pending snapshot. ---
+      _smark('clearRecoveryData:start');
       await clearRecoveryData();
+      _smark('clearRecoveryData:end');
+      _smark('clearPendingSaveSnapshot:start');
       await clearPendingSaveSnapshot();
+      _smark('clearPendingSaveSnapshot:end');
 
       // Auto-export GPX to external storage (non-blocking)
+      _smark('autoExport:start');
       autoExportActivityGPX(savedActivity).catch(e => 
         console.log('Auto-export GPX failed (non-critical):', e.message)
       );
+      _smark('autoExport:fire-and-forget');
       
       // Build success message with gamification info
       let message = `${activityType === 'walking' ? 'Walk' : 'Ride'}: ${formatDistance(finalDistance, distanceUnit)} in ${formatDuration(duration)}`;
@@ -675,6 +694,7 @@ export default function TrackingScreen() {
         icon: 'check'
       });
       setShowSuccessModal(true);
+      _smark('success_modal_shown');
     }
 
     // --- Post-save cleanup: only reached if save succeeded or no route data ---

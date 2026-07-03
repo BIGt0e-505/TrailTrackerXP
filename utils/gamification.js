@@ -1306,7 +1306,11 @@ export const awardSelectedChallengeBonus = async (gamification, selectedChalleng
 
 // Process a new activity - update all gamification
 export const processActivity = async (activity, allActivities) => {
+  const _t0 = Date.now();
+  const _mark = (label) => console.log(`[SAVE_TIMING] processActivity.${label}: ${Date.now() - _t0}ms`);
+  _mark('start');
   const gamification = await loadGamification();
+  _mark('loadGamification');
   const results = {
     xpEarned: 0,
     newLevel: null,
@@ -1430,7 +1434,10 @@ export const processActivity = async (activity, allActivities) => {
   }
   
   // Save and return
+  _mark('before saveGamification');
   await saveGamification(gamification);
+  _mark('after saveGamification');
+  console.log(`[SAVE_TIMING] processActivity.total: ${Date.now() - _t0}ms`);
   
   return results;
 };

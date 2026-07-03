@@ -223,16 +223,19 @@ const toRad = (deg) => deg * (Math.PI / 180);
  * Get list of all saved GPX activity IDs
  */
 export const getSavedActivityIds = async () => {
+  const _t0 = Date.now();
   try {
     await initFileStorage();
     
     const files = await FileSystem.readDirectoryAsync(ACTIVITIES_DIR);
     const gpxFiles = files.filter(f => f.endsWith('.gpx'));
     
+    console.log(`[SAVE_TIMING] getSavedActivityIds: ${Date.now() - _t0}ms (${gpxFiles.length} files)`);
     // Extract IDs from filenames (remove .gpx extension)
     return gpxFiles.map(f => f.replace('.gpx', ''));
   } catch (error) {
     console.error('Error getting saved activity IDs:', error);
+    console.log(`[SAVE_TIMING] getSavedActivityIds: ${Date.now() - _t0}ms (ERROR)`);
     return [];
   }
 };
@@ -255,6 +258,7 @@ export const isActivitySaved = async (activityId) => {
  * Save an activity to file storage as GPX
  */
 export const saveActivityToFile = async (activity) => {
+  const _t0 = Date.now();
   await initFileStorage();
   
   // Get the route data - it might be stored as 'route' or 'routeData'
@@ -273,12 +277,17 @@ export const saveActivityToFile = async (activity) => {
   };
   
   // Convert to GPX format
+  const _t1 = Date.now();
   const gpxContent = activityToGPX(activityWithRoute);
+  console.log(`[SAVE_TIMING] saveActivityToFile.activityToGPX: ${Date.now() - _t1}ms (${routeData.length} points, ${gpxContent.length} chars)`);
   
   // Save to file
+  const _t2 = Date.now();
   const gpxFile = `${ACTIVITIES_DIR}${activity.id}.gpx`;
   await FileSystem.writeAsStringAsync(gpxFile, gpxContent);
+  console.log(`[SAVE_TIMING] saveActivityToFile.writeAsString: ${Date.now() - _t2}ms`);
   
+  console.log(`[SAVE_TIMING] saveActivityToFile.total: ${Date.now() - _t0}ms`);
   console.log(`Activity ${activity.id} saved as GPX`);
   return true;
 };
