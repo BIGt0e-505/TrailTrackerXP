@@ -1,5 +1,5 @@
 # ============================================================
-# TrailTrackerXP — Local APK Build (Windows-native)
+# TrailTrackerXP â€” Local APK Build (Windows-native)
 # ============================================================
 # One command: prebuild, gradle build, copy APK to releases/.
 # No WSL, no EAS cloud, no gh CLI required.
@@ -14,7 +14,7 @@
 #
 # Build modes:
 #   -PreviewBuild (default): assembleRelease with debug signing. JS bundled into APK.
-#     Standalone — no Metro needed. Use this for phone QA.
+#     Standalone â€” no Metro needed. Use this for phone QA.
 #   -DebugBuild: assembleDebug. JS loaded from Metro at runtime.
 #     Requires Metro running. Use for live development.
 #   -ReleaseBuild: assembleRelease with proper release signing + minification.
@@ -25,6 +25,10 @@
 #   - Android SDK at D:\dev\android-sdk
 #   - Node.js + npm
 #   - For -ReleaseBuild: env vars TRAILTRACKER_STORE_PASSWORD and TRAILTRACKER_KEY_PASSWORD
+# 
+#   ⚠️  ProGuard / minification is PERMANENTLY DISABLED. It strips the
+#      background location tracking service and breaks activity recording.
+#      Do NOT re-enable it in build.gradle or gradle.properties.
 # ============================================================
 
 [CmdletBinding()]
@@ -94,7 +98,7 @@ if ($DebugBuild) {
     $ApkName = "$APP_NAME-v$CurrentVersion.apk"
 } else {
     # Preview build: uses assembleRelease with debug signing (already configured by Expo prebuild)
-    # This bundles JS into the APK but signs with the debug keystore — standalone, no Metro needed
+    # This bundles JS into the APK but signs with the debug keystore â€” standalone, no Metro needed
     $BuildMode = "preview"
     $BuildType = "release"
     $GradleTask = "assembleRelease"
@@ -320,7 +324,7 @@ Write-Host ""
 Write-Host "[3/5] Building APK with Gradle ($BuildType)..."
 Set-Location $ANDROID_DIR
 if ($ReleaseBuild) {
-    # ProGuard/minification disabled — strips code the tracking service needs
+    # ProGuard/minification disabled â€” strips code the tracking service needs
     & .\gradlew.bat $GradleTask '--no-daemon' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
 } else {
     & .\gradlew.bat $GradleTask '--no-daemon' 2>&1 | Tee-Object -FilePath "$env:TEMP\gradle-build-trailtracker.log" | Select-Object -Last 10
