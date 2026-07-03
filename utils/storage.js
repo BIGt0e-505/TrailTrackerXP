@@ -112,7 +112,7 @@ export const saveActivity = async (activity) => {
     const fileResult = await saveActivityToFile(newActivity);
     _mark('saveActivityToFile:end');
     if (!fileResult) {
-      throw new Error('saveActivityToFile returned false â€” GPX persistence failed');
+      throw new Error('saveActivityToFile returned false ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â GPX persistence failed');
     }
     console.log('[save] Activity persisted to file:', newActivity.id);
 
@@ -121,7 +121,7 @@ export const saveActivity = async (activity) => {
     const verified = await isActivitySaved(newActivity.id);
     _mark('isActivitySaved(verify):end');
     if (!verified) {
-      throw new Error('Save verification failed â€” GPX file not found after write');
+      throw new Error('Save verification failed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â GPX file not found after write');
     }
     console.log('[save] Activity verified on disk:', newActivity.id);
 
@@ -164,9 +164,22 @@ export const processPostSave = async (activity) => {
   let gamificationResults = null;
   let gamificationError = null;
   try {
-    _mark('getActivities:start');
-    const updatedActivities = await getActivities();
-    _mark('getActivities:end');
+    // Read activities from AsyncStorage directly instead of calling getActivities().
+    // getActivities() does FileSystem.readDirectoryAsync() (folder enumeration +
+    // dedup + orphan cleanup) which is the main bottleneck. The cache was just
+    // updated in Phase 1, so it's current. Append the activity we just saved
+    // (already in the cache, but we pass it explicitly to be safe).
+    _mark('AsyncStorage.getItem:start');
+    const json = await AsyncStorage.getItem(ACTIVITIES_KEY);
+    _mark('AsyncStorage.getItem:end');
+    const cachedActivities = json ? JSON.parse(json) : [];
+    // Ensure the just-saved activity is in the list (it should already be,
+    // but this is a safety net in case the cache write hasn't flushed yet)
+    let updatedActivities = cachedActivities;
+    if (!cachedActivities.some(a => a.id === activity.id)) {
+      updatedActivities = [...cachedActivities, stripRouteForCache(activity)];
+    }
+
     _mark('processActivity:start');
     gamificationResults = await processActivity(activity, updatedActivities);
     _mark('processActivity:end');
